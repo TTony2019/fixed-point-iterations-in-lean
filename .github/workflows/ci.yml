@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"] # replace "main" with the default branch
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v4
+      # uses lean standard action with all default input values
+      # - uses: leanprover/lean-action@v1
+      - name: Install Lean
+        run: |
+          curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s - -y --default-toolchain `cat ./lean-toolchain`
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+      - run: lake exe cache get && lake build
