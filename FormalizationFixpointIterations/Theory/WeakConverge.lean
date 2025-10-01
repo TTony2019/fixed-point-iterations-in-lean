@@ -129,22 +129,33 @@ theorem weakConverge_iff_inner_converge (x : ℕ → H) (p : H) : WeakConverge x
   ∀ y : H, Tendsto (fun n ↦ ⟪x n, y⟫) atTop (nhds ⟪p, y⟫) := tendsto_iff_weakConverge x p
 
 lemma tendsto_iff_sub_tendsto_zero (x : ℕ → H) (p : H) : Tendsto (fun n ↦ x n) atTop (nhds p)
-↔ Tendsto (fun n ↦ x n - p) atTop (nhds 0) := by sorry
+  ↔ Tendsto (fun n ↦ x n - p) atTop (nhds 0) := by sorry
+
+lemma tendsto_iff_sub_tendsto_zero_inner (x : ℕ → H) (p : H) (y : H) :
+  Tendsto (fun n ↦ ⟪x n, y⟫) atTop (nhds ⟪p, y⟫)
+  ↔ Tendsto (fun n ↦ ⟪x n - p, y⟫) atTop (nhds 0) := by
+  have hfun (y : H): (fun n ↦ ⟪x n - p, y⟫) = (fun n ↦ ⟪x n, y⟫ - ⟪p, y⟫) := by sorry
+  rw [hfun y]
+  constructor
+  · intro h
+    apply (tendsto_iff_sub_tendsto_zero (fun n ↦ ⟪x n, y⟫) ⟪p, y⟫).1
+    exact h
+  intro h
+  apply (tendsto_iff_sub_tendsto_zero (fun n ↦ ⟪x n, y⟫) ⟪p, y⟫).2
+  exact h
+
 
 theorem weakConverge_iff_inner_converge' (x : ℕ → H) (p : H) : WeakConverge x p ↔
   ∀ y : H, Tendsto (fun n ↦ ⟪x n - p, y⟫) atTop (nhds 0) := by
-  -- apply tendsto_iff_sub_tendsto_zero
-  have hfun (y : H): (fun n ↦ ⟪x n - p, y⟫) = (fun n ↦ ⟪x n, y⟫ - ⟪p, y⟫) := by sorry
   constructor
   · intro h y
-    rw [hfun y]
-    apply (tendsto_iff_sub_tendsto_zero (fun n ↦ ⟪x n, y⟫) ⟪p, y⟫).1
+    refine (tendsto_iff_sub_tendsto_zero_inner x p y).mp ?_
     apply (weakConverge_iff_inner_converge x p).1 h
   intro h
   rw [weakConverge_iff_inner_converge]
   intro y
   specialize h y
-  rwa [tendsto_iff_sub_tendsto_zero, ← hfun y]
+  exact (tendsto_iff_sub_tendsto_zero_inner x p y).mpr h
 
 #check IsCompact
 #check IsSeqCompact
@@ -182,6 +193,103 @@ theorem finite_weak_converge_iff_converge [FiniteDimensional ℝ H] (x : ℕ →
     apply tendsto_norm_congr
     apply (weakConverge_iff_inner_converge' x p).1
     exact h
+
+theorem strong_converge_then_weak_converge (x : ℕ → H) (p : H)
+  (h : Tendsto x atTop (nhds p)) : WeakConverge x p := by
+  apply (weakConverge_iff_inner_converge' x p).2
+  intro y
+  have (n:ℕ): ⟪x n - p, y⟫ ≤ ‖x n - p‖ * ‖y‖ := by sorry
+  sorry
+
+
+#check limsup
+#check LowerSemicontinuous
+#check norm_inner_le_norm
+#check Tendsto.norm
+
+-- Left hand side in proof of Lemma 2.42
+theorem lim_inner_seq_eq_norm (x : ℕ → H) (p : H) (h : WeakConverge x p) :
+  Tendsto (fun n => ⟪x n, p⟫) atTop (nhds (‖p‖^2)) := by
+  obtain hw := (weakConverge_iff_inner_converge' x p).1 h p
+  rw [← tendsto_iff_sub_tendsto_zero_inner] at hw
+  rwa [real_inner_self_eq_norm_sq p] at hw
+
+#check Real.sSup_le
+#check Real.le_sSup_iff
+-- #check le_of_tendsto_liminf
+-- #check Tendsto.liminf_le
+#check le_liminf_iff
+#check le_of_forall_pos_le_add
+-- #check le_sSup_of_mem
+-- Tendsto.le_limsup
+
+#check EReal.tendsto_coe.mp
+
+-- Right hand side of Lemma 2.42
+lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (nhds p))
+  (hxy : ∀ n, x n ≤ y n) : Real.toEReal p ≤ liminf (fun n => Real.toEReal (y n)) atTop := by
+
+  simp [liminf, limsInf]
+  let s : Set EReal := {a : EReal | ∃ N, ∀ (n : ℕ), N ≤ n → (a ≤ y n)}
+  change p ≤ sSup s
+  have h1 : ∀ (ε : ℝ) , ε > 0 → Real.toEReal (p - ε) ∈ s := by
+    intro ε hε
+    simp [s]
+    sorry
+  have h2 : ∀ (ε : ℝ) , ε > 0 → p - ε ≤ sSup s := by
+    intro ε hε
+    apply le_sSup
+    exact h1 ε hε
+  by_cases hs1 : sSup s = ⊤
+  · simp [hs1]
+  push_neg at hs1
+  have hs2 : sSup s ≠ ⊥ := by
+    by_contra!
+    rw [this] at h2
+    specialize h2 1 (by simp)
+    rw [← EReal.coe_sub] at h2
+    -- simp at h2
+    have : Real.toEReal p = ⊥ := by
+      simp at h2
+      sorry
+    simpa
+  lift (sSup s) to ℝ using ⟨hs1,hs2⟩ with d
+  rw [EReal.coe_le_coe_iff]
+  have h2' : ∀ ε > 0, p - ε ≤ d := by
+    intro ε hε
+    specialize h2 ε hε
+    rwa [← EReal.coe_sub, EReal.coe_le_coe_iff] at h2
+  exact le_of_forall_sub_le h2'
+
+-- Lemma 2.42
+theorem norm_weakly_lsc (x : ℕ → H) (p : H) (h : WeakConverge x p) :
+  Real.toEReal ‖p‖ ≤ liminf (fun n => Real.toEReal ‖x n‖) atTop := by
+  let x' := fun (n:ℕ) => ⟪x n, p⟫
+  let y' := fun (n:ℕ) => ‖x n‖
+  apply EReal.limit_le_liminf x' y'
+  · sorry
+  sorry
+
+
+-- Lemma 2.51 (i)
+theorem weak_converge_limsup_le_iff_strong_converge (x : ℕ → H) (p : H) :
+  WeakConverge x p ∧ limsup (fun n => ‖x n‖) atTop ≤ ‖p‖ ↔
+  Tendsto x atTop (nhds p) := by
+  have : liminf (fun n => ‖x n‖) atTop ≤ limsup (fun n => ‖x n‖) atTop := by
+    sorry
+  sorry
+
+theorem strong_converge_iff_weak_norm_converge (x : ℕ → H) (p : H) :
+  Tendsto x atTop (nhds p) ↔
+  WeakConverge x p ∧ Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖) := by
+  constructor
+  · intro h
+    constructor
+    · exact strong_converge_then_weak_converge x p h
+    exact Tendsto.norm h
+  intro ⟨h1,h2⟩
+  sorry
+
 
 variable {F : Type*}
 -- variable [AddCommMonoid F][Module ℝ F][WeakBilin B F]
