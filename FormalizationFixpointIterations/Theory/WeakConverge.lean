@@ -161,9 +161,13 @@ theorem weakConverge_iff_inner_converge' (x : ℕ → H) (p : H) : WeakConverge 
 #check IsSeqCompact
 #check IsSeqClosed
 
-def IsWeaklyCompact (s : Set H) := IsCompact (s : Set (WeakBilin innerBilin))
-def IsWeaklySeqClosed (s : Set H) := IsSeqClosed (s : Set (WeakBilin innerBilin))
-
+def IsWeaklyCompact (s : Set H) :=
+  @IsCompact (WeakBilin innerBilin) _ (s : Set (WeakBilin innerBilin))
+-- def IsWeaklySeqClosed (s : Set H) := IsSeqClosed (s : Set (WeakBilin innerBilin))
+def IsWeaklySeqClosed (s : Set H) :=
+  @IsSeqClosed (WeakBilin innerBilin) _ (s : Set (WeakBilin innerBilin))
+def IsWeaklyClosed (s : Set H) :=
+  @IsClosed (WeakBilin innerBilin) _ (s : Set (WeakBilin innerBilin))
 
 #check exists_orthonormalBasis
 
@@ -273,12 +277,13 @@ theorem norm_weakly_lsc (x : ℕ → H) (p : H) (h : WeakConverge x p) :
 
 -- Lemma 2.51 (i)
 theorem weak_converge_limsup_le_iff_strong_converge (x : ℕ → H) (p : H) :
-  WeakConverge x p ∧ limsup (fun n => ‖x n‖) atTop ≤ ‖p‖ ↔
+  WeakConverge x p ∧ limsup (fun n => Real.toEReal ‖x n‖) atTop ≤ Real.toEReal ‖p‖ ↔
   Tendsto x atTop (nhds p) := by
   have : liminf (fun n => ‖x n‖) atTop ≤ limsup (fun n => ‖x n‖) atTop := by
     sorry
   sorry
 
+-- Corollary 2.52
 theorem strong_converge_iff_weak_norm_converge (x : ℕ → H) (p : H) :
   Tendsto x atTop (nhds p) ↔
   WeakConverge x p ∧ Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖) := by
@@ -290,6 +295,22 @@ theorem strong_converge_iff_weak_norm_converge (x : ℕ → H) (p : H) :
   intro ⟨h1,h2⟩
   sorry
 
+-- Theorem 3.34 (i) → (ii)
+theorem convex_weakly_seq_closed (s : Set H) (hw : IsWeaklySeqClosed s) : IsSeqClosed s :=
+  fun x p hxn hx => @hw x p hxn ((strong_converge_iff_weak_norm_converge x p).1 hx).1
+
+-- Theorem 3.34 (ii) ↔ (iii)
+#check isSeqClosed_iff_isClosed
+
+-- Theorem 3.34 (iii) → (iv), needs the definition of projection operator
+theorem closed_is_weakly_closed (s : Set H) (hs : Convex ℝ s) (hw : IsClosed s) :
+  IsWeaklyClosed s := by sorry
+
+-- Theorem 3.34 (iv) → (i)
+theorem weakly_closed_seq_closed (s : Set H) (hs : IsWeaklyClosed s) : IsWeaklySeqClosed s := by
+  simp [IsWeaklyClosed] at hs
+  simp [IsWeaklySeqClosed]
+  exact IsClosed.isSeqClosed hs
 
 variable {F : Type*}
 -- variable [AddCommMonoid F][Module ℝ F][WeakBilin B F]
