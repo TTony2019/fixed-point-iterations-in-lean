@@ -1,6 +1,8 @@
 import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Topology.Algebra.Module.WeakBilin
 import Mathlib.Analysis.InnerProductSpace.ProdL2
+import Mathlib.Topology.Algebra.Group.Basic
+import Mathlib.Analysis.InnerProductSpace.Continuous
 
 open WeakBilin Filter
 
@@ -78,6 +80,8 @@ def WeakClusterPt (p : H) (F : Filter H) :=
 
 #check WeakClusterPt
 #check ClusterPt.mem_closure_of_mem
+#check closure
+#check nhds
 variable (p : H) (F : Filter H)
 -- #check WeakClusterPt p F
 
@@ -128,13 +132,28 @@ lemma tendsto_iff_weakConverge
 theorem weakConverge_iff_inner_converge (x : ℕ → H) (p : H) : WeakConverge x p ↔
   ∀ y : H, Tendsto (fun n ↦ ⟪x n, y⟫) atTop (nhds ⟪p, y⟫) := tendsto_iff_weakConverge x p
 
+#check tendsto_sub_nhds_zero_iff
+
+
+
+
+omit [InnerProductSpace ℝ H] in--意思是这里的证明没有用到内积的性质，所以在这里直接忽略内积也能证明
 lemma tendsto_iff_sub_tendsto_zero (x : ℕ → H) (p : H) : Tendsto (fun n ↦ x n) atTop (nhds p)
-  ↔ Tendsto (fun n ↦ x n - p) atTop (nhds 0) := by sorry
+  ↔ Tendsto (fun n ↦ x n - p) atTop (nhds 0) := by
+  exact Iff.symm tendsto_sub_nhds_zero_iff
+
+
+
+
+
+
 
 lemma tendsto_iff_sub_tendsto_zero_inner (x : ℕ → H) (p : H) (y : H) :
   Tendsto (fun n ↦ ⟪x n, y⟫) atTop (nhds ⟪p, y⟫)
   ↔ Tendsto (fun n ↦ ⟪x n - p, y⟫) atTop (nhds 0) := by
-  have hfun (y : H): (fun n ↦ ⟪x n - p, y⟫) = (fun n ↦ ⟪x n, y⟫ - ⟪p, y⟫) := by sorry
+  have hfun (y : H): (fun n ↦ ⟪x n - p, y⟫) = (fun n ↦ ⟪x n, y⟫ - ⟪p, y⟫) := by
+    ext n
+    simp [inner_sub_left]
   rw [hfun y]
   constructor
   · intro h
@@ -171,15 +190,72 @@ def IsWeaklyClosed (s : Set H) :=
 
 #check exists_orthonormalBasis
 
-theorem seq_converge_iff_norm_converge (x : ℕ → H) (p : H) :
-  Tendsto x atTop (nhds p) ↔ Tendsto (fun n => ‖x n - p‖^2) atTop (nhds 0) := sorry
 
+
+omit [InnerProductSpace ℝ H] in
+theorem seq_converge_iff_norm_converge (x : ℕ → H) (p : H) :
+  Tendsto x atTop (nhds p) ↔ Tendsto (fun n => ‖x n - p‖^2) atTop (nhds 0) := by
+  constructor
+  · intro h
+    rw [tendsto_iff_sub_tendsto_zero] at h
+    rw [Metric.tendsto_atTop]
+    intro ε hε
+    rw [Metric.tendsto_atTop] at h
+    obtain ⟨N, hN⟩ := h (Real.sqrt ε) (Real.sqrt_pos.mpr hε)
+    use N
+    intro n hn
+    specialize hN n hn
+    simp [dist] at *
+    refine Real.sq_lt.mpr ?_
+    constructor
+    · have nonneg : 0 ≤ ‖x n - p‖ := by
+        exact norm_nonneg (x n - p)
+      have lt: -√ε < 0 := by linarith
+      exact lt_of_le_of_lt' nonneg lt
+    exact hN
+  intro h
+  rw [tendsto_iff_sub_tendsto_zero]
+  rw [Metric.tendsto_atTop]
+  intro ε hε
+  rw [Metric.tendsto_atTop] at h
+  obtain ⟨N, hN⟩ := h (ε ^ 2) (sq_pos_of_pos hε)
+  use N
+  intro n hn
+  specialize hN n hn
+  simp [dist] at *
+  apply Real.sq_lt.mp at hN
+  rcases hN with ⟨h1, h2⟩
+  have:√(ε ^ 2) = ε := by
+    rw [Real.sqrt_sq hε.le]
+  rw [this] at h2
+  exact h2
+
+
+
+
+omit [NormedAddCommGroup H] [InnerProductSpace ℝ H] in
 theorem tsum_tendsto_zero (w : Finset H) (f : {x//x ∈ w} → ℕ → ℝ)
   (h : ∀ i : {x//x ∈ w}, Tendsto (f i) atTop (nhds 0)):
-  Tendsto (fun n => ∑ i : {x//x ∈ w}, f i n) atTop (nhds 0) := by sorry
+  Tendsto (fun n => ∑ i : {x//x ∈ w}, f i n) atTop (nhds 0) := by
+  have h_sum : Tendsto (fun n => ∑ i : {x//x ∈ w}, f i n) atTop
+    (nhds (∑ i : {x//x ∈ w}, (0 : ℝ))) := by
+    apply tendsto_finset_sum
+    intro i _
+    exact h i
+  simp only [Finset.sum_const_zero] at h_sum
+  exact h_sum
+
+
+
+
+#check IsOpen
+
+
 
 theorem tendsto_norm_congr (x : ℕ → ℝ) (h : Tendsto x atTop (nhds 0)) :
-  Tendsto (fun n => ‖x n‖^2) atTop (nhds 0) := by sorry
+  Tendsto (fun n => ‖x n‖^2) atTop (nhds 0) := by
+  convert (seq_converge_iff_norm_converge x 0).mp h
+  simp
 
 theorem finite_weak_converge_iff_converge [FiniteDimensional ℝ H] (x : ℕ → H) (p : H)
   (h : WeakConverge x p) : Tendsto x atTop (nhds p) := by
@@ -200,10 +276,12 @@ theorem finite_weak_converge_iff_converge [FiniteDimensional ℝ H] (x : ℕ →
 
 theorem strong_converge_then_weak_converge (x : ℕ → H) (p : H)
   (h : Tendsto x atTop (nhds p)) : WeakConverge x p := by
-  apply (weakConverge_iff_inner_converge' x p).2
+  rw [weakConverge_iff_inner_converge]
   intro y
-  have (n:ℕ): ⟪x n - p, y⟫ ≤ ‖x n - p‖ * ‖y‖ := by sorry
-  sorry
+  have hy : Tendsto (fun _ : ℕ => y) atTop (nhds y) := tendsto_const_nhds
+  simpa using (Filter.Tendsto.inner (𝕜:=ℝ) (E:=H) h hy)
+
+
 
 
 #check limsup
@@ -230,16 +308,26 @@ theorem lim_inner_seq_eq_norm (x : ℕ → H) (p : H) (h : WeakConverge x p) :
 #check EReal.tendsto_coe.mp
 
 -- Right hand side of Lemma 2.42
+--此处Real.toEReal是把实数拓展到了包含无限的扩展实数上
 lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (nhds p))
   (hxy : ∀ n, x n ≤ y n) : Real.toEReal p ≤ liminf (fun n => Real.toEReal (y n)) atTop := by
-
   simp [liminf, limsInf]
   let s : Set EReal := {a : EReal | ∃ N, ∀ (n : ℕ), N ≤ n → (a ≤ y n)}
   change p ≤ sSup s
   have h1 : ∀ (ε : ℝ) , ε > 0 → Real.toEReal (p - ε) ∈ s := by
     intro ε hε
     simp [s]
-    sorry
+    obtain ⟨N, hN⟩ := Metric.tendsto_atTop.mp h ε hε  -- 从 Tendsto 得到 ε-N 条件
+    use N
+    intro n hn
+    specialize hN n hn  -- hN: |x n - p| < ε
+    rw [Real.dist_eq] at hN  -- |x n - p| < ε，即 p - ε < x n < p + ε
+    have p_lt_xn : p - ε < x n := by
+      exact sub_lt_of_abs_sub_lt_left hN
+    have xn_lt_yn : x n ≤ y n := hxy n  -- 从假设 hxy: ∀ n, x n ≤ y n
+    have : p - ε < y n := by linarith
+    rw [← EReal.coe_lt_coe_iff] at this
+    exact le_of_lt this
   have h2 : ∀ (ε : ℝ) , ε > 0 → p - ε ≤ sSup s := by
     intro ε hε
     apply le_sSup
@@ -252,11 +340,8 @@ lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (
     rw [this] at h2
     specialize h2 1 (by simp)
     rw [← EReal.coe_sub] at h2
-    -- simp at h2
-    have : Real.toEReal p = ⊥ := by
-      simp at h2
-      sorry
-    simpa
+    simp at h2
+    exact EReal.coe_ne_bot (p - 1) h2
   lift (sSup s) to ℝ using ⟨hs1,hs2⟩ with d
   rw [EReal.coe_le_coe_iff]
   have h2' : ∀ ε > 0, p - ε ≤ d := by
