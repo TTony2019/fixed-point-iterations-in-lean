@@ -3,8 +3,13 @@ import Mathlib.Topology.Algebra.Module.WeakBilin
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Topology.Algebra.Group.Basic
 import Mathlib.Analysis.InnerProductSpace.Continuous
+import Mathlib.Topology.Instances.EReal.Lemmas
+import Mathlib.Order.Filter.ENNReal
+import Mathlib.Order.LiminfLimsup
 
 open WeakBilin Filter
+
+
 
 #check WeakDual
 #check WeakBilin
@@ -350,22 +355,78 @@ lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (
     rwa [← EReal.coe_sub, EReal.coe_le_coe_iff] at h2
   exact le_of_forall_sub_le h2'
 
+
+#check EReal.limsup_neg
+#check ENNReal.limsup_const_mul--用这个把常数移到外面
+
+
+
+
+
 -- Lemma 2.42
 theorem norm_weakly_lsc (x : ℕ → H) (p : H) (h : WeakConverge x p) :
   Real.toEReal ‖p‖ ≤ liminf (fun n => Real.toEReal ‖x n‖) atTop := by
   let x' := fun (n:ℕ) => ⟪x n, p⟫
-  let y' := fun (n:ℕ) => ‖x n‖
-  apply EReal.limit_le_liminf x' y'
-  · sorry
+  let y' := fun (n:ℕ) => ‖x n‖*‖p‖
+  have hxy : ∀ n, x' n ≤ y' n := by
+    intro n
+    exact real_inner_le_norm (x n) p
+  have h1 : Tendsto x' atTop (nhds (‖p‖^2)) := by
+    apply lim_inner_seq_eq_norm x p h
+  have h_lim : Real.toEReal (‖p‖^2) ≤ liminf (fun n => Real.toEReal (y' n)) atTop :=
+    EReal.limit_le_liminf x' y' (‖p‖^2) h1 hxy
+  simp [y'] at h_lim
+  have h2 : liminf (fun n ↦ Real.toEReal (‖x n‖ * ‖p‖)) atTop
+  = (liminf (fun n ↦ Real.toEReal ‖x n‖) atTop) * Real.toEReal ‖p‖ := by
+    by_cases hpnorm : ‖p‖ = 0
+    · simp [hpnorm]
+    push_neg at hpnorm
+    have nonneg : 0 < ‖p‖ := by
+      apply norm_pos_iff.mpr
+      exact norm_ne_zero_iff.mp hpnorm
+    have h3 : limsup (fun n ↦ - (Real.toEReal (‖x n‖ * ‖p‖) )) atTop
+      = -(liminf (fun n ↦ Real.toEReal (‖x n‖ * ‖p‖)) atTop) := by
+      exact EReal.limsup_neg
+    have h3': limsup (fun n ↦ - (Real.toEReal ‖x n‖ * Real.toEReal ‖p‖)) atTop =
+    limsup (fun n ↦ Real.toEReal ‖p‖ * Real.toEReal (-‖x n‖)) atTop:=by
+      congr
+      ext n
+      simp
+      exact EReal.mul_comm ↑‖x n‖ ↑‖p‖
+    have h4 : limsup (fun n ↦ - (Real.toEReal ‖x n‖)) atTop
+      = -(liminf (fun n ↦ Real.toEReal ‖x n‖) atTop) := by
+      exact EReal.limsup_neg
+    have h4': - limsup (fun n ↦ -Real.toEReal ‖x n‖) atTop = liminf (fun n ↦ Real.toEReal ‖x n‖) atTop := by
+      rw [h4]
+      rw [neg_neg]
+    have h4'': limsup (fun n ↦ -Real.toEReal ‖x n‖ ) atTop * Real.toEReal ‖p‖ =
+    Real.toEReal ‖p‖ * limsup (fun n ↦ Real.toEReal (-‖x n‖) ) atTop :=by
+      rw [EReal.mul_comm]
+      congr
+    rw [← neg_inj]
+    rw[← h3, ← h4']
+    simp
+    rw [h3',h4'']
+
+
+
+
+  --rw [h2] at h_lim
+  --然后h_lim两端消去一个‖p‖即可
   sorry
 
 
+
+
+#check liminf_le_limsup
 -- Lemma 2.51 (i)
 theorem weak_converge_limsup_le_iff_strong_converge (x : ℕ → H) (p : H) :
   WeakConverge x p ∧ limsup (fun n => Real.toEReal ‖x n‖) atTop ≤ Real.toEReal ‖p‖ ↔
   Tendsto x atTop (nhds p) := by
   have : liminf (fun n => ‖x n‖) atTop ≤ limsup (fun n => ‖x n‖) atTop := by
-    sorry
+    apply liminf_le_limsup
+
+
   sorry
 
 -- Corollary 2.52
