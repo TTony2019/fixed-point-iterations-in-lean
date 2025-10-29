@@ -33,6 +33,8 @@ variable [NormedAddCommGroup α]
 
 def Fix (T : α → α) : Set α := {x | IsFixedPt T x}
 
+def Fix' (T : α → α) (D : Set α) : Set α := {x | x ∈ D ∧ T x = x}
+
 def Firmly_Nonexpansive (T : α → α) :=
   ∀ x y, ‖T x - T y‖^2 + ‖(x - T x) - (y - T y)‖^2 < ‖x - y‖^2
 
@@ -43,19 +45,19 @@ def Firmly_QuasiNonexpansive (T : α → α) :=
   ∀ x y, IsFixedPt T y → ‖T x - y‖^2 + ‖T x - x‖^2 ≤ ‖x - y‖^2
 
 def Firmly_QuasiNonexpansiveOn (T : α → α) (s : Set α) :=
-  ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, IsFixedPt T y → ‖T x - y‖^2 + ‖T x - x‖^2 ≤ ‖x - y‖^2
+  ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, Fix' T s y → ‖T x - y‖^2 + ‖T x - x‖^2 ≤ ‖x - y‖^2
 
 def QuasiNonexpansive (T : α → α) :=
   ∀ x y, IsFixedPt T y → ‖T x - y‖ ≤ ‖x - y‖
 
 def QuasiNonexpansiveOn (T : α → α) (s : Set α) :=
-  ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, IsFixedPt T y → ‖T x - y‖ ≤ ‖x - y‖
+  ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, Fix' T s y → ‖T x - y‖ ≤ ‖x - y‖
 
 def Strictly_QuasiNonexpansive (T : α → α) :=
   ∀ x, ¬ IsFixedPt T x → ∀ y, IsFixedPt T y → ‖T x - y‖ < ‖x - y‖
 
 def Strictly_QuasiNonexpansiveOn (T : α → α) (s : Set α) :=
-  ∀ x, x ∈ s ∧ (¬ IsFixedPt T x) → ∀ y, IsFixedPt T y → ‖T x - y‖ < ‖x - y‖
+  ∀ x, x ∈ s ∧ (¬ IsFixedPt T x) → ∀ y, Fix' T s y → ‖T x - y‖ < ‖x - y‖
 
 end defn_firmly_nonexpansive
 
