@@ -33,7 +33,7 @@ variable [NormedAddCommGroup α]
 
 def Fix (T : α → α) : Set α := {x | IsFixedPt T x}
 
-def Fix' (T : α → α) (D : Set α) : Set α := {x | x ∈ D ∧ T x = x}
+def Fix' (T : α → α) (D : Set α) : Set α := {x | x ∈ D ∧ IsFixedPt T x}
 
 def Firmly_Nonexpansive (T : α → α) :=
   ∀ x y, ‖T x - T y‖^2 + ‖(x - T x) - (y - T y)‖^2 < ‖x - y‖^2
