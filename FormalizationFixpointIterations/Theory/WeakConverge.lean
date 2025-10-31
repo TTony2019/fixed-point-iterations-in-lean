@@ -15,8 +15,6 @@ import Mathlib.Order.LiminfLimsup
 import Mathlib.Data.EReal.Inv
 import Mathlib.Order.WithBot
 
-
-
 open WeakBilin Filter
 
 
@@ -185,8 +183,7 @@ def IsWeaklyClosed (s : Set H) := @IsClosed (W H) _ (s : Set (W H))
 
 
 
-omit [InnerProductSpace ℝ H] in
-theorem seq_converge_iff_norm_converge (x : ℕ → H) (p : H) :
+omit [InnerProductSpace ℝ H] in theorem seq_converge_iff_norm_converge (x : ℕ → H) (p : H) :
   Tendsto x atTop (nhds p) ↔ Tendsto (fun n => ‖x n - p‖^2) atTop (nhds 0) := by
   constructor
   · intro h
@@ -226,8 +223,8 @@ theorem seq_converge_iff_norm_converge (x : ℕ → H) (p : H) :
 
 
 
-omit [NormedAddCommGroup H] [InnerProductSpace ℝ H] in
-theorem tsum_tendsto_zero (w : Finset H) (f : {x//x ∈ w} → ℕ → ℝ)
+omit [NormedAddCommGroup H] [InnerProductSpace ℝ H] in theorem tsum_tendsto_zero
+  (w : Finset H) (f : {x//x ∈ w} → ℕ → ℝ)
   (h : ∀ i : {x//x ∈ w}, Tendsto (f i) atTop (nhds 0)):
   Tendsto (fun n => ∑ i : {x//x ∈ w}, f i n) atTop (nhds 0) := by
   have h_sum : Tendsto (fun n => ∑ i : {x//x ∈ w}, f i n) atTop
@@ -247,8 +244,8 @@ theorem tsum_tendsto_zero (w : Finset H) (f : {x//x ∈ w} → ℕ → ℝ)
 
 theorem tendsto_norm_congr (x : ℕ → ℝ) (h : Tendsto x atTop (nhds 0)) :
   Tendsto (fun n => ‖x n‖^2) atTop (nhds 0) := by
-  convert (seq_converge_iff_norm_converge ℝ x 0).mp h
-  simp
+  rw[← sub_zero x]
+  exact (seq_converge_iff_norm_converge ℝ x 0).mp h
 
 theorem finite_weak_converge_iff_converge [FiniteDimensional ℝ H] (x : ℕ → H) (p : H)
   (h : WeakConverge H x p) : Tendsto x atTop (nhds p) := by
