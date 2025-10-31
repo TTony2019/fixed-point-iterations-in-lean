@@ -120,7 +120,9 @@ theorem weakConverge_iff_inner_converge (x : ℕ → H) (p : H) : WeakConverge H
 
 
 omit [InnerProductSpace ℝ H] in--意思是这里的证明没有用到内积的性质，所以在这里直接忽略内积也能证明
-lemma tendsto_iff_sub_tendsto_zero (x : ℕ → H) (p : H) : Tendsto (fun n ↦ x n) atTop (nhds p)
+@[simp]
+lemma tendsto_iff_sub_tendsto_zero {G : Type*} [NormedAddCommGroup G]
+  (x : ℕ → G) (p : G) : Tendsto x atTop (nhds p)
   ↔ Tendsto (fun n ↦ x n - p) atTop (nhds 0) := by
   exact Iff.symm tendsto_sub_nhds_zero_iff
 
@@ -139,13 +141,11 @@ lemma tendsto_iff_sub_tendsto_zero_inner (x : ℕ → H) (p : H) (y : H) :
   rw [hfun y]
   constructor
   · intro h
-    sorry
-    -- apply (tendsto_iff_sub_tendsto_zero H (fun n ↦ ⟪x n, y⟫) ⟪p, y⟫).1
-    -- exact h
+    apply (tendsto_iff_sub_tendsto_zero (fun n ↦ ⟪x n, y⟫) ⟪p, y⟫).1
+    exact h
   intro h
-  sorry
-  -- apply (tendsto_iff_sub_tendsto_zero H (fun n ↦ ⟪x n, y⟫) ⟪p, y⟫).2
-  -- exact h
+  apply (tendsto_iff_sub_tendsto_zero (fun n ↦ ⟪x n, y⟫) ⟪p, y⟫).2
+  exact h
 
 
 theorem weakConverge_iff_inner_converge' (x : ℕ → H) (p : H) : WeakConverge H x p ↔
@@ -583,7 +583,7 @@ theorem weak_converge_limsup_le_iff_strong_converge (x : ℕ → H) (p : H) :
     have hnorm : Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖) := by
       simpa using hlim
     have hsub : Tendsto (fun n => x n - p) atTop (nhds 0) := by
-      apply (tendsto_iff_sub_tendsto_zero H x p).1
+      apply (tendsto_iff_sub_tendsto_zero x p).1
       apply (seq_converge_iff_norm_converge H x p).2
       have eq2:∀ n, ‖x n - p‖ ^2 = ‖x n‖^2 - 2 * ⟪x n, p⟫ + ‖p‖^2 := by
         intro n
