@@ -14,7 +14,7 @@ import Mathlib.Data.Set.Function
 open Nonexpansive_operator Filter Topology BigOperators Function
 set_option linter.unusedSectionVars false
 set_option linter.unusedVariables false
-set_option maxHeartbeats 999999999
+-- set_option maxHeartbeats 999999999
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 variable {H : Type*}
@@ -74,7 +74,9 @@ lemma prod_exp_sum
   intro x hx
   exact log_ineq (alg.α x) (h_α_range x)
 
-lemma infinite_prod_zero {T : H → H}
+-- 30.4
+lemma infinite_prod_zero
+  {T : H → H}
   (alg : Halpern T)
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N,
@@ -145,7 +147,7 @@ lemma infinite_prod_zero {T : H → H}
     · exact h_prod_le n hn
     · simp [Finset.Icc_eq_empty_of_lt (Nat.not_le.mp hn)]
 
--- prop 4.23(i)
+-- 4.23(i)
 -- 拟非扩张映射的不动点集刻画
 theorem quasinonexpansive_fixedPoint_characterization
   {D : Set H}
@@ -469,8 +471,7 @@ lemma halpern_mu_bound
   :
   ∃ μ : ℝ, μ > 0 ∧
     (∀ n, ‖alg.x (n + 1) - alg.x n‖ ≤ μ) ∧
-    (∀ n, ‖alg.u - T (alg.x n)‖ ≤ μ) :=
-by
+    (∀ n, ‖alg.u - T (alg.x n)‖ ≤ μ) := by
   -- 取各自的上界
   obtain ⟨M1, hM1⟩ := h_diff_bounded
   obtain ⟨M2, hM2⟩ := h_Tx_bounded
@@ -529,7 +530,8 @@ by
               have := hM3 0; exact le_trans (norm_nonneg _) this
             linarith
 
---‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +(1-λ(n+1))*∏‖x(n+1)-x(n)‖
+
+-- ‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +(1-λ(n+1))*∏‖x(n+1)-x(n)‖
 lemma halpern_telescoping_bound
   {x : ℕ → H} {α : ℕ → ℝ} {μ : ℝ}
   (hμ_nonneg : 0 ≤ μ)
@@ -608,7 +610,7 @@ lemma halpern_telescoping_bound
                   · linarith
                   · linarith
 
---x(n+2)-x(n+1)=λ(n+1)-λn)•(u-T xn)+(1-λ(n+1))•(T x(n+1)-T xn)
+-- x(n+2)-x(n+1)=λ(n+1)-λn)•(u-T xn)+(1-λ(n+1))•(T x(n+1)-T xn)
 lemma halpern_diff_formula
   {T : H → H}
   (alg : Halpern T)
@@ -644,7 +646,7 @@ lemma halpern_diff_formula
           simp
           rw [smul_sub]
 
---‖x(n+2)-x(n+1)‖≤μ*|λ(n+1)-λn|+(1-λ(n+1))‖x(n+1)-x(n)‖
+-- ‖x(n+2)-x(n+1)‖≤μ*|λ(n+1)-λn|+(1-λ(n+1))‖x(n+1)-x(n)‖
 lemma halpern_norm_diff_ineq
   {T : H → H}
   (alg : Halpern T)
@@ -701,7 +703,7 @@ lemma halpern_norm_diff_ineq
         (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖ := by
           rw [mul_comm]
 
---‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +μ *∏‖x(n+1)-x(n)‖
+-- ‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +μ *∏‖x(n+1)-x(n)‖
 lemma halpern_telescoping_ineq
   {T : H → H}
   (alg : Halpern T)
@@ -739,7 +741,7 @@ lemma halpern_telescoping_ineq
             simp [Set.mem_Ioo] at h_range
             linarith
 
---lim ‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +μ *∏‖x(n+1)-x(n)‖
+-- lim ‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +μ *∏‖x(n+1)-x(n)‖
 lemma halpern_telescoping_limit
   {T : H → H}
   (alg : Halpern T)
@@ -785,7 +787,7 @@ lemma halpern_telescoping_limit
             simp [Set.mem_Ioo] at h_range
             linarith
 
---∑k∈ Finset.Icc m n, fk +∑'k,f(k+n+1)=∑'k,f(k+m)
+-- ∑k∈ Finset.Icc m n, fk +∑'k,f(k+n+1)=∑'k,f(k+m)
 lemma sum_icc_add_tsum_eq_tsum_add
   {f : ℕ → ℝ}
   (hf : Summable f)
@@ -832,7 +834,7 @@ lemma sum_icc_add_tsum_eq_tsum_add
     rw [h_split, h_finset_eq]
   rw [h_decomp]
 
---lim_m n → ∞, μ * ∑k∈ Finset.Icc m n, |λ(k+1)-λk| =0
+-- lim_m n → ∞, μ * ∑ k∈Finset.Icc m n,|λ(k+1)-λk| =0
 lemma halpern_sum_tail_tendsto_zero
   {T : H → H}
   (alg : Halpern T)
@@ -872,7 +874,234 @@ lemma halpern_sum_tail_tendsto_zero
         _ = ε := by field_simp [ne_of_gt hμ_pos]
   exact this
 
+-- lim_n → ∞, μ * ∏ k∈Finset.Icc m n,(1-λ(k+1))=0
+lemma halpern_prod_tail_tendsto_zero
+  {T : H → H}
+  (alg : Halpern T)
+  (μ : ℝ)
+  (hμ_pos : μ > 0)
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
+  (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
+  : ∀ ε > 0, ∀ m : ℕ, ∀ᶠ n in atTop, m ≤ n →
+      μ * ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) < ε := by
+  intros ε hε m
 
+  -- 第一步：建立函数相等性
+  have h_reindex : (fun n ↦ ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)))
+      = (fun n ↦ ∏ k ∈ Finset.Icc (m + 1) (n + 1), (1 - alg.α k)) := by
+    ext n
+    by_cases hn : n ≥ m
+    · -- 当 n ≥ m 时
+      let g := fun k => k + 1
+      let s := Finset.Icc m n
+      let f := fun k => 1 - alg.α k
+      have hf : Set.InjOn g ↑s := by
+        intros x hx y hy hxy
+        exact Nat.succ_inj.mp hxy
+      rw [← Finset.prod_image (s := s) (f := f) (g := g) hf]
+      congr
+      ext k
+      simp only [Finset.mem_image, Finset.mem_Icc]
+      constructor
+      · rintro ⟨x, hx, rfl⟩
+        constructor
+        · simp [g, s] at *
+          rcases hx with ⟨hxm, hxn⟩
+          linarith
+        · simp [g, s] at *
+          rcases hx with ⟨hxm, hxn⟩
+          linarith
+      · intro hk
+        use k - 1
+        constructor
+        · rcases hk with ⟨hk1, hk2⟩
+          simp [s, g] at *
+          constructor
+          · exact Nat.le_sub_one_of_lt hk1
+          · linarith
+        rcases hk with ⟨hk1, hk2⟩
+        simp [s, g] at *
+        refine Nat.sub_add_cancel ?_
+        have : 1 ≤ k := by
+          calc 1 ≤ m + 1 := by linarith
+          _ ≤ k := hk1
+        linarith
+    · -- 当 n < m 时，两边都是 1
+      have h_empty1 : Finset.Icc m n = ∅ := by
+        ext x
+        simp [Finset.mem_Icc]
+        simp at *
+        intro hx
+        linarith
+      have h_empty2 : Finset.Icc (m + 1) (n + 1) = ∅ := by
+        ext x
+        simp [Finset.mem_Icc]
+        simp at *
+        intro hx
+        linarith
+      rw [h_empty1, Finset.prod_empty]
+      rw [h_empty2, Finset.prod_empty]
+
+  -- 第二步：证明乘积趋于零
+  have h_prod_tendsto : Tendsto (fun n => ∏ k ∈ Finset.Icc
+    (m + 1) (n + 1), (1 - alg.α k)) atTop (𝓝 0) := by
+    let f : ℕ → ℝ := fun n => ∏ k ∈ Finset.Icc (m + 1) n, (1 - alg.α k)
+    have h_f_tendsto : Tendsto f atTop (𝓝 0) :=
+      infinite_prod_zero alg h_α_range h_α_sum_inf (m + 1) (m + 1) (le_refl _)
+    apply h_f_tendsto.comp
+    exact tendsto_add_atTop_nat 1
+
+  -- 第三步：提取 ε-δ 条件
+  have h_eventually : ∀ᶠ n in atTop, ∏ k ∈ Finset.Icc (m + 1) (n + 1), (1 - alg.α k) < ε / μ := by
+    rw [Metric.tendsto_atTop] at h_prod_tendsto
+    obtain ⟨N, hN⟩ := h_prod_tendsto (ε / μ) (by positivity)
+    rw [eventually_atTop]
+    use N
+    intro n hn
+    have := hN n hn
+    rw [Real.dist_eq] at this
+    simp at this
+    exact lt_of_abs_lt this
+
+  -- 第四步：将条件转化为目标形式
+  rw [eventually_atTop]
+  obtain ⟨N, hN⟩ := (eventually_atTop).mp h_eventually
+  use max m N
+  intro n hn hmn
+  have hn_N : n ≥ N := le_of_max_le_right hn
+  calc
+    μ * ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))
+        = μ * ∏ k ∈ Finset.Icc (m + 1) (n + 1), (1 - alg.α k) := by
+          congr 1
+          exact congrFun h_reindex n
+      _ < μ * (ε / μ) := mul_lt_mul_of_pos_left (hN n hn_N) hμ_pos
+      _ = ε := by field_simp [ne_of_gt hμ_pos]
+
+-- 从范数收敛到向量收敛
+lemma norm_diff_tendsto_zero_iff_diff_tendsto_zero
+  {f : ℕ → H} :
+  Tendsto (fun n => ‖f (n + 2) - f (n + 1)‖) atTop (𝓝 0) ↔
+  Tendsto (fun n => (f (n + 2) - f (n + 1))) atTop (𝓝 0) := by
+  constructor
+  · intro h
+    rw [Metric.tendsto_atTop] at h ⊢
+    intros ε ε_pos
+    obtain ⟨N, hN⟩ := h ε ε_pos
+    use N
+    intro n hn
+    specialize hN n hn
+    rw [Real.dist_eq] at hN
+    simp at hN
+    rw [dist_eq_norm]
+    simp
+    exact hN
+  · intro h
+    rw [Metric.tendsto_atTop] at h ⊢
+    intros ε ε_pos
+    obtain ⟨N, hN⟩ := h ε ε_pos
+    use N
+    intro n hn
+    specialize hN n hn
+    rw [dist_eq_norm] at hN
+    simp at hN
+    rw [Real.dist_eq]
+    simp
+    exact hN
+
+-- 相邻差序列收敛到零
+lemma adjacent_diff_from_shifted
+  {f : ℕ → H} :
+  Tendsto (fun n => (f (n + 2) - f (n + 1))) atTop (𝓝 0) →
+  Tendsto (fun n => (f (n + 1) - f n)) atTop (𝓝 0) := by
+  intro h
+  have : (fun n ↦ f (n + 1) - f n) ∘ (fun n ↦ n + 1) =
+    (fun n ↦ f (n + 2) - f (n + 1)) := by
+    funext n
+    simp only [Function.comp_apply]
+  rw [← this] at h
+  exact (tendsto_add_atTop_iff_nat 1).mp h
+
+-- 合并的主引理
+lemma halpern_norm_diff_limit
+  {T : H → H}
+  (alg : Halpern T)
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
+  (μ : ℝ)
+  (hμ_pos : μ > 0)
+  (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|))
+  (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
+  (hμ_x_bound : ∀ n, ‖alg.x (n + 1) - alg.x n‖ ≤ μ)
+  (h_norm_diff_ineq : ∀ n,
+    ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤
+    μ * |alg.α (n + 1) - alg.α n| +
+    (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖)
+  (h_telescoping : ∀ n m, m ≤ n →
+    ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤
+      μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) +
+      μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)))) :
+  Tendsto (fun n => (alg.x (n + 1) - alg.x n)) atTop (𝓝 0) := by
+  have hμ_nonneg : 0 ≤ μ := le_of_lt hμ_pos
+  have sq_lim_le := halpern_telescoping_limit alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
+  -- 让 n 和 m 趋于 +∞，得到 lim μ ∏ (1 - λₖ₊₁) = 0
+  have sq_lim2 := halpern_prod_tail_tendsto_zero alg μ hμ_pos h_α_range h_α_sum_inf
+  have sq_lim3: ∀ ε > 0, ∀ᶠ m in atTop, ∀ᶠ n in atTop, m ≤ n →
+    μ * ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) < ε := by
+    intro ε ε_pos
+    exact Eventually.mono sq_lim_le fun x a ↦ sq_lim2 ε ε_pos x
+  have sq_lim1 := halpern_sum_tail_tendsto_zero alg μ hμ_pos h_α_diff_finite
+  have sq_lim4 : ∀ ε > 0, ∀ᶠ (m : ℕ) (n : ℕ) in atTop, m ≤ n →
+    μ * ∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k| +
+    μ * ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) < ε := by
+    intros ε ε_pos
+    have h1 := sq_lim1 (ε/2) (by linarith)
+    have h2 := sq_lim3 (ε/2) (by linarith)
+    filter_upwards [h1, h2] with N1 h11 h22
+    filter_upwards [h11, h22] with N2 h111 h222
+    intro hN1N2
+    calc
+        _ < ε/2 + ε/2 := by
+          apply add_lt_add
+          · exact h111 hN1N2
+          · exact h222 hN1N2
+        _ = ε := by ring
+  have sq_lim5 : ∀ ε > 0, ∀ᶠ m in atTop, ∀ᶠ n in atTop, m ≤ n →
+    ‖alg.x (n + 2) - alg.x (n + 1)‖ < ε := by
+    intro ε ε_pos
+    filter_upwards [sq_lim4 ε ε_pos] with N1 h1
+    filter_upwards [h1] with N2 h2
+    intro hN1N2
+    calc
+      ‖alg.x (N2 + 2) - alg.x (N2 + 1)‖
+          ≤ μ * ∑ k ∈ Finset.Icc N1 N2, |alg.α (k + 1) - alg.α k| +
+            μ * ∏ k ∈ Finset.Icc N1 N2, (1 - alg.α (k + 1)) := by
+            apply h_telescoping N2 N1 hN1N2
+        _ < ε := h2 hN1N2
+  have sq_lim5' : ∀ ε > 0, ∀ᶠ n in atTop, ‖alg.x (n + 2) - alg.x (n + 1)‖ < ε := by
+    intro ε ε_pos
+    have h_eventually := sq_lim5 ε ε_pos
+    rw [eventually_atTop] at h_eventually
+    obtain ⟨N, hN⟩ := h_eventually
+    specialize hN N (le_refl N)
+    rw [eventually_atTop] at hN
+    rw [eventually_atTop]
+    rcases hN with ⟨a, ha⟩
+    use max N a
+    intro n hn
+    apply ha
+    · exact le_of_max_le_right hn
+    · exact le_of_max_le_left hn
+  have sq_lim6 : Tendsto (fun n => ‖alg.x (n + 2) - alg.x (n + 1)‖) atTop (𝓝 0) := by
+    rw [Metric.tendsto_atTop]
+    intros ε ε_pos
+    obtain ⟨N, hN⟩ := (eventually_atTop).mp (sq_lim5' ε ε_pos)
+    use N
+    intro n hn
+    rw [Real.dist_eq]
+    simp
+    exact hN n hn
+  have sq_lim7 : Tendsto (fun n => (alg.x (n + 2) - alg.x (n + 1))) atTop (𝓝 0) :=
+    (norm_diff_tendsto_zero_iff_diff_tendsto_zero.1 sq_lim6)
+  exact adjacent_diff_from_shifted sq_lim7
 
 
 
@@ -977,86 +1206,25 @@ theorem halpern_convergence
     have h_telescoping := halpern_telescoping_ineq
       alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
 
-
     -- n趋于无穷且m趋于无穷时，得到 (30.12) 的极限形式
     have sq_lim_le := halpern_telescoping_limit alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
 
     -- 让 n 和 m 趋于 +∞，得到 lim μ Σ |λₖ₊₁ - λₖ| = 0
     have sq_lim1 := halpern_sum_tail_tendsto_zero alg μ hμ_pos h_α_diff_finite
 
+    -- 让 n 趋于 +∞，得到 lim μ ∏ (1 - λₖ₊₁) = 0
+    have sq_lim2 := halpern_prod_tail_tendsto_zero alg μ hμ_pos h_α_range h_α_sum_inf
+
     -- 让 n 和 m 趋于 +∞，得到 lim μ ∏ (1 - λₖ₊₁) = 0
-    have sq_lim2 : ∀ ε > 0, ∀ m : ℕ , ∀ᶠ n in atTop, m ≤ n
-      → μ * ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) < ε := by
-        intros ε hε m
-        have h_reindex : (fun n ↦ ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)))
-            = (fun n ↦ ∏ k ∈ Finset.Icc (m + 1) (n + 1), (1 - alg.α k)) := by
-          ext n
-          by_cases hn : n ≥ m
-          · -- 当 n ≥ m 时
-            let g := fun k => k + 1
-            let s := Finset.Icc m n
-            let f := fun k => 1 - alg.α k
-            have hf : Set.InjOn g ↑s := by
-              intros x hx y hy hxy
-              exact Nat.succ_inj.mp hxy
-            rw [← Finset.prod_image (s := s) (f := f) (g := g) hf]
-            congr
-            ext k
-            simp only [Finset.mem_image, Finset.mem_Icc]
-            constructor
-            · rintro ⟨x, hx, rfl⟩
-              constructor
-              · simp [g, s] at *
-                rcases hx with ⟨hxm, hxn⟩
-                linarith
-              · simp [g, s] at *
-                rcases hx with ⟨hxm, hxn⟩
-                linarith
-            · intro hk
-              use k - 1
-              constructor
-              · rcases hk with ⟨hk1,hk2⟩
-                simp [s, g] at *
-                constructor
-                · exact Nat.le_sub_one_of_lt hk1
-                · linarith
-              rcases hk with ⟨hk1,hk2⟩
-              simp [s, g] at *
-              refine Nat.sub_add_cancel ?_
-              have : 1 ≤ k := by
-                calc 1 ≤ m + 1 := by linarith  -- m ≥ 0 ⇒ 1 ≤ m + 1
-                _ ≤ k := hk1
-              linarith
-          · -- 当 n < m 时，两边都是 1
-            have h_empty1 : Finset.Icc m n = ∅ := by
-              ext x
-              simp [Finset.mem_Icc]
-              simp at *
-              intro hx
-              linarith
-            have h_empty2 : Finset.Icc (m + 1) (n + 1) = ∅ := by
-              ext x
-              simp [Finset.mem_Icc]
-              simp at *
-              intro hx
-              linarith
-            rw [h_empty1, Finset.prod_empty]
-            rw [h_empty2, Finset.prod_empty]
+    have sq_lim3: ∀ ε > 0, ∀ᶠ m in atTop, ∀ᶠ n in atTop, m ≤ n →
+      μ * ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) < ε := by
+      intro ε ε_pos
+      exact Eventually.mono sq_lim_le fun x a ↦ sq_lim2 ε ε_pos x
 
-        have h_prod_tendsto : Tendsto (fun n =>
-          ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) atTop (𝓝 0) := by
-            simp_rw [h_reindex]
-            sorry
-
-        -- 使用 Tendsto 定义得到 ∀ᶠ n, 积 < ε / μ
-        have h_eventually : ∀ᶠ n in atTop, ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) < ε / μ := by
-          apply (tendsto_order.1 h_prod_tendsto).2 (ε / μ) (by positivity)
-        -- 应用到目标
-        filter_upwards [h_eventually] with n hn
-        intro hmn
-        calc μ * ∏ k ∈ Finset.Icc m n,
-          (1 - alg.α (k + 1)) < μ * (ε / μ) := mul_lt_mul_of_pos_left hn hμ_pos
-        _ = ε := by field_simp [ne_of_gt hμ_pos]
+    -- 让 n 和 m 趋于 +∞，得到 xn+1−xn → 0
+    have h_norm_diff_limit := halpern_norm_diff_limit
+      alg h_α_range μ hμ_pos h_α_diff_finite h_α_sum_inf
+      hμ_x_bound h_norm_diff_ineq h_telescoping
 
 
 
@@ -1065,64 +1233,31 @@ theorem halpern_convergence
 
 
 
-    -- 让 n 和 m 趋于 +∞，得到 lim ‖xₙ₊₂ - xₙ₊₁‖ ≤ 0 (30.12 的极限)
-    have h_diff_to_zero : Tendsto (fun n => ‖alg.x (n + 1) - alg.x n‖) atTop (𝓝 0) := by
-      sorry
 
-    -- 因此 xₙ₊₁ - xₙ → 0，由非扩张性得 Txₙ₊₁ - Txₙ → 0 (30.13)
-    have h_Tx_diff_to_zero : Tendsto (fun n => ‖T (alg.x (n + 1)) - T (alg.x n)‖) atTop (𝓝 0) := by
-      sorry
 
-    -- 从迭代公式得到 xₙ₊₁ - Txₙ = λₙ(x - Txₙ)
-    have h_xn_Txn_relation : ∀ n,
-        alg.x (n + 1) - T (alg.x n) = alg.α n • (alg.u - T (alg.x n)) := by
-      intro n
-      sorry
 
-    -- 由于 λₙ → 0 且序列有界，得到 xₙ₊₁ - Txₙ → 0
-    have h_xn_Txn_to_zero : Tendsto (fun n => ‖alg.x (n + 1) - T (alg.x n)‖) atTop (𝓝 0) := by
-      sorry
 
-    -- 结合 (30.13) 得到 xₙ₊₁ - Txₙ₊₁ → 0
-    have h_fixed_point_convergence :
-        Tendsto (fun n => ‖alg.x (n + 1) - T (alg.x (n + 1))‖) atTop (𝓝 0) := by
-      sorry
 
-    -- 由于 {xₙ} 有界，存在弱收敛子列
-    have h_weak_cluster : ∃ p ∈ D, ∃ (φ : ℕ → ℕ), StrictMono φ ∧
-        ∀ d ∈ D, Tendsto (fun k => ⟪alg.x (φ k) - d, d⟫) atTop (𝓝 ⟪p - d, d⟫) := by
-      sorry
 
-    -- p 是 T 的不动点（由 demiclosedness 原理）
-    have h_p_fixed : ∃ p ∈ C, ∃ (φ : ℕ → ℕ), StrictMono φ ∧
-        Tendsto (fun k => alg.x (φ k)) atTop (𝓝[Set.univ] p) := by
-      sorry
 
-    -- 证明整个序列收敛到 p（利用 Opial 引理或类似技巧）
-    have h_full_convergence : ∃ p ∈ C, Tendsto alg.x atTop (𝓝 p) := by
-      sorry
 
-    -- 最后证明 p 是到 u 的变分不等式的解
-    obtain ⟨p, hp_in_C, hp_conv⟩ := h_full_convergence
 
-    use p, hp_in_C, hp_conv
 
-    -- 证明 ⟪u - p, w - p⟫ ≤ 0 对所有 w ∈ C
-    intro w hw_in_C
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     sorry
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  · sorry
+  sorry
