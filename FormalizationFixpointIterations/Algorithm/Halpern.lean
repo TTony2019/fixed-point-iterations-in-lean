@@ -374,11 +374,6 @@ lemma pro_one_sub_le_exp_neg_sum
     exact h_pos k hk
   linarith
 
-
-def A {T : H → H} (alg : Halpern T) (m n : ℕ) := ∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))
-noncomputable def B {T : H → H} (alg : Halpern T) (m n : ℕ) :=
-  Real.exp (- ∑ k ∈ Finset.Icc m n, alg.α (k+1))
-
 lemma halpern_distance_monotone
   {D : Set H}
   (hD_closed : IsClosed D)
@@ -461,6 +456,7 @@ by
               · exact ih.2
         _ = ‖alg.x0 - z‖ := by ring
 
+-- μ is bounded
 lemma halpern_mu_bound
   {D : Set H}
   {T : H → H}
@@ -533,6 +529,7 @@ by
               have := hM3 0; exact le_trans (norm_nonneg _) this
             linarith
 
+--‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +(1-λ(n+1))*∏‖x(n+1)-x(n)‖
 lemma halpern_telescoping_bound
   {x : ℕ → H} {α : ℕ → ℝ} {μ : ℝ}
   (hμ_nonneg : 0 ≤ μ)
@@ -610,6 +607,277 @@ lemma halpern_telescoping_bound
                   · ring_nf
                   · linarith
                   · linarith
+
+--x(n+2)-x(n+1)=λ(n+1)-λn)•(u-T xn)+(1-λ(n+1))•(T x(n+1)-T xn)
+lemma halpern_diff_formula
+  {T : H → H}
+  (alg : Halpern T)
+  : ∀ n,
+    alg.x (n + 2) - alg.x (n + 1) =
+    (alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n)) +
+    (1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (alg.x n)) := by
+  intro n
+  rw [alg.update, alg.update]
+  calc
+    alg.α (n + 1) • alg.u
+    + (1 - alg.α (n + 1)) • T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n))
+    - (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n))
+    = (alg.α (n + 1) • alg.u - alg.α n • alg.u)
+      + ((1 - alg.α (n + 1)) • T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n))
+        - (1 - alg.α n) • T (alg.x n)) := by abel
+    _ = (alg.α (n + 1) - alg.α n) • alg.u
+      + ((1 - alg.α (n + 1)) • T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n))
+        - (1 - alg.α n) • T (alg.x n)) := by
+          rw [sub_smul]
+          simp
+          rw [sub_smul]
+    _ = (alg.α (n + 1) - alg.α n) • alg.u
+      - (alg.α (n + 1) - alg.α n) • T (alg.x n)
+      + (1 - alg.α (n + 1)) • (T (alg.α n • alg.u +
+        (1 - alg.α n) • T (alg.x n)) - T (alg.x n)) := by
+          simp [sub_smul, add_sub, add_comm, smul_sub]
+          abel_nf
+    _ = (alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n))
+      + (1 - alg.α (n + 1)) • (T (alg.α n • alg.u +
+        (1 - alg.α n) • T (alg.x n)) - T (alg.x n)) := by
+          rw [smul_sub]
+          simp
+          rw [smul_sub]
+
+--‖x(n+2)-x(n+1)‖≤μ*|λ(n+1)-λn|+(1-λ(n+1))‖x(n+1)-x(n)‖
+lemma halpern_norm_diff_ineq
+  {T : H → H}
+  (alg : Halpern T)
+  {D : Set H}
+  (hT_nonexp : NonexpansiveOn T D)
+  (halg_x_in_D : ∀ n, alg.x n ∈ D)
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
+  (h_diff_formula : ∀ n,
+    alg.x (n + 2) - alg.x (n + 1) =
+    (alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n)) +
+    (1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (alg.x n)))
+  (μ : ℝ)
+  (hμ_pos : μ > 0)
+  (hμ_Tx_bound : ∀ n, ‖alg.u - T (alg.x n)‖ ≤ μ)
+  : ∀ n,
+      ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤
+      μ * |alg.α (n + 1) - alg.α n| +
+      (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖ := by
+  intro n
+  rw [h_diff_formula n]
+  calc
+    ‖(alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n))
+      + (1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (alg.x n))‖
+      ≤ ‖(alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n))‖
+        + ‖(1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (alg.x n))‖ := by
+          apply norm_add_le
+    _ = |alg.α (n + 1) - alg.α n| * ‖alg.u - T (alg.x n)‖
+        + |1 - alg.α (n + 1)| * ‖T (alg.x (n + 1)) - T (alg.x n)‖ := by
+          rw [norm_smul, norm_smul]
+          norm_cast
+    _ = |alg.α (n + 1) - alg.α n| * ‖alg.u - T (alg.x n)‖
+        + (1 - alg.α (n + 1)) * ‖T (alg.x (n + 1)) - T (alg.x n)‖ := by
+          have h1_minus_α_pos : 0 < 1 - alg.α (n + 1) := by
+            have := h_α_range (n + 1)
+            simp [Set.mem_Ioo] at this
+            linarith
+          rw [abs_of_pos h1_minus_α_pos]
+    _ ≤ |alg.α (n + 1) - alg.α n| * μ
+        + (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖ := by
+          gcongr
+          · exact hμ_Tx_bound n
+          · have h_range := h_α_range (n + 1)
+            simp [Set.mem_Ioo] at h_range
+            linarith
+          have hT_nonexp' := hT_nonexp (halg_x_in_D (n + 1)) (halg_x_in_D n)
+          rw [edist_dist, edist_dist] at hT_nonexp'
+          rw [dist_eq_norm, dist_eq_norm] at hT_nonexp'
+          have h_nonneg : 0 ≤ ‖alg.x (n + 1) - alg.x n‖ := norm_nonneg _
+          simp at hT_nonexp'
+          apply (ENNReal.ofReal_le_ofReal_iff h_nonneg).mp
+          simp
+          exact hT_nonexp'
+    _ = μ * |alg.α (n + 1) - alg.α n| +
+        (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖ := by
+          rw [mul_comm]
+
+--‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +μ *∏‖x(n+1)-x(n)‖
+lemma halpern_telescoping_ineq
+  {T : H → H}
+  (alg : Halpern T)
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
+  (μ : ℝ)
+  (hμ_pos : μ > 0)
+  (hμ_x_bound : ∀ n, ‖alg.x (n + 1) - alg.x n‖ ≤ μ)
+  (h_norm_diff_ineq : ∀ n,
+    ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤
+    μ * |alg.α (n + 1) - alg.α n| +
+    (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖)
+  : ∀ n m, m ≤ n →
+      ‖alg.x (n+2) - alg.x (n+1)‖ ≤
+        μ * (∑ k ∈ Finset.Icc m n, |alg.α (k+1) - alg.α k|)
+          + μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
+    intro n m hmn
+    have hμ_nonneg : 0 ≤ μ := le_of_lt hμ_pos
+    calc
+      ‖alg.x (n+2) - alg.x (n+1)‖
+          ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k+1) - alg.α k|)
+            + ‖alg.x (m+1) - alg.x m‖ *
+              (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
+            apply halpern_telescoping_bound hμ_nonneg h_α_range h_norm_diff_ineq
+            exact hmn
+      _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k+1) - alg.α k|)
+          + μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
+          have hμ_x_diff_bound := hμ_x_bound m
+          have h_norm_diff_nonneg : 0 ≤ ‖alg.x (m + 1) - alg.x m‖ := norm_nonneg _
+          apply add_le_add_left
+          apply mul_le_mul_of_nonneg_right
+          · exact hμ_x_diff_bound
+          · apply Finset.prod_nonneg
+            intro k hk
+            have h_range := h_α_range (k + 1)
+            simp [Set.mem_Ioo] at h_range
+            linarith
+
+--lim ‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +μ *∏‖x(n+1)-x(n)‖
+lemma halpern_telescoping_limit
+  {T : H → H}
+  (alg : Halpern T)
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
+  (μ : ℝ)
+  (hμ_pos : μ > 0)
+  (hμ_x_bound : ∀ n, ‖alg.x (n + 1) - alg.x n‖ ≤ μ)
+  (h_norm_diff_ineq : ∀ n,
+    ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤
+    μ * |alg.α (n + 1) - alg.α n| +
+    (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖)
+  : ∀ᶠ n in atTop, ∀ᶠ m in atTop, m ≤ n →
+      ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤
+        μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) +
+        μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
+  have hμ_nonneg : 0 ≤ μ := le_of_lt hμ_pos
+  have h_telescoping := halpern_telescoping_ineq
+    alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
+
+  apply eventually_atTop.2
+  use 0
+  intro n hn
+  apply eventually_atTop.2
+  use 0
+  intro m hm
+  intro hmn
+  calc
+    ‖alg.x (n + 2) - alg.x (n + 1)‖
+        ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) +
+          ‖alg.x (m + 1) - alg.x m‖ *
+            (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
+            exact halpern_telescoping_bound hμ_nonneg h_α_range h_norm_diff_ineq n m hmn
+    _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) +
+          μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
+          have hμ_x_diff_bound := hμ_x_bound m
+          have h_norm_diff_nonneg : 0 ≤ ‖alg.x (m + 1) - alg.x m‖ := norm_nonneg _
+          apply add_le_add_left
+          apply mul_le_mul_of_nonneg_right
+          · exact hμ_x_diff_bound
+          · apply Finset.prod_nonneg
+            intro k hk
+            have h_range := h_α_range (k + 1)
+            simp [Set.mem_Ioo] at h_range
+            linarith
+
+--∑k∈ Finset.Icc m n, fk +∑'k,f(k+n+1)=∑'k,f(k+m)
+lemma sum_icc_add_tsum_eq_tsum_add
+  {f : ℕ → ℝ}
+  (hf : Summable f)
+  (m n : ℕ)
+  (hmn : m ≤ n) :
+  ∑ k ∈ Finset.Icc m n, f k + ∑' k, f (k + n + 1) = ∑' k, f (k + m) := by
+  -- 首先，分解 ∑' k, f (k + m) 为三部分
+  have h_decomp : ∑' k, f (k + m) =
+      ∑ k ∈ Finset.Icc m n, f k + ∑' k, f (k + n + 1) := by
+    have h_split : ∑' k : ℕ, f (k + m) =
+        ∑ k ∈ Finset.range (n - m + 1), f (k + m) + ∑' k : ℕ, f (k + n + 1) := by
+      have hf_shift : Summable (fun k => f (k + m)) := by
+        apply hf.comp_injective
+        intro a b hab
+        linarith
+      rw [← Summable.sum_add_tsum_nat_add]
+      · congr
+        ext k
+        ring_nf
+        congr 1
+        rw [Nat.Simproc.add_eq_add_le (1 + k + (n - m)) (1 + k) hmn]
+      · assumption
+    have h_finset_eq : ∑ k ∈ Finset.range (n - m + 1), f (k + m) =
+        ∑ k ∈ Finset.Icc m n, f k := by
+      trans ∑ i ∈ Finset.Icc m n, f i
+      · -- 转换求和指标：k ∈ range(n-m+1) ↔ k+m ∈ Icc m n
+        rw [Finset.sum_bij (fun k _ => k + m)]
+        · intro k hk
+          simp only [Finset.mem_range, Finset.mem_Icc] at hk ⊢
+          omega
+        · intro k₁ k₂ _ _ heq
+          omega
+        · intro k hk
+          use k - m
+          simp
+          constructor
+          · simp at hk
+            omega
+          · simp at hk
+            omega
+        · intro i hi
+          rfl
+      simp
+    rw [h_split, h_finset_eq]
+  rw [h_decomp]
+
+--lim_m n → ∞, μ * ∑k∈ Finset.Icc m n, |λ(k+1)-λk| =0
+lemma halpern_sum_tail_tendsto_zero
+  {T : H → H}
+  (alg : Halpern T)
+  (μ : ℝ)
+  (hμ_pos : μ > 0)
+  (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|))
+  : ∀ ε > 0, ∀ᶠ m in atTop, ∀ᶠ n in atTop,
+      m ≤ n → μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) < ε := by
+  intros ε ε_pos
+  let f := fun n => |alg.α (n + 1) - alg.α n|
+  have hf : Summable f := h_α_diff_finite
+  have h_sum_tail : Tendsto (fun m => ∑' k : ℕ, f (k + m)) atTop (𝓝 0) := by
+    exact tendsto_sum_nat_add f
+  have h_eventually_tail : ∀ᶠ m in atTop, ∑' k : ℕ, f (k + m) < ε / μ := by
+    apply (tendsto_order.1 h_sum_tail).2 (ε / μ) (by positivity)
+  have : ∀ᶠ m in atTop, ∀ᶠ n in atTop, m ≤ n → μ * ∑ k ∈ Finset.Icc m n, f k < ε := by
+    filter_upwards [h_eventually_tail] with m hm
+    apply eventually_atTop.2
+    use m
+    intro n hmn hmn'
+    have h_le : ∑ k ∈ Finset.Icc m n, f k ≤ ∑' k : ℕ, f (k + m) := by
+      calc
+        ∑ k ∈ Finset.Icc m n, f k
+            ≤ ∑ k ∈ Finset.Icc m n, f k + ∑' (k : ℕ), f (k + n + 1) := by
+              simp
+              simp [f]
+              apply tsum_nonneg
+              intro k
+              exact abs_nonneg _
+          _ = ∑' (k : ℕ), f (k + m) := by
+              exact sum_icc_add_tsum_eq_tsum_add h_α_diff_finite m n hmn
+    -- 应用到目标
+    calc
+      μ * ∑ k ∈ Finset.Icc m n, f k
+          ≤ μ * ∑' k : ℕ, f (k + m) := by apply mul_le_mul_of_nonneg_left h_le (le_of_lt hμ_pos)
+        _ < μ * (ε / μ) := mul_lt_mul_of_pos_left hm hμ_pos
+        _ = ε := by field_simp [ne_of_gt hμ_pos]
+  exact this
+
+
+
+
+
+
+
 
 #check Fin.sum_Icc_succ
 #check Summable.hasSum_iff_tendsto_nat
@@ -693,212 +961,38 @@ theorem halpern_convergence
       exact D
 
     obtain ⟨μ, hμ_pos, hμ_x_bound, hμ_Tx_bound⟩ := h_mu_bound
+
+
     -- 证明 xₙ₊₂ - xₙ₊₁ = (λₙ₊₁ - λₙ)(x - Txₙ) + (1 - λₙ₊₁)(Txₙ₊₁ - Txₙ) (30.10)
-    have h_diff_formula : ∀ n,
-        alg.x (n + 2) - alg.x (n + 1) =
-        (alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n)) +
-        (1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (alg.x n)) := by
-      intro n
-      rw [alg.update, alg.update]
-      calc
-        alg.α (n + 1) • alg.u
-        + (1 - alg.α (n + 1)) • T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n))
-        - (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n))
-        = (alg.α (n + 1) • alg.u - alg.α n • alg.u)
-          + ((1 - alg.α (n + 1)) • T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n))
-            - (1 - alg.α n) • T (alg.x n)) := by abel
-        _ = (alg.α (n + 1) - alg.α n) • alg.u
-          + ((1 - alg.α (n + 1)) • T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n))
-            - (1 - alg.α n) • T (alg.x n)) := by
-              rw [sub_smul]
-              simp
-              rw [sub_smul]
-        _ = (alg.α (n + 1) - alg.α n) • alg.u
-          - (alg.α (n + 1) - alg.α n) • T (alg.x n)
-          + (1 - alg.α (n + 1)) • (T (alg.α n • alg.u +
-            (1 - alg.α n) • T (alg.x n)) - T (alg.x n)) := by
-              simp [sub_smul, add_sub, add_comm, smul_sub]
-              abel_nf
-        _ = (alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n))
-          + (1 - alg.α (n + 1)) • (T (alg.α n • alg.u +
-            (1 - alg.α n) • T (alg.x n)) - T (alg.x n)) := by
-              rw [smul_sub]
-              simp
-              rw [smul_sub]
+    let h_diff_formula := halpern_diff_formula alg
 
 
+    -- 使用提取出来的范数差分不等式引理(30.11)
+    have h_norm_diff_ineq := halpern_norm_diff_ineq alg hT_nonexp halg_x_in_D h_α_range
+      h_diff_formula μ hμ_pos hμ_Tx_bound
 
-    -- 证明 ‖xₙ₊₂ - xₙ₊₁‖ ≤ μ|λₙ₊₁ - λₙ| + (1 - λₙ₊₁)‖xₙ₊₁ - xₙ‖ (30.11)
-    have h_norm_diff_ineq : ∀ n,
-        ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤
-        μ * |alg.α (n + 1) - alg.α n| +
-        (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖ := by
-      intro n
-      rw [h_diff_formula n]
-      calc
-        ‖(alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n))
-          + (1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (alg.x n))‖
-          ≤ ‖(alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n))‖
-            + ‖(1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (alg.x n))‖ := by
-              apply norm_add_le
-        _ = |alg.α (n + 1) - alg.α n| * ‖alg.u - T (alg.x n)‖
-            + |1 - alg.α (n + 1)| * ‖T (alg.x (n + 1)) - T (alg.x n)‖ := by
-              rw [norm_smul, norm_smul]
-              norm_cast
-        _ = |alg.α (n + 1) - alg.α n| * ‖alg.u - T (alg.x n)‖
-            + (1 - alg.α (n + 1)) * ‖T (alg.x (n + 1)) - T (alg.x n)‖ := by
-              have h1_minus_α_pos : 0 < 1 - alg.α (n + 1) := by
-                have := h_α_range (n + 1)
-                simp [Set.mem_Ioo] at this
-                linarith
-              rw [abs_of_pos h1_minus_α_pos]
-        _ ≤ |alg.α (n + 1) - alg.α n| * μ
-            + (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖ := by
-              gcongr
-              · exact hμ_Tx_bound n
-              · have h_range := h_α_range (n + 1)
-                simp [Set.mem_Ioo] at h_range
-                linarith
-              have hT_nonexp' := hT_nonexp (halg_x_in_D (n + 1)) (halg_x_in_D n)
-              rw [edist_dist, edist_dist] at hT_nonexp'
-              rw [dist_eq_norm, dist_eq_norm] at hT_nonexp'
-              have h_nonneg : 0 ≤ ‖alg.x (n + 1) - alg.x n‖ := norm_nonneg _
-              simp at hT_nonexp'
-              apply (ENNReal.ofReal_le_ofReal_iff h_nonneg).mp
-              simp
-              exact hT_nonexp'
-        _ = μ * |alg.α (n + 1) - alg.α n| +
-            (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖ := by
-              rw [mul_comm]
-
-    -- 对于 n ≥ m，通过归纳证明 (30.12)
     have hμ_nonneg : 0 ≤ μ := by exact le_of_lt hμ_pos
 
-    have h_telescoping :
-    ∀ n m, m ≤ n →
-      ‖alg.x (n+2) - alg.x (n+1)‖ ≤
-        μ * (∑ k ∈ Finset.Icc m n, |alg.α (k+1) - alg.α k|)
-          + μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
-      intro n m hmn
-      calc
-        _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k+1) - alg.α k|)
-          + ‖alg.x (m+1) - alg.x m‖ *
-            (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
-          apply halpern_telescoping_bound
-            (H := H) (x := alg.x) (α := alg.α) (μ := μ)
-            hμ_nonneg
-            (by intro n; exact h_α_range n)
-            (by intro n; exact h_norm_diff_ineq n)
-          exact hmn
-        _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k+1) - alg.α k|)
-          + μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
-            have hμ_x_diff_bound := hμ_x_bound m
-            have h_norm_diff_nonneg : 0 ≤ ‖alg.x (m + 1) - alg.x m‖ := norm_nonneg _
-            apply add_le_add_left
-            apply mul_le_mul_of_nonneg_right
-            · exact hμ_x_diff_bound
-            · apply Finset.prod_nonneg
-              intro k hk
-              have h_range := h_α_range (k + 1)
-              simp [Set.mem_Ioo] at h_range
-              linarith
+    -- 对于 n ≥ m，通过归纳证明 (30.12)
+    have h_telescoping := halpern_telescoping_ineq
+      alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
 
 
     -- n趋于无穷且m趋于无穷时，得到 (30.12) 的极限形式
-    have sq_lim_le : ∀ᶠ n in atTop, ∀ᶠ m in atTop, m ≤ n → ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤
-        μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) +
-        μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
-          apply eventually_atTop.2
-          use 0
-          intro n hn
-          apply eventually_atTop.2
-          use 0
-          intro m hm
-          intro hmn
-          have h_norm_diff := h_telescoping n m hmn
-          calc
-            ‖alg.x (n + 2) - alg.x (n + 1)‖
-                ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) +
-                  ‖alg.x (m + 1) - alg.x m‖ *
-                    (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
-                      exact halpern_telescoping_bound hμ_nonneg h_α_range h_norm_diff_ineq n m hmn
-            _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) +
-                  μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
-                      have hμ_x_diff_bound := hμ_x_bound m
-                      have h_norm_diff_nonneg : 0 ≤ ‖alg.x (m + 1) - alg.x m‖ := norm_nonneg _
-                      apply add_le_add_left
-                      apply mul_le_mul_of_nonneg_right
-                      · exact hμ_x_diff_bound
-                      · apply Finset.prod_nonneg
-                        intro k hk
-                        have h_range := h_α_range (k + 1)
-                        simp [Set.mem_Ioo] at h_range
-                        linarith
+    have sq_lim_le := halpern_telescoping_limit alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
 
     -- 让 n 和 m 趋于 +∞，得到 lim μ Σ |λₖ₊₁ - λₖ| = 0
-    have sq_lim1 : ∀ ε > 0, ∀ᶠ m in atTop, ∀ᶠ n in atTop,
-      m ≤ n → μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) < ε := by
-      intros ε ε_pos
-      -- Step 1: 设 f n := |α_{n+1} - α_n|
-      let f := fun n => |alg.α (n + 1) - alg.α n|
-      have hf : Summable f := h_α_diff_finite
-
-      -- Step 2: 总和 S := ∑' f n
-      let S := ∑' n, f n
-
-      -- Step 3: 尾部级数趋于 0
-      have h_sum_tail : Tendsto (fun m => ∑' k : ℕ, f (k + m)) atTop (𝓝 0) := by
-      -- 利用 Summable 得到尾部趋于 0
-        exact tendsto_sum_nat_add f
-
-      -- Step 4: 对于充分大的 m，尾部和 < ε / μ
-      have h_eventually_tail : ∀ᶠ m in atTop, ∑' k : ℕ, f (k + m) < ε / μ := by
-      -- 从 h_sum_tail 得到
-        apply (tendsto_order.1 h_sum_tail).2 (ε / μ) (by positivity)
-
-      -- Step 5: 综合上述，得到所需不等式
-      have : ∀ᶠ m in atTop, ∀ᶠ n in atTop, m ≤ n → μ * ∑ k ∈ Finset.Icc m n, f k < ε := by
-        -- 对充分大的 m
-        filter_upwards [h_eventually_tail] with m hm
-        -- 对这样的 m，选择 n ≥ m（例如 n = m 即可，因为 ∑_{k=m to m} = f m，可能为 0，但一般 n ≥ m）
-        apply eventually_atTop.2
-        use m  -- 从 m 开始
-        intro n hmn hmn'
-        -- 证明 ∑_{k=m to n} f k ≤ ∑_{k=m to ∞} f k < ε / μ
-        have h_le : ∑ k ∈ Finset.Icc m n, f k ≤ ∑' k : ℕ, f (k + m) := by
-          -- 因为 Finset.Icc m n ⊆ {k | k ≥ m}，且 ∑' 是无穷和的上界
-          -- 使用 tsum_le_tsum 或类似
-          calc
-            _ ≤  ∑ k ∈ Finset.Icc m n, f k + ∑' (k : ℕ), f (k + n + 1):= by
-              simp
-              simp [f]
-              apply tsum_nonneg
-              intro k
-              exact abs_nonneg _
-            _ = ∑' (k : ℕ), f (k + m) := by
-              sorry
-
-
-        -- 现在应用不等式
-        calc μ * ∑ k ∈ Finset.Icc m n, f k ≤
-          μ * ∑' k : ℕ, f (k + m) := mul_le_mul_of_nonneg_left h_le (le_of_lt hμ_pos)
-        _ < μ * (ε / μ) := mul_lt_mul_of_pos_left hm hμ_pos
-        _ = ε := by field_simp [ne_of_gt hμ_pos]
-
-      -- 完成 sq_lim1
-      exact this
+    have sq_lim1 := halpern_sum_tail_tendsto_zero alg μ hμ_pos h_α_diff_finite
 
     -- 让 n 和 m 趋于 +∞，得到 lim μ ∏ (1 - λₖ₊₁) = 0
     have sq_lim2 : ∀ ε > 0, ∀ m : ℕ , ∀ᶠ n in atTop, m ≤ n
       → μ * ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) < ε := by
         intros ε hε m
-        -- 对于每个 m，证明积趋于 0
-        have h_prod_tendsto : Tendsto (fun n =>
-          ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) atTop (𝓝 0) := by
-          have h_reindex : ∀ n ≥ m,
-              ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))
-              = ∏ k ∈ Finset.Icc (m + 1) (n + 1), (1 - alg.α k) := by
-            intro n hn
+        have h_reindex : (fun n ↦ ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)))
+            = (fun n ↦ ∏ k ∈ Finset.Icc (m + 1) (n + 1), (1 - alg.α k)) := by
+          ext n
+          by_cases hn : n ≥ m
+          · -- 当 n ≥ m 时
             let g := fun k => k + 1
             let s := Finset.Icc m n
             let f := fun k => 1 - alg.α k
@@ -906,7 +1000,6 @@ theorem halpern_convergence
               intros x hx y hy hxy
               exact Nat.succ_inj.mp hxy
             rw [← Finset.prod_image (s := s) (f := f) (g := g) hf]
-            -- image of Icc m n under k ↦ k + 1 is Icc (m + 1) (n + 1)
             congr
             ext k
             simp only [Finset.mem_image, Finset.mem_Icc]
@@ -934,41 +1027,26 @@ theorem halpern_convergence
                 calc 1 ≤ m + 1 := by linarith  -- m ≥ 0 ⇒ 1 ≤ m + 1
                 _ ≤ k := hk1
               linarith
-          -- 应用 infinite_prod_zero 从 m+1 开始
-          have h_tendsto_shifted : Tendsto
-            (fun n => ∏ k ∈ Finset.Icc (m + 1) n, (1 - alg.α k)) atTop (𝓝 0) := by
-            apply infinite_prod_zero alg h_α_range h_α_sum_inf (m + 1)
-            exact Nat.le_refl (m + 1)
-          have h_index_eq : (fun n ↦ ∏ k ∈ Finset.Icc m n,
-            (1 - alg.α (k + 1))) = (fun n ↦ ∏ k ∈ Finset.Icc (m+1) (n+1), (1 - alg.α (k))) := by
-            funext n
-            by_cases hn : n ≥ m
-            · rw [h_reindex n hn]
-            · -- 当 n < m 时，两个积都是空积，等于 1
-              have h_empty_prod : ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) = 1 := by
-                rw [Finset.prod_eq_one]
-                intro k hk
-                have hkm : m ≤ k := (Finset.mem_Icc.mp hk).1
-                have hkn : k ≤ n := (Finset.mem_Icc.mp hk).2
-                linarith
-              have h_empty_prod_shifted : ∏ k ∈ Finset.Icc (m + 1) (n + 1), (1 - alg.α k) = 1 := by
-                rw [Finset.prod_eq_one]
-                intro k hk
-                have hkm1 : m + 1 ≤ k := (Finset.mem_Icc.mp hk).1
-                have hkn1 : k ≤ n + 1 := (Finset.mem_Icc.mp hk).2
-                linarith
-              rw [h_empty_prod, h_empty_prod_shifted]
-          rw [h_index_eq]
-          have h_eq_all :
-            ∀ n ≥ m,
-              ∏ k ∈ Finset.Icc (m + 1) (n + 1), (1 - alg.α k)
-                = (∏ k ∈ Finset.Icc (m + 1) n, (1 - alg.α k)) * (1 - alg.α (n + 1)) := by
-            intro n hmn
-            -- 这个就是标准的 “把上界从 n+1 拆成 n 和最后一个因子”
-            -- 在 mathlib 中是 prod_Icc_succ_top
-            apply Finset.prod_Icc_succ_top
-            linarith
-          sorry
+          · -- 当 n < m 时，两边都是 1
+            have h_empty1 : Finset.Icc m n = ∅ := by
+              ext x
+              simp [Finset.mem_Icc]
+              simp at *
+              intro hx
+              linarith
+            have h_empty2 : Finset.Icc (m + 1) (n + 1) = ∅ := by
+              ext x
+              simp [Finset.mem_Icc]
+              simp at *
+              intro hx
+              linarith
+            rw [h_empty1, Finset.prod_empty]
+            rw [h_empty2, Finset.prod_empty]
+
+        have h_prod_tendsto : Tendsto (fun n =>
+          ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) atTop (𝓝 0) := by
+            simp_rw [h_reindex]
+            sorry
 
         -- 使用 Tendsto 定义得到 ∀ᶠ n, 积 < ε / μ
         have h_eventually : ∀ᶠ n in atTop, ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) < ε / μ := by
