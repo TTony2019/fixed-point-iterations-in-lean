@@ -14,7 +14,7 @@ import Mathlib.Data.Set.Function
 open Nonexpansive_operator Filter Topology BigOperators Function
 set_option linter.unusedSectionVars false
 set_option linter.unusedVariables false
--- set_option maxHeartbeats 999999999
+set_option maxHeartbeats 999999999
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 variable {H : Type*}
@@ -149,7 +149,7 @@ lemma infinite_prod_zero
 
 -- 4.23(i)
 -- 拟非扩张映射的不动点集刻画
-theorem quasinonexpansive_fixedPoint_characterization
+lemma quasinonexpansive_fixedPoint_characterization
   {D : Set H}
   (hD_nonempty : D.Nonempty)
   {T : H → H}
@@ -293,7 +293,7 @@ lemma intersection_set_is_closed_convex
 
 -- prop 4.23(ii)
 -- 推论：不动点集的闭凸性
-theorem quasinonexpansive_fixedPoint_closed_convex
+lemma quasinonexpansive_fixedPoint_closed_convex
   {D : Set H}
   (hD_closed : IsClosed D)
   (hD_convex : Convex ℝ D)
@@ -395,8 +395,7 @@ lemma halpern_distance_monotone
   :
   ∀ z ∈ C, ∀ n,
     ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧
-    ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖ :=
-by
+    ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖ := by
   -- 由非扩张性推出拟非扩张性
   have hT_quasinonexp := nonexpansive_leadsto_quasinonexpansive hT_nonexp
   intro z hzC n
@@ -1021,8 +1020,8 @@ lemma adjacent_diff_from_shifted
   rw [← this] at h
   exact (tendsto_add_atTop_iff_nat 1).mp h
 
--- 合并的主引理
-lemma halpern_norm_diff_limit
+-- 让 n 和 m 趋于 +∞，得到 lim xn+1−xn → 0
+lemma halpern_diff_limit
   {T : H → H}
   (alg : Halpern T)
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
@@ -1102,6 +1101,183 @@ lemma halpern_norm_diff_limit
   have sq_lim7 : Tendsto (fun n => (alg.x (n + 2) - alg.x (n + 1))) atTop (𝓝 0) :=
     (norm_diff_tendsto_zero_iff_diff_tendsto_zero.1 sq_lim6)
   exact adjacent_diff_from_shifted sq_lim7
+
+-- 由Nonexpansive 得到 lim T(xn+1)−T(xn) → 0
+lemma T_preserves_diff_tendsto_zero
+  {T : H → H}
+  (alg : Halpern T)
+  {D : Set H}
+  (hT_nonexp : NonexpansiveOn T D)
+  (halg_x_in_D : ∀ n, alg.x n ∈ D)
+  (h_diff_limit : Tendsto (fun n ↦ alg.x (n + 1) - alg.x n) atTop (𝓝 0))
+  : Tendsto (fun n ↦ T (alg.x (n + 1)) - T (alg.x n)) atTop (𝓝 0) := by
+  -- 利用非扩张映射的性质：dist(Tx, Ty) ≤ dist(x, y)
+  have hT_lip : ∀ n, ‖T (alg.x (n + 1)) - T (alg.x n)‖ ≤ ‖alg.x (n + 1) - alg.x n‖ := by
+    intro n
+    rw [← dist_eq_norm, ← dist_eq_norm]
+    specialize hT_nonexp (halg_x_in_D (n + 1)) (halg_x_in_D n)
+    simp at hT_nonexp
+    rw [edist_dist, edist_dist] at hT_nonexp
+    have h_nonneg : 0 ≤ dist (alg.x (n + 1)) (alg.x n) := dist_nonneg
+    exact (ENNReal.ofReal_le_ofReal_iff h_nonneg).mp hT_nonexp
+  -- 由于 ‖alg.x (n + 1) - alg.x n‖ → 0，而 T 是非扩张的
+  -- 所以 ‖T (alg.x (n + 1)) - T (alg.x n)‖ → 0
+  rw [Metric.tendsto_atTop]
+  intro ε ε_pos
+  rw [Metric.tendsto_atTop] at h_diff_limit
+  obtain ⟨N, hN⟩ := h_diff_limit ε ε_pos
+  use N
+  intro n hn
+  specialize hN n hn
+  rw [dist_eq_norm] at hN ⊢
+  simp at hN ⊢
+  calc
+    ‖T (alg.x (n + 1)) - T (alg.x n)‖
+        ≤ ‖alg.x (n + 1) - alg.x n‖ := by apply hT_lip n
+      _ < ε := hN
+
+-- lim ‖(xn+1-Txn+1)-(xn-Txn)‖ = 0
+lemma x_sub_Tx_diff_Tendsto_zero
+  {T : H → H}
+  (alg : Halpern T)
+  {D : Set H}
+  (hT_nonexp : NonexpansiveOn T D)
+  (halg_x_in_D : ∀ n, alg.x n ∈ D)
+  (h_diff_limit : Tendsto (fun n ↦ alg.x (n + 1) - alg.x n) atTop (𝓝 0))
+  (h_T_diff_limit : Tendsto (fun n ↦ T (alg.x (n + 1)) - T (alg.x n)) atTop (𝓝 0))
+  : ∀ ε > 0, ∃ N, ∀ n ≥ N,
+      ‖(alg.x (n + 1) - T (alg.x (n + 1))) -
+        (alg.x n - T (alg.x n))‖ < ε := by
+  intro ε ε_pos
+  rw [Metric.tendsto_atTop] at h_diff_limit h_T_diff_limit
+  obtain ⟨N1, hN1⟩ := h_diff_limit (ε / 2) (by linarith)
+  obtain ⟨N2, hN2⟩ := h_T_diff_limit (ε / 2) (by linarith)
+  use max N1 N2
+  intro n hn
+  have hn_N1 : n ≥ max N1 N2 := hn
+  have hn_N1' : n ≥ N1 := le_of_max_le_left hn_N1
+  have hn_N2' : n ≥ N2 := le_of_max_le_right hn_N1
+  have step1 : ‖alg.x (n + 1) - alg.x n‖ < ε / 2 := by
+    have h := hN1 n (by omega)
+    rw [dist_eq_norm] at h
+    simp at h
+    linarith
+  have step2 : ‖T (alg.x (n + 1)) - T (alg.x n)‖ < ε / 2 := by
+    have h := hN2 n (by omega)
+    rw [dist_eq_norm] at h
+    simp at h
+    linarith
+  calc
+    ‖(alg.x (n + 1) - T (alg.x (n + 1))) - (alg.x n - T (alg.x n))‖
+        = ‖(alg.x (n + 1) - alg.x n) - (T (alg.x (n + 1)) - T (alg.x n))‖ := by
+          congr 1; abel
+      _ ≤ ‖alg.x (n + 1) - alg.x n‖ + ‖T (alg.x (n + 1)) - T (alg.x n)‖ := by
+          apply norm_sub_le
+      _ < ε / 2 + ‖T (alg.x (n + 1)) - T (alg.x n)‖ := by
+        gcongr
+      _ < ε := by linarith
+
+-- 从存在量化形式得到 Tendsto 形式
+lemma tendsto_of_forall_eps_exists_N_le
+  {f : ℕ → H}
+  (h : ∀ ε > 0, ∃ N, ∀ n ≥ N, ‖f n‖ < ε) :
+  Tendsto f atTop (𝓝 0) := by
+  rw [Metric.tendsto_atTop]
+  intro ε ε_pos
+  obtain ⟨N, hN⟩ := h ε ε_pos
+  use N
+  intro n hn
+  rw [dist_eq_norm]
+  simp
+  exact hN n hn
+
+-- lim ‖(xn+k-Txn+k)-(xn-Txn)‖ = 0
+lemma sum_x_sub_Tx_diff_Tendsto_zero
+  {T : H → H}
+  (alg : Halpern T)
+  {D : Set H}
+  (hT_nonexp : NonexpansiveOn T D)
+  (halg_x_in_D : ∀ n, alg.x n ∈ D)
+  (h_diff_limit : Tendsto (fun n ↦ alg.x (n + 1) - alg.x n) atTop (𝓝 0))
+  (h_T_diff_limit : Tendsto (fun n ↦ T (alg.x (n + 1)) - T (alg.x n)) atTop (𝓝 0))
+  : ∀ k : ℕ, Tendsto (fun n ↦ (alg.x (n + k) - T (alg.x (n + k))) -
+    (alg.x n - T (alg.x n))) atTop (𝓝 0) := by
+  intro k
+  induction k with
+  | zero =>
+    -- 基础情况：k = 0
+    simp only [add_zero, sub_self]
+    exact tendsto_const_nhds
+  | succ k ih =>
+    -- 归纳步：从 k 推到 k+1
+    -- 关键思想：(xₙ₊ₖ₊₁ - Txₙ₊ₖ₊₁) - (xₙ - Txₙ)
+    --         = [(xₙ₊ₖ₊₁ - Txₙ₊ₖ₊₁) - (xₙ₊ₖ - Txₙ₊ₖ)] + [(xₙ₊ₖ - Txₙ₊ₖ) - (xₙ - Txₙ)]
+    have h_decomp : ∀ n,
+      (alg.x (n + (k + 1)) - T (alg.x (n + (k + 1)))) - (alg.x n - T (alg.x n)) =
+      ((alg.x (n + (k + 1)) - T (alg.x (n + (k + 1)))) - (alg.x (n + k) - T (alg.x (n + k)))) +
+      ((alg.x (n + k) - T (alg.x (n + k))) - (alg.x n - T (alg.x n))) := by
+      intro n
+      abel
+
+    -- 第一部分：固定 m = n+k，让 n 趋于无穷
+    have h_part1 : Tendsto (fun n ↦ (alg.x (n + (k + 1)) - T (alg.x (n + (k + 1)))) -
+      (alg.x (n + k) - T (alg.x (n + k)))) atTop (𝓝 0) := by
+      -- 从 x_sub_Tx_diff_Tendsto_zero 得到存在量化形式
+      have h_base_eps_N : ∀ ε > 0, ∃ N, ∀ n ≥ N,
+        ‖(alg.x (n + 1) - T (alg.x (n + 1))) - (alg.x n - T (alg.x n))‖ < ε :=by
+        exact x_sub_Tx_diff_Tendsto_zero alg hT_nonexp halg_x_in_D h_diff_limit h_T_diff_limit
+
+      -- 转换为 Tendsto 形式
+      have h_base : Tendsto (fun n ↦ (alg.x (n + 1) - T (alg.x (n + 1))) -
+        (alg.x n - T (alg.x n))) atTop (𝓝 0) := by
+        exact tendsto_of_forall_eps_exists_N_le h_base_eps_N
+
+      -- 现在可以使用组合和移位
+      have h_shift : (fun n ↦ (alg.x (n + (k + 1)) - T (alg.x (n + (k + 1)))) -
+        (alg.x (n + k) - T (alg.x (n + k)))) =
+          (fun m ↦ (alg.x (m + 1) - T (alg.x (m + 1))) -
+            (alg.x m - T (alg.x m))) ∘ (· + k) := by
+              funext n
+              simp only [Function.comp_apply, add_assoc]
+      rw [h_shift]
+      exact h_base.comp (tendsto_add_atTop_nat k)
+
+    -- 第二部分：由归纳假设
+    have h_part2 := ih
+
+    -- 合并两部分
+    have h_combined : Tendsto (fun n ↦
+      ((alg.x (n + (k + 1)) - T (alg.x (n + (k + 1)))) - (alg.x (n + k) - T (alg.x (n + k)))) +
+        ((alg.x (n + k) - T (alg.x (n + k))) - (alg.x n - T (alg.x n)))) atTop (𝓝 (0 + 0)) := by
+          apply Tendsto.add h_part1 h_part2
+    convert h_combined using 1
+    · funext n
+      exact h_decomp n
+    · simp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1188,13 +1364,10 @@ theorem halpern_convergence
       · exact h_Tx_bounded
       · exact h_seq_bounded
       exact D
-
     obtain ⟨μ, hμ_pos, hμ_x_bound, hμ_Tx_bound⟩ := h_mu_bound
-
 
     -- 证明 xₙ₊₂ - xₙ₊₁ = (λₙ₊₁ - λₙ)(x - Txₙ) + (1 - λₙ₊₁)(Txₙ₊₁ - Txₙ) (30.10)
     let h_diff_formula := halpern_diff_formula alg
-
 
     -- 使用提取出来的范数差分不等式引理(30.11)
     have h_norm_diff_ineq := halpern_norm_diff_ineq alg hT_nonexp halg_x_in_D h_α_range
@@ -1206,31 +1379,30 @@ theorem halpern_convergence
     have h_telescoping := halpern_telescoping_ineq
       alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
 
-    -- n趋于无穷且m趋于无穷时，得到 (30.12) 的极限形式
-    have sq_lim_le := halpern_telescoping_limit alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
-
-    -- 让 n 和 m 趋于 +∞，得到 lim μ Σ |λₖ₊₁ - λₖ| = 0
-    have sq_lim1 := halpern_sum_tail_tendsto_zero alg μ hμ_pos h_α_diff_finite
-
-    -- 让 n 趋于 +∞，得到 lim μ ∏ (1 - λₖ₊₁) = 0
-    have sq_lim2 := halpern_prod_tail_tendsto_zero alg μ hμ_pos h_α_range h_α_sum_inf
-
-    -- 让 n 和 m 趋于 +∞，得到 lim μ ∏ (1 - λₖ₊₁) = 0
-    have sq_lim3: ∀ ε > 0, ∀ᶠ m in atTop, ∀ᶠ n in atTop, m ≤ n →
-      μ * ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)) < ε := by
-      intro ε ε_pos
-      exact Eventually.mono sq_lim_le fun x a ↦ sq_lim2 ε ε_pos x
-
-    -- 让 n 和 m 趋于 +∞，得到 xn+1−xn → 0
-    have h_norm_diff_limit := halpern_norm_diff_limit
+    -- 让 n 和 m 趋于 +∞，得到 lim xn+1 − xn → 0
+    have h_diff_limit := halpern_diff_limit
       alg h_α_range μ hμ_pos h_α_diff_finite h_α_sum_inf
       hμ_x_bound h_norm_diff_ineq h_telescoping
 
+    -- 由Nonexpansive 得到(30.13)
+    have h_T_diff_limit : Tendsto (fun n ↦ T (alg.x (n + 1)) - T (alg.x n)) atTop (𝓝 0) := by
+      exact T_preserves_diff_tendsto_zero alg hT_nonexp halg_x_in_D h_diff_limit
+
+    -- 首先得到(xn-Txn)是一个 Cauchy 序列
+    have h_x_Tx_cauchy : CauchySeq (fun n ↦ alg.x n - T (alg.x n)) := by sorry
 
 
 
 
 
+
+
+
+
+
+    -- 结合(30.8)与(30.13)得到(30.14)
+    have h_x_Tx_tendsto_zero : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (𝓝 0) := by
+      sorry
 
 
 
