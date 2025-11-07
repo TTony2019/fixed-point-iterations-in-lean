@@ -6,7 +6,7 @@ import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
 import Mathlib.Analysis.InnerProductSpace.Dual
 import Mathlib.Analysis.Normed.Module.WeakDual
 
-open Filter WeakDual Metric
+open Filter WeakDual Metric WeakBilin
 
 section WeakTopology
 
@@ -15,21 +15,105 @@ variable {H : Type u1}
 variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
-abbrev W := WeakSpace ℝ H
-#check W
-
 def WeakConverge'' (x : ℕ → H) (p : H) :=
-  Tendsto (x: ℕ → W) atTop (nhds p : Filter W)
+  Tendsto (x: ℕ → WeakSpace ℝ H) atTop (nhds p : Filter (WeakSpace ℝ H))
 
-def IsWeaklyClosed' (s : Set H) := IsClosed (s : Set W)
+#check tendsto_iff_forall_eval_tendsto
+#check LinearMap.flip_inj
+#check LinearMap.flip_apply
 
-theorem weakConverge_iff_inner_converge (x : ℕ → H) (p : H) : WeakConverge'' x p ↔
+def va (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] (a : H) : H →L[ℝ] ℝ where
+  toFun := fun x => ⟪x, a⟫
+  map_add' := sorry
+  map_smul' := sorry
+
+#check inner_self_eq_zero
+lemma topDualPairing_is_injective : Function.Injective ⇑(topDualPairing ℝ H).flip := by
+  simp [Function.Injective]
+  intro a b hab
+  have h1: (topDualPairing ℝ H).flip a (va H a)= (topDualPairing ℝ H).flip b (va H a) := by
+    rw [hab]
+  simp [LinearMap.flip_apply, topDualPairing_apply, va] at h1
+  have h2: (topDualPairing ℝ H).flip a (va H b)= (topDualPairing ℝ H).flip b (va H b) := by
+    rw [hab]
+  simp [LinearMap.flip_apply, topDualPairing_apply, va] at h2
+  have : a - b = 0 := by
+    have h1': ⟪a - b, a⟫ = 0 := sorry
+    have h2': ⟪a - b, b⟫ = 0 := sorry
+    apply (@inner_self_eq_zero ℝ H _ _ _ (a - b)).1
+    calc
+      _ = ⟪a - b, a⟫ - ⟪a - b, b⟫ := inner_sub_right (a - b) a b
+      _ = 0 - 0 := by sorry
+      _ = 0 := by simp
+  calc
+    _ = a - b + b := Eq.symm (sub_add_cancel a b)
+    _ = 0 + b := by rw [this]
+    _ = b := by simp
+
+#check InnerProductSpace.toDual
+theorem topDualPairing_eq (p : H) : ∀ y : H →L[ℝ] ℝ, (topDualPairing ℝ H).flip p y = y p := by
+  simp [LinearMap.flip_apply, topDualPairing_apply]
+
+theorem topDualPairing_strong_dual [CompleteSpace H] (p : H) : ∀ y : H →L[ℝ] ℝ,
+  (topDualPairing ℝ H).flip p y = ⟪(InnerProductSpace.toDual ℝ H).symm y, p⟫  := by
+  simp [LinearMap.flip_apply, topDualPairing_apply]
+
+theorem topDualPairing_strong_dual_seq [CompleteSpace H] (x : ℕ → H) : ∀ y : H →L[ℝ] ℝ,
+  (fun n ↦ ((topDualPairing ℝ H).flip (x n)) y) =
+  fun n => ⟪(InnerProductSpace.toDual ℝ H).symm y, x n⟫ := by
+  intro y; ext n
+  exact topDualPairing_strong_dual (x n) y
+
+theorem topDualPairing_strong_dual_seq' [CompleteSpace H] (x : ℕ → H) : ∀ y : H →L[ℝ] ℝ,
+  (fun n ↦ ((topDualPairing ℝ H).flip (x n)) y) =
+  fun n => ⟪(InnerProductSpace.toDual ℝ H).symm y, x n⟫ := by
+  intro y; ext n
+  exact topDualPairing_strong_dual (x n) y
+
+theorem weakConverge_iff_inner_converge_pre (x : ℕ → H) (p : H) : WeakConverge'' x p ↔
+  ∀ y : H →L[ℝ] ℝ, Tendsto (fun n ↦ (topDualPairing ℝ H).flip (x n) y)
+    atTop (nhds ((topDualPairing ℝ H).flip p y)) := by
+  simp [WeakConverge'']
+  apply tendsto_iff_forall_eval_tendsto
+  exact topDualPairing_is_injective
+
+theorem weakConverge_iff_inner_converge [CompleteSpace H] (x : ℕ → H) (p : H) : WeakConverge'' x p ↔
   ∀ y : H, Tendsto (fun n ↦ ⟪x n, y⟫) atTop (nhds ⟪p, y⟫) := by
-  sorry
+  constructor
+  · intro h y
+    rw [weakConverge_iff_inner_converge_pre] at h
+    specialize h (va H y)
+    have : (fun n ↦ ((topDualPairing ℝ H).flip (x n)) (va H y)) = fun n => ⟪x n, y⟫ := by
+      ext n
+      simp [topDualPairing_apply, va]
+    rw [this] at h
+    simp [topDualPairing_apply, va] at h
+    exact h
+  intro h
+  rw [weakConverge_iff_inner_converge_pre]
+  intro y
+  let yf := (InnerProductSpace.toDual ℝ H).symm y
+  rw [topDualPairing_strong_dual, topDualPairing_strong_dual_seq]
+  have : (fun n ↦ inner ℝ ((InnerProductSpace.toDual ℝ H).symm y) (x n)) =
+    (fun n ↦ inner ℝ  (x n) ((InnerProductSpace.toDual ℝ H).symm y)) := by
+    ext n; rw [real_inner_comm]
+  rw [real_inner_comm, this]
+  apply h
 
-noncomputable instance : Preorder (WeakSpace ℝ ℝ) := by
-  exact specializationPreorder (WeakSpace ℝ ℝ)
+def IsWeaklyClosed' (s : Set H) := @IsClosed (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
 
+theorem continuous_real_weakspace : Continuous (toWeakSpace ℝ ℝ).symm := by
+  have heq (w : ℝ): (toWeakSpace ℝ ℝ).symm w = (topDualPairing ℝ ℝ).flip w 1 := by
+    simp [topDualPairing_apply]
+    rfl
+  have heq' : (toWeakSpace ℝ ℝ).symm.toFun = fun w => (topDualPairing ℝ ℝ).flip w 1 := by
+    ext w
+    exact heq w
+  change Continuous (toWeakSpace ℝ ℝ).symm.toFun
+  rw [heq']
+  exact eval_continuous (topDualPairing ℝ ℝ).flip 1
+
+#check isOpenMap_toWeakSpace_symm
 theorem closed_is_weakly_closed' [CompleteSpace H] (s : Set H) (hs : Convex ℝ s) (hw : IsClosed s) :
   IsWeaklyClosed' s := by
   simp [IsWeaklyClosed']
@@ -42,35 +126,35 @@ theorem closed_is_weakly_closed' [CompleteSpace H] (s : Set H) (hs : Convex ℝ 
     refine Continuous.isOpen_preimage ?_ (Set.Iio u) ?_
     exact ContinuousLinearMap.continuous f
     exact isOpen_Iio
-  -- have hxinU : x ∈ U := fxu
-  -- have hUinsc : U ⊆ sᶜ := by
-  --   refine Disjoint.subset_compl_left ?_
-  --   refine Set.disjoint_left.mpr ?_
-  --   sorry
   let yf := (InnerProductSpace.toDual ℝ H).symm f
   have (x:H): ⟪yf,x⟫ = f x := by
     exact InnerProductSpace.toDual_symm_apply
-  -- let WD := WeakDual ℝ H
   let f1 := WeakSpace.map f
-
-  have (x : H): f1 x = f x := rfl
-  let U' := f1⁻¹' (Set.Iio u)
+  let f2 := (toWeakSpace ℝ ℝ).symm
+  let f21 := f2 ∘ f1
+  have feq (x : H): f21 x = f x := rfl
+  let U' := f21⁻¹' (Set.Iio u)
   use U'
   have U'Open : IsOpen U' := by
-    -- apply @isOpen_coinduced.mp
-
-
-    have : WeakSpace ℝ ℝ = ℝ := rfl
-    sorry
-
-    -- apply isOpen_Iio
-    -- apply?
-  have hU'insc : U' ⊆ sᶜ := by sorry
-  have hxinU' : x ∈ U' := sorry
+    refine Continuous.isOpen_preimage ?_ (Set.Iio u) ?_
+    · simp [f21]
+      refine Continuous.comp ?_ ?_
+      · simp [f2]
+        exact continuous_real_weakspace
+      exact ContinuousLinearMap.continuous f1
+    exact isOpen_Iio
+  have hU'insc : U' ⊆ sᶜ := by
+    intro g hg
+    simp; simp [U', feq g] at hg
+    by_contra! hgs
+    linarith [fbu g hgs]
+  have hxinU' : x ∈ U' := by
+    refine Set.mem_preimage.mpr ?_
+    simp [feq x]; exact fxu
   constructor
   · exact hU'insc
   constructor
-  · sorry
+  · exact U'Open
   exact hxinU'
 
 
