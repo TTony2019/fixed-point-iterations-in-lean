@@ -431,7 +431,17 @@ theorem norm_weakly_lsc (x : ℕ → H) (p : H) (h : WeakConverge H x p) :
 #check liminf_le_limsup
 #check tendsto_of_liminf_eq_limsup
 
+#check isCompact_closedBall
+-- #check MetrizableSpace
 
+instance : PseudoMetricSpace (W H) where
+  dist := sorry
+  dist_self := sorry
+  dist_comm := sorry
+  dist_triangle := sorry
+
+instance : ProperSpace (W H) where
+  isCompact_closedBall := sorry
 
 -- Lemma 2.51 (i)
 theorem weak_converge_limsup_le_iff_strong_converge (x : ℕ → H) (p : H) :
