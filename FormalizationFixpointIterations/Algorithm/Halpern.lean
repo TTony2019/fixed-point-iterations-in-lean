@@ -1385,43 +1385,38 @@ lemma halpern_x_sub_Tx_tendsto_zero
 
 
 
+#check norm_eq_iInf_iff_real_inner_le_zero
+#check exists_norm_eq_iInf_of_complete_convex
 
+theorem existence_of_projection_point (C : Set H) (hC1 : C.Nonempty) (hC2 : Convex ℝ C)
+  (hC3 : IsClosed C) (x : H) : ∃ u ∈ C, ‖x - u‖ = ⨅ w : C, ‖x - w‖ :=
+  exists_norm_eq_iInf_of_complete_convex hC1 (IsClosed.isComplete hC3) hC2 x
 
+theorem proj_pt_inner_le_zero (x PxC : H) (C : Set H) (hC2 : Convex ℝ C)
+  (hPxC : PxC ∈ C) (hP : ‖x - PxC‖ = ⨅ w : C, ‖x - w‖) :
+  ∀ w ∈ C, inner ℝ (x - PxC) (w - PxC) ≤ 0 := (norm_eq_iInf_iff_real_inner_le_zero hC2 hPxC).1 hP
 
---建立投影算子的定义和假设
-def IsProjectionPoint (x v : H) (C : Set H) : Prop :=
-v ∈ C ∧ ∀ w, w ∈ C → ‖x - v‖ ≤ ‖x - w‖
+-- --建立投影算子的定义和假设
+-- def IsProjectionPoint (x v : H) (C : Set H) : Prop :=
+-- v ∈ C ∧ ∀ w, w ∈ C → ‖x - v‖ ≤ ‖x - w‖
 
-structure ProjectionAssumptions (C : Set H) : Prop :=
-(convex : Convex ℝ C)
-(closed : IsClosed C)
-(nonempty : C.Nonempty)
+-- structure ProjectionAssumptions (C : Set H) : Prop :=
+-- (convex : Convex ℝ C)
+-- (closed : IsClosed C)
+-- (nonempty : C.Nonempty)
 
-noncomputable def P (C : Set H)
-  (h : ProjectionAssumptions C) (x : H) : H :=
-Classical.choose
-  (existsUnique_of_exists_of_unique
-    (by
-      -- existence: ∃ v ∈ C, minimizing ‖x - v‖
-      -- fill with the appropriate Mathlib lemma establishing existence
-      admit)
-    (by
-      -- uniqueness: minimal point is unique in a real Hilbert space (strict convexity)
-      -- fill with the appropriate Mathlib lemma establishing uniqueness
-      admit))
-
-
-
-
-
-
-
-
-
-
-
-
-
+-- noncomputable def P (C : Set H)
+--   (h : ProjectionAssumptions C) (x : H) : H :=
+-- Classical.choose
+--   (existsUnique_of_exists_of_unique
+--     (by
+--       -- existence: ∃ v ∈ C, minimizing ‖x - v‖
+--       -- fill with the appropriate Mathlib lemma establishing existence
+--       admit)
+--     (by
+--       -- uniqueness: minimal point is unique in a real Hilbert space (strict convexity)
+--       -- fill with the appropriate Mathlib lemma establishing uniqueness
+--       admit))
 
 
 
