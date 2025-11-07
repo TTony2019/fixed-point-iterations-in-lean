@@ -8,8 +8,11 @@ import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.Algebra.Group.Basic
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Data.Set.Function
-
-
+import FormalizationFixpointIterations.Theory.WeakConverge
+import Mathlib.Analysis.InnerProductSpace.Basic
+import Mathlib.Topology.MetricSpace.Pseudo.Defs
+import Mathlib.Analysis.Convex.Segment
+import Mathlib.Analysis.Convex.Cone.Basic
 
 open Nonexpansive_operator Filter Topology BigOperators Function
 set_option linter.unusedSectionVars false
@@ -1255,6 +1258,157 @@ lemma sum_x_sub_Tx_diff_Tendsto_zero
       exact h_decomp n
     · simp
 
+-- Lemma 2.45: 有界序列存在弱收敛子序列
+lemma bounded_seq_weakly_convergent_subsequence
+  (x : ℕ → H)
+  (h_bounded : ∃ M, ∀ n, ‖x n‖ ≤ M) :
+  ∃ (φ : ℕ → ℕ) (p : H),
+    (∀ m n, m < n → φ m < φ n) ∧  -- φ 是严格递增的
+    WeakConverge H (x ∘ φ) p := by
+      sorry
+
+-- lim (xₙ - Txₙ) → 0
+lemma halpern_x_sub_Tx_tendsto_zero
+  {T : H → H}
+  (alg : Halpern T)
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
+  (h_α_limit : Tendsto alg.α atTop (𝓝 0))
+  (μ : ℝ)
+  (hμ_pos : μ > 0)
+  (hμ_Tx_bound : ∀ n, ‖alg.u - T (alg.x n)‖ ≤ μ)
+  (h_diff_limit : Tendsto (fun n ↦ alg.x (n + 1) - alg.x n) atTop (𝓝 0))
+  : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (𝓝 0) := by
+  -- 步骤1：建立关键等式
+  have eq1 : ∀ n, alg.x (n + 1) - alg.x n =
+      alg.α n • (alg.u - T (alg.x n)) + (T (alg.x n) - alg.x n) := by
+    intro n
+    rw [alg.update]
+    calc
+      alg.α n • alg.u + (1 - alg.α n) • T (alg.x n) - alg.x n
+          = alg.α n • alg.u + (1 - alg.α n) • T (alg.x n) -
+            (alg.α n • alg.x n + (1 - alg.α n) • alg.x n) := by
+            congr 1
+            simp [sub_smul]
+        _ = alg.α n • (alg.u - alg.x n) + (1 - alg.α n) • (T (alg.x n) - alg.x n) := by
+            simp [smul_sub, sub_smul]
+            abel
+        _ = alg.α n • (alg.u - T (alg.x n)) + alg.α n • (T (alg.x n) - alg.x n) +
+            (1 - alg.α n) • (T (alg.x n) - alg.x n) := by
+            simp [smul_sub, sub_smul]
+        _ = alg.α n • (alg.u - T (alg.x n)) +
+            (alg.α n + (1 - alg.α n)) • (T (alg.x n) - alg.x n) := by
+            simp [smul_sub, sub_smul]
+            abel
+        _ = alg.α n • (alg.u - T (alg.x n)) + (T (alg.x n) - alg.x n) := by
+            simp [add_sub_cancel]
+
+  -- 步骤2：证明 α_n * ‖u - T(x_n)‖ → 0
+  have h1 : Tendsto (fun n ↦ alg.α n * ‖alg.u - T (alg.x n)‖) atTop (𝓝 0) := by
+    rw [Metric.tendsto_atTop]
+    intro ε ε_pos
+    rw [Metric.tendsto_atTop] at h_α_limit
+    obtain ⟨N, hN⟩ := h_α_limit (ε / μ) (by positivity)
+    use N
+    intro n hn
+    rw [Real.dist_eq]
+    simp only [sub_zero]
+    have h_α_small : |alg.α n| < ε / μ := by
+      have := hN n hn
+      rw [Real.dist_eq] at this
+      simp at this
+      exact this
+    have h_α_nonneg : 0 ≤ alg.α n := by
+      have := h_α_range n
+      simp [Set.mem_Ioo] at this
+      rcases this with ⟨h1, h2⟩
+      linarith
+    rw [abs_of_nonneg h_α_nonneg] at h_α_small
+    calc
+      |alg.α n * ‖alg.u - T (alg.x n)‖|
+          = alg.α n * ‖alg.u - T (alg.x n)‖ := by
+            simp [abs_mul, abs_of_nonneg h_α_nonneg]
+        _ ≤ alg.α n * μ := by
+            gcongr
+            exact hμ_Tx_bound n
+        _ < (ε / μ) * μ := by
+            apply mul_lt_mul_of_pos_right h_α_small
+            exact hμ_pos
+        _ = ε := by field_simp [ne_of_gt hμ_pos]
+
+  -- 步骤3：证明 α_n • (u - T(x_n)) → 0
+  have h2 : Tendsto (fun n ↦ alg.α n • (alg.u - T (alg.x n))) atTop (𝓝 0) := by
+    -- 我们需要证明 ‖alg.α n • (alg.u - T (alg.x n))‖ → 0
+    have h_norm_bound : Tendsto (fun n ↦ ‖alg.α n • (alg.u - T (alg.x n))‖) atTop (𝓝 0) := by
+      have : Tendsto (fun n ↦ |alg.α n| * ‖alg.u - T (alg.x n)‖) atTop (𝓝 0) := by
+        convert h1 using 1
+        ext n; congr; simp
+        have := h_α_range n
+        simp [Set.mem_Ioo] at this
+        rcases this with ⟨h1, h2⟩
+        exact le_of_lt h1
+      apply Metric.tendsto_atTop.mpr
+      apply Metric.tendsto_atTop.mp
+      convert this using 1
+      funext n
+      rw [norm_smul]
+      simp
+
+    -- 从范数的收敛性推出向量的收敛性
+    rw [Metric.tendsto_atTop] at h_norm_bound
+    rw [Metric.tendsto_atTop]
+    intros ε ε_pos
+    obtain ⟨N, hN⟩ := h_norm_bound ε ε_pos
+    use N
+    intros n hn
+    specialize hN n hn
+    rw [dist_eq_norm]
+    simp at hN
+    simp
+    exact hN
+
+  -- 步骤4：合并结果
+  have h3 : Tendsto (fun n ↦ alg.x (n + 1) - alg.x n) atTop (𝓝 0) := h_diff_limit
+
+  have h_key : ∀ n, alg.x n - T (alg.x n) =
+      alg.α n • (alg.u - T (alg.x n)) - (alg.x (n + 1) - alg.x n) := by
+    intro n
+    have := eq1 n
+    rw [this]
+    simp
+  convert Tendsto.sub h2 h3 using 1
+  · funext n
+    exact h_key n
+  simp
+
+
+
+
+
+
+
+
+
+--建立投影算子的定义和假设
+def IsProjectionPoint (x v : H) (C : Set H) : Prop :=
+v ∈ C ∧ ∀ w, w ∈ C → ‖x - v‖ ≤ ‖x - w‖
+
+structure ProjectionAssumptions (C : Set H) : Prop :=
+(convex : Convex ℝ C)
+(closed : IsClosed C)
+(nonempty : C.Nonempty)
+
+noncomputable def P (C : Set H)
+  (h : ProjectionAssumptions C) (x : H) : H :=
+Classical.choose
+  (existsUnique_of_exists_of_unique
+    (by
+      -- existence: ∃ v ∈ C, minimizing ‖x - v‖
+      -- fill with the appropriate Mathlib lemma establishing existence
+      admit)
+    (by
+      -- uniqueness: minimal point is unique in a real Hilbert space (strict convexity)
+      -- fill with the appropriate Mathlib lemma establishing uniqueness
+      admit))
 
 
 
@@ -1271,21 +1425,7 @@ lemma sum_x_sub_Tx_diff_Tendsto_zero
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-#check Fin.sum_Icc_succ
-#check Summable.hasSum_iff_tendsto_nat
+#check norm_eq_iInf_iff_real_inner_le_zero--投影的形式
 
 theorem halpern_convergence
   {D : Set H}
@@ -1329,20 +1469,38 @@ theorem halpern_convergence
       use ‖alg.x0 - y‖
       intro n
       apply (h_induction y hy_in_C n).2
+    have h_xn_bounded : ∃ M, ∀ n, ‖alg.x n‖ ≤ M := by
+      obtain ⟨M1, hM1⟩ := h_seq_bounded
+      let M2 := ‖y‖
+      use M1 + M2
+      intro n
+      calc
+        ‖alg.x n‖ = ‖(alg.x n - y) + y‖ := by rw [sub_add_cancel]
+        _ ≤ ‖alg.x n - y‖ + ‖y‖ := by apply norm_add_le
+        _ ≤ M1 + M2 := by linarith [hM1 n]
 
     -- 证明 (Txₙ)ₙ∈ℕ 有界 (30.7)
-    have h_Tx_bounded : ∃ M, ∀ n, ‖T (alg.x n) - y‖ ≤ M := by
+    have h_Tseq_bounded : ∃ M, ∀ n, ‖T (alg.x n) - y‖ ≤ M := by
       obtain ⟨M, hM⟩ := h_seq_bounded
       use M
       intro n
       calc
         _ ≤ ‖alg.x n - y‖ := (h_induction y hy_in_C n).1
         _ ≤ M := hM n
+    have h_Txn_bounded : ∃ M, ∀ n, ‖T (alg.x n)‖ ≤ M := by
+      obtain ⟨M1, hM1⟩ := h_Tseq_bounded
+      let M2 := ‖y‖
+      use M1 + M2
+      intro n
+      calc
+        ‖T (alg.x n)‖ = ‖(T (alg.x n) - y) + y‖ := by rw [sub_add_cancel]
+        _ ≤ ‖T (alg.x n) - y‖ + ‖y‖ := by apply norm_add_le
+        _ ≤ M1 + M2 := by linarith [hM1 n]
 
     -- 证明 (xₙ₊₁ - Txₙ)ₙ∈ℕ 有界 (30.8)
     have h_diff_bounded : ∃ M, ∀ n, ‖alg.x (n + 1) - T (alg.x n)‖ ≤ M := by
       obtain ⟨M1, hM1⟩ := h_seq_bounded
-      obtain ⟨M2, hM2⟩ := h_Tx_bounded
+      obtain ⟨M2, hM2⟩ := h_Tseq_bounded
       use M1 + M2
       intro n
       calc
@@ -1361,7 +1519,7 @@ theorem halpern_convergence
         (∀ n, ‖alg.u - T (alg.x n)‖ ≤ μ) := by
       apply halpern_mu_bound alg
       · exact h_diff_bounded
-      · exact h_Tx_bounded
+      · exact h_Tseq_bounded
       · exact h_seq_bounded
       exact D
     obtain ⟨μ, hμ_pos, hμ_x_bound, hμ_Tx_bound⟩ := h_mu_bound
@@ -1388,21 +1546,9 @@ theorem halpern_convergence
     have h_T_diff_limit : Tendsto (fun n ↦ T (alg.x (n + 1)) - T (alg.x n)) atTop (𝓝 0) := by
       exact T_preserves_diff_tendsto_zero alg hT_nonexp halg_x_in_D h_diff_limit
 
-    -- 首先得到(xn-Txn)是一个 Cauchy 序列
-    have h_x_Tx_cauchy : CauchySeq (fun n ↦ alg.x n - T (alg.x n)) := by sorry
-
-
-
-
-
-
-
-
-
-
     -- 结合(30.8)与(30.13)得到(30.14)
-    have h_x_Tx_tendsto_zero : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (𝓝 0) := by
-      sorry
+    have h_x_Tx_limit : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (𝓝 0) :=
+      halpern_x_sub_Tx_tendsto_zero alg h_α_range h_α_limit μ hμ_pos hμ_Tx_bound h_diff_limit
 
 
 
