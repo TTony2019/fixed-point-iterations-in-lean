@@ -18,6 +18,8 @@ open Nonexpansive_operator Filter Topology BigOperators Function
 set_option linter.unusedSectionVars false
 set_option linter.unusedVariables false
 set_option maxHeartbeats 999999999
+set_option linter.style.commandStart false
+
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 variable {H : Type*}
@@ -1258,15 +1260,6 @@ lemma sum_x_sub_Tx_diff_Tendsto_zero
       exact h_decomp n
     · simp
 
--- Lemma 2.45: 有界序列存在弱收敛子序列
-lemma bounded_seq_weakly_convergent_subsequence
-  (x : ℕ → H)
-  (h_bounded : ∃ M, ∀ n, ‖x n‖ ≤ M) :
-  ∃ (φ : ℕ → ℕ) (p : H),
-    (∀ m n, m < n → φ m < φ n) ∧  -- φ 是严格递增的
-    WeakConverge H (x ∘ φ) p := by
-      sorry
-
 -- lim (xₙ - Txₙ) → 0
 lemma halpern_x_sub_Tx_tendsto_zero
   {T : H → H}
@@ -1383,35 +1376,324 @@ lemma halpern_x_sub_Tx_tendsto_zero
 
 
 
+#check norm_eq_iInf_iff_real_inner_le_zero
+#check exists_norm_eq_iInf_of_complete_convex
+
+-- Lemma 2.45: 有界序列存在弱收敛子序列
+lemma bounded_seq_weakly_convergent_subsequence
+  (x : ℕ → H)
+  (h_bounded : ∃ M, ∀ n, ‖x n‖ ≤ M) :
+  ∃ (φ : ℕ → ℕ) (p : H),
+    (∀ m n, m < n → φ m < φ n) ∧  -- φ 是严格递增的
+    WeakConverge H (x ∘ φ) p := by
+      sorry
+
+theorem existence_of_projection_point (C : Set H) (hC1 : C.Nonempty) (hC2 : Convex ℝ C)
+  (hC3 : IsClosed C) (x : H) : ∃ u ∈ C, ‖x - u‖ = ⨅ w : C, ‖x - w‖ :=
+  exists_norm_eq_iInf_of_complete_convex hC1 (IsClosed.isComplete hC3) hC2 x
+
+theorem proj_pt_inner_le_zero (x PxC : H) (C : Set H) (hC2 : Convex ℝ C)
+  (hPxC : PxC ∈ C) (hP : ‖x - PxC‖ = ⨅ w : C, ‖x - w‖) :
+  ∀ w ∈ C, inner ℝ (x - PxC) (w - PxC) ≤ 0 := (norm_eq_iInf_iff_real_inner_le_zero hC2 hPxC).1 hP
+
+--有子列的极限收敛到数列上极限
+theorem lim_subsequence_eq_limsup
+  (x : ℕ → ℝ) :
+  ∃ (φ : ℕ → ℕ) (L : ℝ),
+    (∀ m n, m < n → φ m < φ n) ∧
+    (L = limsup x atTop) ∧
+    (Tendsto (x ∘ φ) atTop (𝓝 L)) := by
+  sorry
+
+-- 引理 30.15：提取子列的弱收敛性和内积序列的收敛性
+lemma halpern_subsequence_weak_convergence
+  {D : Set H}
+  (hD_closed : IsClosed D)
+  (hD_convex : Convex ℝ D)
+  (hD_nonempty : D.Nonempty)
+  {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D)
+  {C : Set H}
+  (hC : C = Fix T ∩ D)
+  (hT_fixpoint : C.Nonempty)
+  (alg : Halpern T)
+  (halg_x_in_D : ∀ n, alg.x n ∈ D)
+  (h_C_closed_convex : IsClosed C ∧ Convex ℝ C)
+  (h_xn_bounded : ∃ M, ∀ n, ‖alg.x n‖ ≤ M)
+  :
+  ∃ (n : ℕ → ℕ) (z : H) (m : H) (q : ℕ → ℝ),
+    -- n 是严格递增的子列索引
+    (∀ i j, i < j → n i < n j) ∧
+    -- z 是子列的弱极限
+    (z ∈ D ∧ WeakConverge H (alg.x ∘ n) z) ∧
+    -- m 是 alg.u 在 C 上的投影
+    (m ∈ C ∧ ‖alg.u - m‖ = ⨅ w : C, ‖alg.u - w‖) ∧
+    -- q_n = ⟪T(x_n) - m, alg.u - m⟫
+    (q = fun n => ⟪T (alg.x n) - m, alg.u - m⟫) ∧
+    -- 子列满足收敛性
+    (Tendsto (q ∘ n) atTop (𝓝 (limsup q atTop))) := by
+
+  -- 第一步：C 的闭凸性
+  have h_C_closed : IsClosed C := h_C_closed_convex.1
+  have h_C_convex : Convex ℝ C := h_C_closed_convex.2
+
+  -- 第二步：存在投影点 m ∈ C 使得 m 是 alg.u 在 C 上的投影
+  obtain ⟨m, hm_in_C, hm_proj⟩ :=
+    existence_of_projection_point C hT_fixpoint h_C_convex h_C_closed alg.u
+
+  -- 第三步：定义数列 q_n = ⟪T(x_n) - m, alg.u - m⟫
+  let q : ℕ → ℝ := fun n => ⟪T (alg.x n) - m, alg.u - m⟫
+
+  -- 第四步：证明存在子列 q_k_n 使得 lim q_k_n → limsup q_n
+  have h_subseq_q : ∃ (k : ℕ → ℕ), StrictMono k ∧ Tendsto (q ∘ k) atTop (𝓝 (limsup q atTop)) := by
+    obtain ⟨φ, L, h_strict_mono, h_L_eq, h_tendsto⟩ := lim_subsequence_eq_limsup q
+    exact ⟨φ, h_strict_mono, by rwa [← h_L_eq]⟩
+  obtain ⟨k, h_k_strict_mono, h_k_tendsto⟩ := h_subseq_q
+
+  -- 第五步：在子列 x(k_n) 中提取弱收敛子列
+  -- 首先证明子列 x(k_n) 有界
+  have h_xk_bounded : ∃ M, ∀ j, ‖alg.x (k j)‖ ≤ M := by
+    obtain ⟨M, hM⟩ := h_xn_bounded
+    exact ⟨M, fun j => hM (k j)⟩
+  -- 由有界性，存在进一步的子列 x(k(l_n)) 弱收敛到某点 z
+  obtain ⟨l, z, h_l_strict_mono, h_weak_xkl_to_z⟩ :=
+    bounded_seq_weakly_convergent_subsequence (alg.x ∘ k) h_xk_bounded
+
+  -- 第六步：验证 z ∈ D（由 D 的闭性和弱收敛性）
+  have h_z_in_D : z ∈ D := by
+    have h_x_in_D : ∀ j, alg.x (k (l j)) ∈ D := fun j => halg_x_in_D _
+    have h_D_weakly_closed : IsWeaklyClosed H D := by
+      apply closed_is_weakly_closed'
+      · exact hD_convex
+      · exact hD_closed
+    have h_D_weakly_seq_closed : IsWeaklySeqClosed H D := by
+      apply weakly_closed_seq_closed
+      exact h_D_weakly_closed
+    simp only [IsWeaklySeqClosed] at h_D_weakly_seq_closed
+    apply h_D_weakly_seq_closed
+    · exact h_x_in_D
+    · exact h_weak_xkl_to_z
+
+  -- 第七步：定义复合子列索引
+  let n : ℕ → ℕ := k ∘ l
+  have h_n_strict_mono : ∀ i j, i < j → n i < n j := by
+    intros i j hij
+    unfold n
+    simp only [Function.comp_apply]
+    exact h_k_strict_mono (h_l_strict_mono i j hij)
+
+  -- 第八步：证明内积序列的收敛性
+  have h_n_tendsto : Tendsto (q ∘ n) atTop (𝓝 (limsup q atTop)) := by
+    have h_comp : (q ∘ n) = (q ∘ k) ∘ l := by
+      funext j
+      simp only [Function.comp_apply, n]
+    rw [h_comp]
+    apply h_k_tendsto.comp
+    exact StrictMono.tendsto_atTop h_l_strict_mono
+
+  -- 返回所有构造
+  exact ⟨n, z, m, q, h_n_strict_mono, ⟨h_z_in_D, h_weak_xkl_to_z⟩,
+         ⟨hm_in_C, hm_proj⟩, rfl, h_n_tendsto⟩
+
+-- Corollary 4.28: 弱收敛且误差趋零蕴含固定点
+lemma corollary_4_28
+  {D : Set H}
+  (hD_closed : IsClosed D)
+  (hD_convex : Convex ℝ D)
+  (hD_nonempty : D.Nonempty)
+  {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D)
+  (x : ℕ → H)
+  (hx_in_D : ∀ n, x n ∈ D)
+  (p : H)
+  (hp_in_D : p ∈ D)
+  (h_weak_conv : WeakConverge H x p)
+  (h_error_zero : Tendsto (fun n => x n - T (x n)) atTop (𝓝 0))
+  : p ∈ Fix T := by
+  sorry
 
 
+-- 引理：子列满足误差趋零条件
+lemma halpern_subseq_x_sub_Tx_tendsto_zero
+  {T : H → H}
+  (alg : Halpern T)
+  (n : ℕ → ℕ)
+  (h_n_strict_mono : ∀ i j, i < j → n i < n j)
+  (h_x_Tx_limit : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (𝓝 0))
+  : Tendsto (fun k => alg.x (n k) - T (alg.x (n k))) atTop (𝓝 0) := by
+  -- 首先证明严格递增函数满足 n k ≥ k
+  have h_n_k_ge_k : ∀ k, n k ≥ k := by
+    intro k
+    induction k with
+    | zero =>
+      have := h_n_strict_mono 0 1 (by norm_num)
+      omega
+    | succ k' ih =>
+      have : n (k' + 1) > n k' := h_n_strict_mono k' (k' + 1) (by omega)
+      omega
+  -- 证明子列也满足误差趋零条件
+  rw [Metric.tendsto_atTop]
+  intro ε ε_pos
+  rw [Metric.tendsto_atTop] at h_x_Tx_limit
+  obtain ⟨N, hN⟩ := h_x_Tx_limit ε ε_pos
+  use N
+  intro k hk
+  specialize hN (n k) ?_
+  · exact Nat.le_trans hk (h_n_k_ge_k k)
+  · rw [dist_eq_norm] at hN ⊢
+    exact hN
 
 
-
---建立投影算子的定义和假设
-def IsProjectionPoint (x v : H) (C : Set H) : Prop :=
-v ∈ C ∧ ∀ w, w ∈ C → ‖x - v‖ ≤ ‖x - w‖
-
-structure ProjectionAssumptions (C : Set H) : Prop :=
-(convex : Convex ℝ C)
-(closed : IsClosed C)
-(nonempty : C.Nonempty)
-
-noncomputable def P (C : Set H)
-  (h : ProjectionAssumptions C) (x : H) : H :=
-Classical.choose
-  (existsUnique_of_exists_of_unique
-    (by
-      -- existence: ∃ v ∈ C, minimizing ‖x - v‖
-      -- fill with the appropriate Mathlib lemma establishing existence
-      admit)
-    (by
-      -- uniqueness: minimal point is unique in a real Hilbert space (strict convexity)
-      -- fill with the appropriate Mathlib lemma establishing uniqueness
-      admit))
+-- 引理：子列的固定点性质
+lemma halpern_subseq_fixed_point
+  {D : Set H}
+  (hD_closed : IsClosed D)
+  (hD_convex : Convex ℝ D)
+  (hD_nonempty : D.Nonempty)
+  {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D)
+  (alg : Halpern T)
+  (n : ℕ → ℕ)
+  (z : H)
+  (h_z_in_D : z ∈ D)
+  (h_z_weak_limit : WeakConverge H (alg.x ∘ n) z)
+  (halg_x_in_D : ∀ n, alg.x n ∈ D)
+  (h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (n k) - T (alg.x (n k))) atTop (𝓝 0))
+  : z ∈ Fix T := by
+  apply corollary_4_28 hD_closed hD_convex hD_nonempty hT_nonexp
+    (alg.x ∘ n) (fun k => halg_x_in_D (n k)) z h_z_in_D
+    h_z_weak_limit h_subseq_x_Tx_limit
 
 
+-- 引理 30.16：子列内积序列的上极限不等式
+lemma halpern_limsup_inner_le_zero
+  {D : Set H}
+  (hD_closed : IsClosed D)
+  (hD_convex : Convex ℝ D)
+  {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D)
+  {C : Set H}
+  (hC : C = Fix T ∩ D)
+  (hC_closed_convex : IsClosed C ∧ Convex ℝ C)
+  (alg : Halpern T)
+  (n : ℕ → ℕ)
+  (z : H)
+  (h_z_in_C : z ∈ C)
+  (h_weak_xn_to_z : WeakConverge H (alg.x ∘ n) z)
+  (m : H)
+  (hm_in_C : m ∈ C)
+  (hm_proj : ‖alg.u - m‖ = ⨅ w : C, ‖alg.u - w‖)
+  (h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (n k) - T (alg.x (n k))) atTop (𝓝 0))
+  (h_n_tendsto : Tendsto (fun k => ⟪T (alg.x (n k)) - m, alg.u - m⟫) atTop
+    (𝓝 (limsup (fun n => ⟪T (alg.x n) - m, alg.u - m⟫) atTop)))
+  : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0 := by
 
+  -- lim ⟨T xkn − xkn , x − PCx⟩ → 0
+  have h_subseq_inner_limit1 : Tendsto
+    (fun k => ⟪T (alg.x (n k)) - alg.x (n k), alg.u - m⟫) atTop (𝓝 0) := by
+      rw [Metric.tendsto_atTop]
+      intro ε ε_pos
+      let R := ‖alg.u - m‖
+      rw [Metric.tendsto_atTop] at h_subseq_x_Tx_limit
+      by_cases hR : R = 0
+      · use 0
+        intro k hk
+        rw [Real.dist_eq]
+        simp only [sub_zero]
+        have h_vec_zero : alg.u - m = 0 := norm_eq_zero.mp hR
+        simp [inner_zero_right, h_vec_zero]
+        linarith
+      · have hR_pos : 0 < R := by
+          simp only [R]
+          exact norm_pos_iff.mpr (by
+            intro h_eq
+            have : alg.u - m = 0 := h_eq
+            have : ‖alg.u - m‖ = 0 := by simp [this]
+            exact hR this)
+        obtain ⟨N, hN⟩ := h_subseq_x_Tx_limit (ε / R) (by positivity)
+        use N
+        intro k hk
+        specialize hN k hk
+        rw [dist_eq_norm] at hN
+        simp at hN
+        rw [Real.dist_eq]
+        simp only [sub_zero]
+        calc
+          _ ≤ ‖T (alg.x (n k)) - alg.x (n k)‖ * ‖alg.u - m‖ := by
+            apply abs_real_inner_le_norm
+          _ = ‖alg.x (n k) - T (alg.x (n k))‖ * ‖alg.u - m‖ := by
+            congr 1
+            rw [norm_sub_rev]
+          _ < (ε / R) * R := by
+            apply mul_lt_mul_of_pos_right
+            · exact hN
+            · exact hR_pos
+          _ = ε := by field_simp [ne_of_gt hR_pos]
+
+  -- lim ⟨xkn, x − PCx⟩ → ⟨ z , x − PCx⟩
+  have h_subseq_inner_limit2 : Tendsto (fun k => ⟪alg.x (n k), alg.u - m⟫)
+    atTop (𝓝 ⟪z , alg.u - m⟫) := by
+    rw [tendsto_iff_weakConverge] at h_weak_xn_to_z
+    apply h_weak_xn_to_z (alg.u - m)
+
+  -- lim ⟨xkn - PCx, x − PCx⟩ → ⟨ z - PCx, x − PCx⟩
+  have h_subseq_inner_limit3 : Tendsto (fun k => ⟪alg.x (n k) - m, alg.u - m⟫)
+    atTop (𝓝 ⟪z - m, alg.u - m⟫) := by
+      by_cases h_eq : alg.u = m
+      · simp [h_eq]
+      · rw [Metric.tendsto_atTop]
+        intro ε ε_pos
+        rw [Metric.tendsto_atTop] at h_subseq_inner_limit2
+        obtain ⟨N, hN⟩ := h_subseq_inner_limit2 ε (by positivity)
+        use N
+        intro k hk
+        specialize hN k hk
+        rw [Real.dist_eq] at hN ⊢
+        calc
+          _ = |⟪alg.x (n k), alg.u - m⟫- ⟪z, alg.u - m⟫| := by
+            congr 1
+            rw [inner_sub_left, inner_sub_left]
+            ring
+          _ < ε := by exact hN
+
+  -- 利用投影性质得到不等式
+  have h_proj_ineq : ⟪alg.u - m, z - m⟫ ≤ 0 := by
+    have hm_in_D : m ∈ D := by
+      rw [hC] at hm_in_C
+      exact Set.mem_of_mem_inter_right hm_in_C
+    have h_proj_apply : ∀ w ∈ C, ⟪alg.u - m, w - m⟫ ≤ 0 := by
+      apply proj_pt_inner_le_zero alg.u m C ?_ hm_in_C ?_
+      · exact hC_closed_convex.2
+      · exact hm_proj
+    exact h_proj_apply z h_z_in_C
+
+  -- 子列内积的收敛性
+  have h_subseq_inner_limit4 : Tendsto (fun k => ⟪ T (alg.x (n k)) - m, alg.u - m⟫)
+    atTop (𝓝 ⟪z - m, alg.u - m⟫) := by
+      have h_inner_diff : ∀ k,
+          ⟪ T (alg.x (n k)) - m, alg.u - m⟫ =
+          ⟪ T (alg.x (n k)) - alg.x (n k), alg.u - m⟫ +
+          ⟪ alg.x (n k) - m, alg.u - m⟫ := by
+        intro k
+        rw [inner_sub_left, inner_sub_left, inner_sub_left]
+        ring
+      convert Tendsto.add h_subseq_inner_limit1 h_subseq_inner_limit3 using 1
+      funext k
+      · exact h_inner_diff k
+      · simp
+
+  -- 上极限等于子列的极限
+  have h_limsup_eq : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop
+    = ⟪z - m, alg.u - m⟫ := by
+    have h1 := h_n_tendsto
+    have h2 := h_subseq_inner_limit4
+    exact tendsto_nhds_unique h1 h2
+
+  -- 最终结论
+  calc
+    _ = ⟪z - m, alg.u - m⟫ := h_limsup_eq
+    _ = ⟪alg.u - m, z - m⟫ := by exact real_inner_comm (alg.u - m) (z - m)
+    _ ≤ 0 := h_proj_ineq
 
 
 
@@ -1457,7 +1739,6 @@ theorem halpern_convergence
     hD_closed hD_convex hD_nonempty hT_quasinonexp
   by_cases coincidence : alg.u = alg.x0
   · obtain ⟨y, hy_in_C⟩ := hT_fixpoint
-    -- 使用我们抽出来的引理来控制距离
     have h_induction :=
       halpern_distance_monotone
         hD_closed hD_convex hD_nonempty
@@ -1549,6 +1830,76 @@ theorem halpern_convergence
     -- 结合(30.8)与(30.13)得到(30.14)
     have h_x_Tx_limit : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (𝓝 0) :=
       halpern_x_sub_Tx_tendsto_zero alg h_α_range h_α_limit μ hμ_pos hμ_Tx_bound h_diff_limit
+
+    -- 得到(30.15)
+    obtain ⟨n, z, m, q, h_n_strict_mono, ⟨h_z_in_D, h_weak_xn_to_z⟩,
+      ⟨hm_in_C, hm_proj⟩, hq_def, h_n_tendsto⟩ := by
+        apply halpern_subsequence_weak_convergence hD_closed
+          hD_convex hD_nonempty hT_nonexp hC ?_ alg halg_x_in_D
+        · rw [hC]
+          exact hC_closed_convex
+        · exact h_xn_bounded
+        · exact Set.nonempty_of_mem hy_in_C
+
+    -- z∈C
+    have h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (n k) - T (alg.x (n k))) atTop (𝓝 0) :=
+      halpern_subseq_x_sub_Tx_tendsto_zero alg n h_n_strict_mono h_x_Tx_limit
+    have h_z_fixed : z ∈ Fix T :=
+      halpern_subseq_fixed_point hD_closed hD_convex hD_nonempty hT_nonexp
+        alg n z h_z_in_D h_weak_xn_to_z halg_x_in_D h_subseq_x_Tx_limit
+    have h_z_in_C : z ∈ C := by
+      rw [hC]
+      exact ⟨h_z_fixed, h_z_in_D⟩
+
+    -- 得到(30.16)
+    have h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0 := by
+      apply halpern_limsup_inner_le_zero hD_closed hD_convex hT_nonexp hC ?_
+        alg n z h_z_in_C h_weak_xn_to_z m hm_in_C hm_proj
+        h_subseq_x_Tx_limit ?_
+      · rw[hC]
+        exact hC_closed_convex
+      · rw [hq_def] at h_n_tendsto
+        exact h_n_tendsto
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
