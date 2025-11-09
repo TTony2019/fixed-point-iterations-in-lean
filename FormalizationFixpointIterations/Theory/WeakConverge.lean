@@ -1,6 +1,12 @@
 import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Topology.Algebra.Module.WeakBilin
 import Mathlib.Analysis.InnerProductSpace.ProdL2
+import Mathlib.Topology.Defs.Filter
+import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
+import Mathlib.Analysis.InnerProductSpace.Dual
+import Mathlib.Analysis.InnerProductSpace.Continuous
+import Mathlib.Analysis.InnerProductSpace.Adjoint
+-- import Mathlib.Analysis.InnerProductSpace.OfNorm
 import Mathlib.Topology.Algebra.Group.Basic
 import Mathlib.Analysis.InnerProductSpace.Continuous
 import Mathlib.Topology.Instances.EReal.Lemmas
@@ -8,12 +14,6 @@ import Mathlib.Order.Filter.ENNReal
 import Mathlib.Order.LiminfLimsup
 import Mathlib.Data.EReal.Inv
 import Mathlib.Order.WithBot
-import Mathlib.Topology.Defs.Filter
-import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
-import Mathlib.Analysis.InnerProductSpace.Dual
-import Mathlib.Analysis.InnerProductSpace.Continuous
-import Mathlib.Analysis.InnerProductSpace.Adjoint
--- import Mathlib.Analysis.InnerProductSpace.OfNorm
 
 open WeakBilin Filter
 
@@ -431,7 +431,17 @@ theorem norm_weakly_lsc (x : ℕ → H) (p : H) (h : WeakConverge H x p) :
 #check liminf_le_limsup
 #check tendsto_of_liminf_eq_limsup
 
+#check isCompact_closedBall
+-- #check MetrizableSpace
 
+instance : PseudoMetricSpace (W H) where
+  dist := sorry
+  dist_self := sorry
+  dist_comm := sorry
+  dist_triangle := sorry
+
+instance : ProperSpace (W H) where
+  isCompact_closedBall := sorry
 
 -- Lemma 2.51 (i)
 theorem weak_converge_limsup_le_iff_strong_converge (x : ℕ → H) (p : H) :

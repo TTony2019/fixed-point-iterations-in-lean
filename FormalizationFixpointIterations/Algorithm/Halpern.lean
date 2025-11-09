@@ -1543,6 +1543,9 @@ lemma halpern_subseq_x_sub_Tx_tendsto_zero
   · rw [dist_eq_norm] at hN ⊢
     exact hN
 
+theorem existence_of_projection_point (C : Set H) (hC1 : C.Nonempty) (hC2 : Convex ℝ C)
+  (hC3 : IsClosed C) (x : H) : ∃ u ∈ C, ‖x - u‖ = ⨅ w : C, ‖x - w‖ :=
+  exists_norm_eq_iInf_of_complete_convex hC1 (IsClosed.isComplete hC3) hC2 x
 
 -- 引理：子列的固定点性质
 lemma halpern_subseq_fixed_point
@@ -1703,7 +1706,23 @@ lemma halpern_limsup_inner_le_zero
 
 
 
+-- structure ProjectionAssumptions (C : Set H) : Prop :=
+-- (convex : Convex ℝ C)
+-- (closed : IsClosed C)
+-- (nonempty : C.Nonempty)
 
+-- noncomputable def P (C : Set H)
+--   (h : ProjectionAssumptions C) (x : H) : H :=
+-- Classical.choose
+--   (existsUnique_of_exists_of_unique
+--     (by
+--       -- existence: ∃ v ∈ C, minimizing ‖x - v‖
+--       -- fill with the appropriate Mathlib lemma establishing existence
+--       admit)
+--     (by
+--       -- uniqueness: minimal point is unique in a real Hilbert space (strict convexity)
+--       -- fill with the appropriate Mathlib lemma establishing uniqueness
+--       admit))
 
 
 
