@@ -13,6 +13,8 @@ import Mathlib.Analysis.InnerProductSpace.Basic
 import Mathlib.Topology.MetricSpace.Pseudo.Defs
 import Mathlib.Analysis.Convex.Segment
 import Mathlib.Analysis.Convex.Cone.Basic
+import Mathlib.Topology.Instances.Nat
+
 
 open Nonexpansive_operator Filter Topology BigOperators Function
 set_option linter.unusedSectionVars false
@@ -1543,9 +1545,6 @@ lemma halpern_subseq_x_sub_Tx_tendsto_zero
   · rw [dist_eq_norm] at hN ⊢
     exact hN
 
-theorem existence_of_projection_point (C : Set H) (hC1 : C.Nonempty) (hC2 : Convex ℝ C)
-  (hC3 : IsClosed C) (x : H) : ∃ u ∈ C, ‖x - u‖ = ⨅ w : C, ‖x - w‖ :=
-  exists_norm_eq_iInf_of_complete_convex hC1 (IsClosed.isComplete hC3) hC2 x
 
 -- 引理：子列的固定点性质
 lemma halpern_subseq_fixed_point
@@ -1706,26 +1705,11 @@ lemma halpern_limsup_inner_le_zero
 
 
 
--- structure ProjectionAssumptions (C : Set H) : Prop :=
--- (convex : Convex ℝ C)
--- (closed : IsClosed C)
--- (nonempty : C.Nonempty)
-
--- noncomputable def P (C : Set H)
---   (h : ProjectionAssumptions C) (x : H) : H :=
--- Classical.choose
---   (existsUnique_of_exists_of_unique
---     (by
---       -- existence: ∃ v ∈ C, minimizing ‖x - v‖
---       -- fill with the appropriate Mathlib lemma establishing existence
---       admit)
---     (by
---       -- uniqueness: minimal point is unique in a real Hilbert space (strict convexity)
---       -- fill with the appropriate Mathlib lemma establishing uniqueness
---       admit))
 
 
 
+
+#check Filter.eventually_lt_of_limsup_lt
 #check norm_eq_iInf_iff_real_inner_le_zero--投影的形式
 
 theorem halpern_convergence
@@ -1851,7 +1835,7 @@ theorem halpern_convergence
       halpern_x_sub_Tx_tendsto_zero alg h_α_range h_α_limit μ hμ_pos hμ_Tx_bound h_diff_limit
 
     -- 得到(30.15)
-    obtain ⟨n, z, m, q, h_n_strict_mono, ⟨h_z_in_D, h_weak_xn_to_z⟩,
+    obtain ⟨p, z, m, q, h_n_strict_mono, ⟨h_z_in_D, h_weak_xn_to_z⟩,
       ⟨hm_in_C, hm_proj⟩, hq_def, h_n_tendsto⟩ := by
         apply halpern_subsequence_weak_convergence hD_closed
           hD_convex hD_nonempty hT_nonexp hC ?_ alg halg_x_in_D
@@ -1861,11 +1845,11 @@ theorem halpern_convergence
         · exact Set.nonempty_of_mem hy_in_C
 
     -- z∈C
-    have h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (n k) - T (alg.x (n k))) atTop (𝓝 0) :=
-      halpern_subseq_x_sub_Tx_tendsto_zero alg n h_n_strict_mono h_x_Tx_limit
+    have h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (p k) - T (alg.x (p k))) atTop (𝓝 0) :=
+      halpern_subseq_x_sub_Tx_tendsto_zero alg p h_n_strict_mono h_x_Tx_limit
     have h_z_fixed : z ∈ Fix T :=
       halpern_subseq_fixed_point hD_closed hD_convex hD_nonempty hT_nonexp
-        alg n z h_z_in_D h_weak_xn_to_z halg_x_in_D h_subseq_x_Tx_limit
+        alg p z h_z_in_D h_weak_xn_to_z halg_x_in_D h_subseq_x_Tx_limit
     have h_z_in_C : z ∈ C := by
       rw [hC]
       exact ⟨h_z_fixed, h_z_in_D⟩
@@ -1873,12 +1857,96 @@ theorem halpern_convergence
     -- 得到(30.16)
     have h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0 := by
       apply halpern_limsup_inner_le_zero hD_closed hD_convex hT_nonexp hC ?_
-        alg n z h_z_in_C h_weak_xn_to_z m hm_in_C hm_proj
+        alg p z h_z_in_C h_weak_xn_to_z m hm_in_C hm_proj
         h_subseq_x_Tx_limit ?_
       · rw[hC]
         exact hC_closed_convex
       · rw [hq_def] at h_n_tendsto
         exact h_n_tendsto
+
+
+
+
+
+
+
+
+
+
+
+
+
+    -- 从(30.16)和(i)条件提取存在量化形式
+    -- 即对任意ε>0，存在k使得对所有n≥k满足两个条件
+    have h_eps_exists : ∀ ε > 0, ∃ k : ℕ, ∀ n ≥ k,
+        ⟪T (alg.x n) - m, alg.u - m⟫ ≤ ε ∧
+        alg.α n * ‖alg.u - m‖^2 ≤ ε := by
+      intro ε hε
+      -- 从 h_α_limit: λₙ → 0，对ε/‖u-m‖²存在N₁
+      have h_norm_um : 0 ≤ ‖alg.u - m‖ := norm_nonneg _
+      by_cases h_um_zero : ‖alg.u - m‖ = 0
+      · have h_u_eq_m : alg.u = m := by
+          exact eq_of_norm_sub_eq_zero h_um_zero
+        rw [h_u_eq_m]
+        simp
+        use 0
+        intro n hn
+        linarith
+      · -- 若 ‖u-m‖ ≠ 0
+        have h_um_pos : 0 < ‖alg.u - m‖ := by
+          exact norm_pos_iff.mpr (fun h => h_um_zero (by
+            have : alg.u - m = 0 := h
+            simp [this]))
+        have h_um_sq_pos : 0 < ‖alg.u - m‖^2 := by positivity
+
+        -- 从 h_α_limit 得到 ∃k₁ 使得 λₙ < ε/‖u-m‖²
+        rw [Metric.tendsto_atTop] at h_α_limit
+        obtain ⟨k₁, hk₁⟩ := h_α_limit (ε / ‖alg.u - m‖^2) (by positivity)
+
+        have h_inner_bounded :
+            ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M := by
+          use limsup (fun k => ⟪T (alg.x k) - m, alg.u - m⟫) atTop
+          sorry
+
+        have h_limsup_half : ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ ε / 2 := by
+          -- 由于 limsup ≤ 0，而 ε/2 > 0，所以最终 f_n ≤ ε/2
+          have h_eventually : ∀ᶠ n in atTop,
+              ⟪T (alg.x n) - m, alg.u - m⟫ < ε / 2 := by
+            -- 使用 limsup 的性质：如果 limsup f ≤ L < L'，
+            -- 则最终 f_n < L'
+            have : (0 : ℝ) < ε / 2 := by linarith
+            have h_gap : limsup (fun k => ⟪T (alg.x k) - m, alg.u - m⟫) atTop < ε / 2 := by
+              linarith [h_limsup_neg]
+            -- 现在应用 limsup 的定义
+            apply Filter.eventually_lt_of_limsup_lt
+            · exact h_gap
+            · exact h_inner_bounded
+          filter_upwards [h_eventually] with n hn
+          exact le_of_lt hn
+        rw [eventually_atTop] at h_limsup_half
+        obtain ⟨k₂, hk₂⟩ := h_limsup_half
+        use max k₁ k₂
+        intro n hn
+        have hn_k₁ : n ≥ k₁ := le_of_max_le_left hn
+        have hn_k₂ : n ≥ k₂ := le_of_max_le_right hn
+        constructor
+        · exact le_trans (hk₂ n hn_k₂) (by linarith)
+        · have h_α_small : ‖alg.α n - 0‖ < ε / ‖alg.u - m‖^2 := hk₁ n hn_k₁
+          rw [sub_zero] at h_α_small
+          have h_α_nonneg : 0 ≤ alg.α n := by
+            have := h_α_range n
+            simp [Set.mem_Ioo] at this
+            linarith
+          have h_alpha_abs : |alg.α n| = alg.α n := abs_of_nonneg h_α_nonneg
+          rw [← h_alpha_abs] at h_α_small
+          calc
+            alg.α n * ‖alg.u - m‖^2
+                ≤ (ε / ‖alg.u - m‖^2) * ‖alg.u - m‖^2 := by
+                  apply mul_le_mul_of_nonneg_right
+                  · simp [h_alpha_abs] at h_α_small
+                    linarith
+                  · exact h_um_sq_pos.le
+            _ = ε := by field_simp [ne_of_gt h_um_sq_pos]
 
 
 
