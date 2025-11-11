@@ -18,7 +18,6 @@ import Mathlib.Topology.Algebra.Order.LiminfLimsup
 
 open Nonexpansive_operator Filter Topology BigOperators Function
 set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 set_option maxHeartbeats 999999999
 set_option linter.style.commandStart false
 set_option maxRecDepth 2000
@@ -57,7 +56,7 @@ lemma prod_exp_sum
   {T : H → H}
   (alg : Halpern T)
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
-  (m n : ℕ) (hmn : m ≤ n) :
+  (m n : ℕ) :
   ∏ x ∈ Finset.Icc m n, (1 - alg.α x) =
     Real.exp (∑ x ∈ Finset.Icc m n, Real.log (1 - alg.α x)) ∧
   Real.exp (∑ x ∈ Finset.Icc m n, Real.log (1 - alg.α x)) ≤
@@ -89,16 +88,16 @@ lemma infinite_prod_zero
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N,
     alg.α n) atTop atTop)
-  (m n : ℕ) (hmn : m ≤ n) :
+  (m : ℕ) :
   Tendsto (fun n => ∏ k ∈ Finset.Icc m n, (1 - alg.α k)) atTop (𝓝 0) := by
   have h_prod_eq : ∀ n ≥ m, ∏ k ∈ Finset.Icc m n, (1 - alg.α k) =
       Real.exp (∑ k ∈ Finset.Icc m n, Real.log (1 - alg.α k)) := by
     intro n hn
-    exact (prod_exp_sum alg h_α_range m n hn).1
+    exact (prod_exp_sum alg h_α_range m n).1
   have h_exp_le : ∀ n ≥ m, Real.exp (∑ k ∈ Finset.Icc m n, Real.log (1 - alg.α k)) ≤
       Real.exp (∑ k ∈ Finset.Icc m n, -alg.α k) := by
     intro n hn
-    exact (prod_exp_sum alg h_α_range m n hn).2
+    exact (prod_exp_sum alg h_α_range m n).2
   have h_prod_le : ∀ n ≥ m, ∏ k ∈ Finset.Icc m n, (1 - alg.α k) ≤
       Real.exp (- ∑ k ∈ Finset.Icc m n, alg.α k) := by
     intro n hn
@@ -287,8 +286,7 @@ lemma intersection_set_is_closed_convex
     (hD_closed : IsClosed D)
     (hD_convex : Convex ℝ D)
     {T : H → H}
-    (x : H)
-    (hx : x ∈ D) :
+    (x : H) :
     IsClosed {y ∈ D | ⟪y - T x, x - T x⟫ ≤ (1/2) * ‖T x - x‖^2} ∧
     Convex ℝ {y ∈ D | ⟪y - T x, x - T x⟫ ≤ (1/2) * ‖T x - x‖^2} := by
   constructor
@@ -313,10 +311,10 @@ lemma quasinonexpansive_fixedPoint_closed_convex
   constructor
   · apply isClosed_biInter
     intro x hx
-    exact (intersection_set_is_closed_convex hD_closed hD_convex x hx).1
+    exact (intersection_set_is_closed_convex hD_closed hD_convex x).1
   · apply convex_iInter₂
     intro x hx
-    exact (intersection_set_is_closed_convex hD_closed hD_convex x hx).2
+    exact (intersection_set_is_closed_convex hD_closed hD_convex x).2
 
 -- quasi可以推出nonexpansive
 lemma nonexpansive_leadsto_quasinonexpansive
@@ -386,17 +384,12 @@ lemma pro_one_sub_le_exp_neg_sum
 
 lemma halpern_distance_monotone
   {D : Set H}
-  (hD_closed : IsClosed D)
-  (hD_convex : Convex ℝ D)
-  (hD_nonempty : D.Nonempty)
   {T : H → H}
   (hT_nonexp : NonexpansiveOn T D)
   {C : Set H}
   (hC : C = Fix T ∩ D)
-  (hT_invariant : ∀ x ∈ D, T x ∈ D)
   (alg : Halpern T)
   (halg_x0 : alg.x0 ∈ D)
-  (halg_u : alg.u ∈ D)
   (halg_x_in_D : ∀ n, alg.x n ∈ D)
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (coincidence : alg.u = alg.x0)
@@ -467,7 +460,6 @@ lemma halpern_distance_monotone
 
 -- μ is bounded
 lemma halpern_mu_bound
-  {D : Set H}
   {T : H → H}
   (alg : Halpern T)
   {y : H}
@@ -666,7 +658,6 @@ lemma halpern_norm_diff_ineq
     (alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n)) +
     (1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (alg.x n)))
   (μ : ℝ)
-  (hμ_pos : μ > 0)
   (hμ_Tx_bound : ∀ n, ‖alg.u - T (alg.x n)‖ ≤ μ)
   : ∀ n,
       ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤
@@ -953,7 +944,7 @@ lemma halpern_prod_tail_tendsto_zero
     (m + 1) (n + 1), (1 - alg.α k)) atTop (𝓝 0) := by
     let f : ℕ → ℝ := fun n => ∏ k ∈ Finset.Icc (m + 1) n, (1 - alg.α k)
     have h_f_tendsto : Tendsto f atTop (𝓝 0) :=
-      infinite_prod_zero alg h_α_range h_α_sum_inf (m + 1) (m + 1) (le_refl _)
+      infinite_prod_zero alg h_α_range h_α_sum_inf (m + 1)
     apply h_f_tendsto.comp
     exact tendsto_add_atTop_nat 1
 
@@ -1148,7 +1139,6 @@ lemma x_sub_Tx_diff_Tendsto_zero
   {T : H → H}
   (alg : Halpern T)
   {D : Set H}
-  (hT_nonexp : NonexpansiveOn T D)
   (halg_x_in_D : ∀ n, alg.x n ∈ D)
   (h_diff_limit : Tendsto (fun n ↦ alg.x (n + 1) - alg.x n) atTop (𝓝 0))
   (h_T_diff_limit : Tendsto (fun n ↦ T (alg.x (n + 1)) - T (alg.x n)) atTop (𝓝 0))
@@ -1232,7 +1222,7 @@ lemma sum_x_sub_Tx_diff_Tendsto_zero
       -- 从 x_sub_Tx_diff_Tendsto_zero 得到存在量化形式
       have h_base_eps_N : ∀ ε > 0, ∃ N, ∀ n ≥ N,
         ‖(alg.x (n + 1) - T (alg.x (n + 1))) - (alg.x n - T (alg.x n))‖ < ε :=by
-        exact x_sub_Tx_diff_Tendsto_zero alg hT_nonexp halg_x_in_D h_diff_limit h_T_diff_limit
+        exact x_sub_Tx_diff_Tendsto_zero alg halg_x_in_D h_diff_limit h_T_diff_limit
 
       -- 转换为 Tendsto 形式
       have h_base : Tendsto (fun n ↦ (alg.x (n + 1) - T (alg.x (n + 1))) -
@@ -1412,9 +1402,7 @@ lemma halpern_subsequence_weak_convergence
   {D : Set H}
   (hD_closed : IsClosed D)
   (hD_convex : Convex ℝ D)
-  (hD_nonempty : D.Nonempty)
   {T : H → H}
-  (hT_nonexp : NonexpansiveOn T D)
   {C : Set H}
   (hC : C = Fix T ∩ D)
   (hT_fixpoint : C.Nonempty)
@@ -1570,10 +1558,7 @@ lemma halpern_subseq_fixed_point
 -- 引理 30.16：子列内积序列的上极限不等式
 lemma halpern_limsup_inner_le_zero
   {D : Set H}
-  (hD_closed : IsClosed D)
-  (hD_convex : Convex ℝ D)
   {T : H → H}
-  (hT_nonexp : NonexpansiveOn T D)
   {C : Set H}
   (hC : C = Fix T ∩ D)
   (hC_closed_convex : IsClosed C ∧ Convex ℝ C)
@@ -1780,20 +1765,14 @@ lemma halpern_eps_exists_of_limsup_and_alpha
 -- 30.18：投影距离的上界
 lemma halpern_xn_sub_PCx_upbd
   {D : Set H}
-  (hD_closed : IsClosed D)
-  (hD_convex : Convex ℝ D)
-  (hD_nonempty : D.Nonempty)
   {T : H → H}
   (hT_nonexp : NonexpansiveOn T D)
   {C : Set H}
-  (hC : C = Fix T ∩ D)
   (alg : Halpern T)
-  (halg_x_in_D : ∀ n, alg.x n ∈ D)
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_α_limit : Tendsto alg.α atTop (𝓝 0))
   (m : H)
   (hm_in_C : m ∈ C)
-  (hm_proj : ‖alg.u - m‖ = ⨅ w : C, ‖alg.u - w‖)
   (h_induction : ∀ z ∈ C, ∀ n,
     ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧
     ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
@@ -1905,20 +1884,15 @@ lemma halpern_xn_sub_PCx_upbd
 -- 引理 30.19：归纳得到乘积形式
 lemma halpern_xn_sub_PCx_prod
   {D : Set H}
-  (hD_closed : IsClosed D)
-  (hD_convex : Convex ℝ D)
-  (hD_nonempty : D.Nonempty)
+
   {T : H → H}
   (hT_nonexp : NonexpansiveOn T D)
   {C : Set H}
-  (hC : C = Fix T ∩ D)
   (alg : Halpern T)
-  (halg_x_in_D : ∀ n, alg.x n ∈ D)
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_α_limit : Tendsto alg.α atTop (𝓝 0))
   (m : H)
   (hm_in_C : m ∈ C)
-  (hm_proj : ‖alg.u - m‖ = ⨅ w : C, ‖alg.u - w‖)
   (h_induction : ∀ z ∈ C, ∀ n,
     ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧
     ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
@@ -1930,8 +1904,8 @@ lemma halpern_xn_sub_PCx_prod
 
   -- 首先应用 30.18 获得逐步不等式
   have h_dist_bound := halpern_xn_sub_PCx_upbd
-    hD_closed hD_convex hD_nonempty hT_nonexp hC alg halg_x_in_D
-    h_α_range h_α_limit m hm_in_C hm_proj h_induction h_limsup_neg
+    hT_nonexp alg
+    h_α_range h_α_limit m hm_in_C h_induction h_limsup_neg
     h_inner_bounded
   intro ε hε
   obtain ⟨N, hN⟩ := h_dist_bound ε hε
@@ -2009,7 +1983,187 @@ lemma halpern_xn_sub_PCx_prod
 
 
 
+-- 引理：由(30.19)和步长条件得到 limsup 的上界
+lemma halpern_limsup_bound_from_prod
+  {D : Set H}
+  {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D)
+  {C : Set H}
+  (hC : C = Fix T ∩ D)
+  (alg : Halpern T)
+  (halg_x_in_D : ∀ n, alg.x n ∈ D)
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
+  (h_α_limit : Tendsto alg.α atTop (𝓝 0))
+  (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
+  (m : H)
+  (hm_in_C : m ∈ C)
+  (hm_proj : ‖alg.u - m‖ = ⨅ w : C, ‖alg.u - w‖)
+  (h_induction : ∀ z ∈ C, ∀ n,
+    ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧
+    ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
+  (h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0)
+  (h_inner_bounded : ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M)
+  (y : H) (hy_in_C : y ∈ C)
+  (h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - y‖ ≤ M)
+  : ∀ ε > 0, ∃ N : ℕ, ∀ (n k : ℕ), n ≥ k → n ≥ N → k ≥ N →
+      limsup (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop ≤ 3 * ε := by
+  have h_α_le_one : ∀ n, 1 - alg.α n ≤ 1 := by
+    intro n
+    have := h_α_range n
+    simp [Set.mem_Ioo] at this
+    linarith
+  have h_nonneg_one_sub_α : ∀ n, 0 ≤ 1 - alg.α n := by
+    intro n
+    have := h_α_range n
+    simp [Set.mem_Ioo] at this
+    linarith
+  intro ε hε
+  obtain ⟨N, hN⟩ := halpern_xn_sub_PCx_prod
+    hT_nonexp alg h_α_range h_α_limit m hm_in_C h_induction h_limsup_neg
+    h_inner_bounded ε hε
 
+  have h_pointwise : ∀ n ≥ N, ∀ k ≥ N, n ≥ k →
+      ‖alg.x (n + 1) - m‖ ^ 2 ≤ 3 * ε + ‖alg.x k - m‖ ^ 2 *
+        (∏ l ∈ Finset.Icc k n, (1 - alg.α l)) := by
+    intros n hn k hk hnk
+    exact hN n k hn hk hnk
+
+  have h_prod_zero : ∀ k ≥ N,
+    limsup (fun n => (∏ l ∈ Finset.Icc k n, (1 - alg.α l))) atTop = 0 := by
+    intro k hk
+    have h_prod_tendsto : Tendsto (fun n => ∏ l ∈ Finset.Icc k n, (1 - alg.α l))
+      atTop (𝓝 0) :=
+      infinite_prod_zero alg h_α_range h_α_sum_inf k
+    have h_limsup_eq : limsup (fun n => ∏ l ∈ Finset.Icc k n, (1 - alg.α l)) atTop = 0 := by
+      exact Tendsto.limsup_eq h_prod_tendsto
+    exact h_limsup_eq
+
+  use N
+  intro n k hnk hnN hkN
+
+  have h_xn_sub_m_bdd : ∃ M : ℝ, ∀ n : ℕ, ‖alg.x (n + 1) - m‖ ^ 2 ≤ M := by
+    obtain ⟨K, hK⟩ := h_seq_bounded
+    have h_K_nonneg : 0 ≤ K := by
+      have hK_nonneg : ∀ n, 0 ≤ ‖alg.x n - y‖ := by
+        intro n
+        exact norm_nonneg _
+      exact Std.le_trans (hK_nonneg N) (hK N)
+    use (‖y - m‖ + K) ^ 2
+    intro n
+    calc
+      _ = ‖(alg.x (n + 1) - y) + (y - m)‖ ^ 2 := by
+        congr 1
+        congr
+        abel
+      _ = ‖alg.x (n + 1) - y‖ ^ 2 + ‖y - m‖ ^ 2 +
+          2 * ⟪alg.x (n + 1) - y, y - m⟫ := by
+            rw [← real_inner_self_eq_norm_sq]
+            rw [inner_add_left, inner_add_right, inner_add_right]
+            rw [real_inner_self_eq_norm_sq, real_inner_self_eq_norm_sq]
+            simp [real_inner_comm]
+            ring
+      _ ≤ K ^ 2 + ‖y - m‖ ^ 2 +
+          2 * ‖alg.x (n + 1) - y‖ * ‖y - m‖ := by
+            apply add_le_add
+            · apply add_le_add
+              · apply sq_le_sq.2
+                · simp
+                  convert hK (n + 1)
+                  simp
+                  assumption
+              · simp
+            · rw [mul_assoc]
+              apply mul_le_mul_of_nonneg_left
+              · exact real_inner_le_norm (alg.x (n + 1) - y) (y - m)
+              · norm_num
+      _ ≤ (‖y - m‖ + K) ^ 2 := by
+        rw [pow_two (‖y - m‖ + K), mul_add, add_mul, add_mul]
+        ring_nf
+        simp
+        rw [add_comm]
+        simp
+        rw[mul_comm]
+        apply mul_le_mul
+        · convert hK (1+n)
+        · simp
+        · exact norm_nonneg (y - m)
+        · assumption
+
+  calc
+    _ ≤ limsup (fun n => 3 * ε + ‖alg.x k - m‖ ^ 2 *
+      (∏ l ∈ Finset.Icc k n, (1 - alg.α l))) atTop := by
+        apply limsup_le_limsup
+        · apply eventually_atTop.2
+          use k
+          intro p hp
+          apply h_pointwise
+          · linarith
+          · linarith
+          · assumption
+        · sorry--‖alg.x (n + 1) - m‖ ^ 2有界
+        · sorry--3 * ε + ‖alg.x k - m‖ ^ 2 * ∏ l ∈ Finset.Icc k n, (1 - alg.α l)有界
+    _ = limsup (fun n ↦ ‖alg.x k - m‖ ^ 2 *
+      ∏ l ∈ Finset.Icc k n, (1 - alg.α l) + 3 * ε) atTop := by
+      apply congr
+      · ext n
+        ring_nf
+      · simp
+    _ ≤ limsup (fun n => ‖alg.x k - m‖ ^ 2) atTop *
+      limsup (fun n => (∏ l ∈ Finset.Icc k n, (1 - alg.α l))) atTop + 3 * ε := by
+      rw [limsup_add_const]
+      · simp
+        apply limsup_mul_le
+        · simp
+          exact atTop_neBot
+        · exact isBoundedUnder_const
+        · apply eventually_atTop.2
+          use k
+          intro n hn
+          simp
+          exact Finset.prod_nonneg fun i a ↦ h_nonneg_one_sub_α i
+        · simp [IsBoundedUnder, IsBounded]
+          use 1
+          use k
+          intro n hn
+          apply Finset.prod_le_one
+          · intro i hi
+            exact h_nonneg_one_sub_α i
+          · intro i hi
+            exact h_α_le_one i
+      · simp [IsBoundedUnder, IsBounded]
+        obtain ⟨M, hM⟩ := h_xn_sub_m_bdd
+        have h_M_nonneg : 0 ≤ M := by
+          by_contra h
+          push_neg at h
+          have := hM 0
+          have h_contradiction : ‖alg.x 1 - m‖ ^ 2 < 0 := by
+            linarith
+          have := sq_nonneg (‖alg.x 1 - m‖)
+          linarith
+        use M
+        use k - 1
+        intro n hn
+        rw [← mul_one M]
+        apply mul_le_mul
+        · convert hM (k - 1)
+          sorry--k = k - 1 + 1
+        · apply Finset.prod_le_one
+          · intro i hi
+            exact h_nonneg_one_sub_α i
+          · intro i hi
+            exact h_α_le_one i
+        · apply Finset.prod_nonneg
+          intro i hi
+          exact h_nonneg_one_sub_α i
+        · exact h_M_nonneg
+      · sorry--‖alg.x k - m‖ ^ 2 * ∏ l ∈ Finset.Icc k n, (1 - alg.α l)有界
+    _ = limsup (fun n ↦ ‖alg.x k - m‖ ^ 2) atTop * 0 + 3 * ε := by
+      congr
+      · rw [h_prod_zero k]
+        assumption
+    _ = 3 * ε := by
+      rw [mul_zero]
+      simp
 
 
 
@@ -2071,9 +2225,8 @@ theorem halpern_convergence
   · obtain ⟨y, hy_in_C⟩ := hT_fixpoint
     have h_induction :=
       halpern_distance_monotone
-        hD_closed hD_convex hD_nonempty
-        hT_nonexp hC hT_invariant
-        alg halg_x0 halg_u halg_x_in_D h_α_range coincidence
+        hT_nonexp hC
+        alg halg_x0 halg_x_in_D h_α_range coincidence
 
     -- 证明序列有界 (30.6)
     have h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - y‖ ≤ M := by
@@ -2132,7 +2285,6 @@ theorem halpern_convergence
       · exact h_diff_bounded
       · exact h_Tseq_bounded
       · exact h_seq_bounded
-      exact D
     obtain ⟨μ, hμ_pos, hμ_x_bound, hμ_Tx_bound⟩ := h_mu_bound
 
     -- 证明 xₙ₊₂ - xₙ₊₁ = (λₙ₊₁ - λₙ)(x - Txₙ) + (1 - λₙ₊₁)(Txₙ₊₁ - Txₙ) (30.10)
@@ -2140,7 +2292,7 @@ theorem halpern_convergence
 
     -- 使用提取出来的范数差分不等式引理(30.11)
     have h_norm_diff_ineq := halpern_norm_diff_ineq alg hT_nonexp halg_x_in_D h_α_range
-      h_diff_formula μ hμ_pos hμ_Tx_bound
+      h_diff_formula μ hμ_Tx_bound
 
     have hμ_nonneg : 0 ≤ μ := by exact le_of_lt hμ_pos
 
@@ -2165,7 +2317,7 @@ theorem halpern_convergence
     obtain ⟨p, z, m, q, h_n_strict_mono, ⟨h_z_in_D, h_weak_xn_to_z⟩,
       ⟨hm_in_C, hm_proj⟩, hq_def, h_n_tendsto⟩ := by
         apply halpern_subsequence_weak_convergence hD_closed
-          hD_convex hD_nonempty hT_nonexp hC ?_ alg halg_x_in_D
+          hD_convex hC ?_ alg halg_x_in_D
         · rw [hC]
           exact hC_closed_convex
         · exact h_xn_bounded
@@ -2183,10 +2335,10 @@ theorem halpern_convergence
 
     -- 得到(30.16)
     have h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0 := by
-      apply halpern_limsup_inner_le_zero hD_closed hD_convex hT_nonexp hC ?_
+      apply halpern_limsup_inner_le_zero hC ?_
         alg p z h_z_in_C h_weak_xn_to_z m hm_in_C hm_proj
         h_subseq_x_Tx_limit ?_
-      · rw[hC]
+      · rw [hC]
         exact hC_closed_convex
       · rw [hq_def] at h_n_tendsto
         exact h_n_tendsto
@@ -2201,69 +2353,33 @@ theorem halpern_convergence
 
     -- 得到(30.18)
     have h_xn_sub_PCx_upbd := halpern_xn_sub_PCx_upbd
-      hD_closed hD_convex hD_nonempty hT_nonexp hC alg halg_x_in_D
-      h_α_range h_α_limit m hm_in_C hm_proj h_induction h_limsup_neg
+      hT_nonexp alg h_α_range h_α_limit m hm_in_C h_induction h_limsup_neg
       h_inner_bounded
 
     -- 得到(30.19)
     have h_xn_sub_PCx_prod := halpern_xn_sub_PCx_prod
-      hD_closed hD_convex hD_nonempty hT_nonexp hC alg halg_x_in_D
-      h_α_range h_α_limit m hm_in_C hm_proj h_induction h_limsup_neg
+      hT_nonexp alg
+      h_α_range h_α_limit m hm_in_C h_induction h_limsup_neg
       h_inner_bounded
 
-
-    -- 由(30.19)和步长条件得到强收敛
-    have h_xn_sub_PCx_limsup : ∀ ε > 0, ∃ N : ℕ, ∀ (n k : ℕ), n ≥ k → n ≥ N → k ≥ N → limsup (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop ≤ 3 * ε := by
-      intro ε hε
-      obtain ⟨N, hN⟩ := h_xn_sub_PCx_prod ε hε
-      -- 构造辅助序列
-      have h_pointwise : ∀ n ≥ N, ∀ k ≥ N, n ≥ k →
-          ‖alg.x (n + 1) - m‖ ^ 2 ≤ 3 * ε + ‖alg.x k - m‖ ^ 2 *
-            (∏ l ∈ Finset.Icc k n, (1 - alg.α l)) := by
-        intros n hn k hk hnk
-        exact hN n k hn hk hnk
-
-      -- 利用 limsup_le_limsup：从点态不等式得到 limsup 不等式
-      have h_eventually_ineq : ∀ᶠ n in atTop, ∀ k ≥ N, n ≥ k →
-          ‖alg.x (n + 1) - m‖ ^ 2 ≤ 3 * ε + ‖alg.x k - m‖ ^ 2 *
-            (∏ l ∈ Finset.Icc k n, (1 - alg.α l)) := by
-        apply eventually_atTop.2
-        use N
-      -- 对固定的 k，取 n → ∞
-      have h_prod_zero : ∀ k ≥ N,
-        limsup (fun n => (∏ l ∈ Finset.Icc k n, (1 - alg.α l))) atTop = 0 := by
-          intro k hk
-          have h_prod_tendsto : Tendsto (fun n => ∏ l ∈ Finset.Icc k n, (1 - alg.α l))
-            atTop (𝓝 0) :=
-            infinite_prod_zero alg h_α_range h_α_sum_inf k k (le_refl k)
-          -- 从 Tendsto 到 limsup 等于极限值
-          have h_limsup_eq : limsup (fun n => ∏ l ∈ Finset.Icc k n, (1 - alg.α l)) atTop = 0 := by
-            exact Tendsto.limsup_eq h_prod_tendsto
-          exact h_limsup_eq
-      use N
-      intro n k hnk hnN hkN
+    -- limsup被ε控制
+    have h_limsup_bounded : ∀ ε > 0, ∃ N : ℕ, ∀ (n k : ℕ), n ≥ k → n ≥ N → k ≥ N →
+        limsup (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop ≤ 3 * ε := by
+      apply halpern_limsup_bound_from_prod hT_nonexp hC alg halg_x_in_D
+        h_α_range h_α_limit h_α_sum_inf m hm_in_C hm_proj h_induction
+        h_limsup_neg h_inner_bounded z h_z_in_C
+      obtain ⟨M, hM⟩ := h_seq_bounded
+      use M + ‖y - z‖
+      intro n
       calc
-        _ ≤ limsup (fun n => 3 * ε + ‖alg.x k - m‖ ^ 2 *
-          (∏ l ∈ Finset.Icc k n, (1 - alg.α l))) atTop := by
-            apply limsup_le_limsup
-            · apply eventually_atTop.2
-              use k
-              intro p hp
-              apply h_pointwise
-              · linarith
-              · linarith
-              · assumption
-            ·
+        ‖alg.x n - z‖ = ‖(alg.x n - y) + (y - z)‖ := by
+          simp
+        _ ≤ ‖alg.x n - y‖ + ‖y - z‖ := by apply norm_add_le
+        _ ≤ M + ‖y - z‖ := by linarith [hM n]
 
-
-        _ = 3 * ε + ‖alg.x k - m‖ ^ 2 * limsup (fun n => (∏ l ∈ Finset.Icc k n, (1 - alg.α l))) atTop := by
-          rw [limsup_add_const, limsup_mul_const_of_nonneg]
-          apply mul_nonneg
-          · linarith
-          · apply sq_nonneg
-
-
-
+    -- 由ε控制得到极限
+    have h_final_limit : Tendsto (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop (𝓝 0) := by
+      sorry
 
 
 
