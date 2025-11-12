@@ -1676,7 +1676,7 @@ lemma halpern_limsup_inner_le_zero
     _ = ⟪alg.u - m, z - m⟫ := by exact real_inner_comm (alg.u - m) (z - m)
     _ ≤ 0 := h_proj_ineq
 
---上极限有界，则整个序列有界
+--上极限有上界，则整个序列有上界
 lemma isBoundedUnder_of_limsup_le {u : ℕ → ℝ} {M : ℝ}
     (h : limsup u atTop ≤ M) :
     IsBoundedUnder (· ≤ ·) (atTop : Filter ℕ) u := by
@@ -2030,7 +2030,7 @@ lemma halpern_limsup_bound_from_prod
   use N
   intro n k hnk hnN hkN
 
-  have h_xn_sub_m_bdd : ∃ M : ℝ, ∀ n : ℕ, ‖alg.x (n + 1) - m‖ ^ 2 ≤ M := by
+  have h_xn_sub_m_bdd : ∃ M : ℝ, ∀ n : ℕ, ‖alg.x n - m‖ ^ 2 ≤ M := by
     obtain ⟨K, hK⟩ := h_seq_bounded
     have h_K_nonneg : 0 ≤ K := by
       have hK_nonneg : ∀ n, 0 ≤ ‖alg.x n - y‖ := by
@@ -2040,30 +2040,30 @@ lemma halpern_limsup_bound_from_prod
     use (‖y - m‖ + K) ^ 2
     intro n
     calc
-      _ = ‖(alg.x (n + 1) - y) + (y - m)‖ ^ 2 := by
+      _ = ‖(alg.x n - y) + (y - m)‖ ^ 2 := by
         congr 1
         congr
         abel
-      _ = ‖alg.x (n + 1) - y‖ ^ 2 + ‖y - m‖ ^ 2 +
-          2 * ⟪alg.x (n + 1) - y, y - m⟫ := by
+      _ = ‖alg.x n - y‖ ^ 2 + ‖y - m‖ ^ 2 +
+          2 * ⟪alg.x n - y, y - m⟫ := by
             rw [← real_inner_self_eq_norm_sq]
             rw [inner_add_left, inner_add_right, inner_add_right]
             rw [real_inner_self_eq_norm_sq, real_inner_self_eq_norm_sq]
             simp [real_inner_comm]
             ring
       _ ≤ K ^ 2 + ‖y - m‖ ^ 2 +
-          2 * ‖alg.x (n + 1) - y‖ * ‖y - m‖ := by
+          2 * ‖alg.x n - y‖ * ‖y - m‖ := by
             apply add_le_add
             · apply add_le_add
               · apply sq_le_sq.2
                 · simp
-                  convert hK (n + 1)
+                  convert hK n
                   simp
                   assumption
               · simp
             · rw [mul_assoc]
               apply mul_le_mul_of_nonneg_left
-              · exact real_inner_le_norm (alg.x (n + 1) - y) (y - m)
+              · exact real_inner_le_norm (alg.x n - y) (y - m)
               · norm_num
       _ ≤ (‖y - m‖ + K) ^ 2 := by
         rw [pow_two (‖y - m‖ + K), mul_add, add_mul, add_mul]
@@ -2073,7 +2073,7 @@ lemma halpern_limsup_bound_from_prod
         simp
         rw[mul_comm]
         apply mul_le_mul
-        · convert hK (1+n)
+        · convert hK n
         · simp
         · exact norm_nonneg (y - m)
         · assumption
@@ -2124,18 +2124,17 @@ lemma halpern_limsup_bound_from_prod
         have h_M_nonneg : 0 ≤ M := by
           by_contra h
           push_neg at h
-          have := hM 0
+          have := hM 1
           have h_contradiction : ‖alg.x 1 - m‖ ^ 2 < 0 := by
             linarith
           have := sq_nonneg (‖alg.x 1 - m‖)
           linarith
         use M
-        use k - 1
+        use k
         intro n hn
         rw [← mul_one M]
         apply mul_le_mul
-        · convert hM (k - 1)
-          sorry--k = k - 1 + 1
+        · convert hM k
         · apply Finset.prod_le_one
           · intro i hi
             exact h_nonneg_one_sub_α i
