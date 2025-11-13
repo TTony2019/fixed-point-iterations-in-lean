@@ -1482,6 +1482,19 @@ lemma halpern_subsequence_weak_convergence
   exact ⟨n, z, m, q, h_n_strict_mono, ⟨h_z_in_D, h_weak_xkl_to_z⟩,
          ⟨hm_in_C, hm_proj⟩, rfl, h_n_tendsto⟩
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 -- Corollary 4.28: 弱收敛且误差趋零蕴含固定点
 lemma corollary_4_28
   {D : Set H}
