@@ -8,7 +8,7 @@ import Mathlib.MeasureTheory.Function.L2Space
 import Mathlib.Algebra.Group.Basic
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Data.Set.Function
-import FormalizationFixpointIterations.Theory.WeakConverge
+import FormalizationFixpointIterations.Theory.WeakSpace
 import Mathlib.Analysis.InnerProductSpace.Basic
 import Mathlib.Topology.MetricSpace.Pseudo.Defs
 import Mathlib.Analysis.Convex.Segment
@@ -1374,7 +1374,7 @@ lemma bounded_seq_weakly_convergent_subsequence
   (h_bounded : ∃ M, ∀ n, ‖x n‖ ≤ M) :
   ∃ (φ : ℕ → ℕ) (p : H),
     (∀ m n, m < n → φ m < φ n) ∧  -- φ 是严格递增的
-    WeakConverge H (x ∘ φ) p := by
+    WeakConverge (x ∘ φ) p := by
       sorry
 
 theorem existence_of_projection_point (C : Set H) (hC1 : C.Nonempty) (hC2 : Convex ℝ C)
@@ -1412,7 +1412,7 @@ lemma halpern_subsequence_weak_convergence
     -- n 是严格递增的子列索引
     (∀ i j, i < j → n i < n j) ∧
     -- z 是子列的弱极限
-    (z ∈ D ∧ WeakConverge H (alg.x ∘ n) z) ∧
+    (z ∈ D ∧ WeakConverge (alg.x ∘ n) z) ∧
     -- m 是 alg.u 在 C 上的投影
     (m ∈ C ∧ ‖alg.u - m‖ = ⨅ w : C, ‖alg.u - w‖) ∧
     -- q_n = ⟪T(x_n) - m, alg.u - m⟫
@@ -1449,11 +1449,11 @@ lemma halpern_subsequence_weak_convergence
   -- 第六步：验证 z ∈ D（由 D 的闭性和弱收敛性）
   have h_z_in_D : z ∈ D := by
     have h_x_in_D : ∀ j, alg.x (k (l j)) ∈ D := fun j => halg_x_in_D _
-    have h_D_weakly_closed : IsWeaklyClosed H D := by
-      apply closed_is_weakly_closed'
+    have h_D_weakly_closed : IsWeaklyClosed D := by
+      apply closed_is_weakly_closed
       · exact hD_convex
       · exact hD_closed
-    have h_D_weakly_seq_closed : IsWeaklySeqClosed H D := by
+    have h_D_weakly_seq_closed : IsWeaklySeqClosed D := by
       apply weakly_closed_seq_closed
       exact h_D_weakly_closed
     simp only [IsWeaklySeqClosed] at h_D_weakly_seq_closed
@@ -1507,7 +1507,7 @@ lemma corollary_4_28
   (hx_in_D : ∀ n, x n ∈ D)
   (p : H)
   (hp_in_D : p ∈ D)
-  (h_weak_conv : WeakConverge H x p)
+  (h_weak_conv : WeakConverge x p)
   (h_error_zero : Tendsto (fun n => x n - T (x n)) atTop (𝓝 0))
   : p ∈ Fix T := by
   sorry
@@ -1554,7 +1554,7 @@ lemma halpern_subseq_fixed_point
   (n : ℕ → ℕ)
   (z : H)
   (h_z_in_D : z ∈ D)
-  (h_z_weak_limit : WeakConverge H (alg.x ∘ n) z)
+  (h_z_weak_limit : WeakConverge (alg.x ∘ n) z)
   (halg_x_in_D : ∀ n, alg.x n ∈ D)
   (h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (n k) - T (alg.x (n k))) atTop (𝓝 0))
   : z ∈ Fix T := by
@@ -1573,7 +1573,7 @@ lemma halpern_limsup_inner_le_zero
   (n : ℕ → ℕ)
   (z : H)
   (h_z_in_C : z ∈ C)
-  (h_weak_xn_to_z : WeakConverge H (alg.x ∘ n) z)
+  (h_weak_xn_to_z : WeakConverge (alg.x ∘ n) z)
   (m : H)
   (hm_in_C : m ∈ C)
   (hm_proj : ‖alg.u - m‖ = ⨅ w : C, ‖alg.u - w‖)

@@ -147,6 +147,10 @@ theorem weakConverge_iff_inner_converge' [CompleteSpace H] (x : ℕ → H) (p : 
   specialize h y
   exact (tendsto_iff_sub_tendsto_zero_inner x p y).mpr h
 
+theorem tendsto_iff_weakConverge [CompleteSpace H]
+  (x : ℕ → H) (p : H) : WeakConverge x p ↔
+  ∀ y : H, Tendsto (fun i ↦ inner ℝ (x i) y) atTop (nhds (inner ℝ p y)) :=
+    weakConverge_iff_inner_converge x p
 
 omit [InnerProductSpace ℝ H] in
 theorem seq_converge_iff_norm_converge (x : ℕ → H) (p : H) :
@@ -711,7 +715,6 @@ variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 def IsWeaklyCompact (s : Set H) : Prop := @IsCompact (WeakSpace ℝ H) _ (s: Set (WeakSpace ℝ H))
-def IsWeaklySeqClosed (s : Set H) := @IsSeqClosed (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
 /-
 Lemma 1.12
 -/
