@@ -27,6 +27,11 @@ def va (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] (a : H) : H 
   map_add' := sorry
   map_smul' := sorry
 
+theorem continuous_va (a : H) : Continuous (va H a) := by sorry
+
+theorem continuous_va_weak (a : H) :
+  @Continuous (WeakSpace ℝ H) ℝ _ _ (va H a) := by sorry
+
 #check inner_self_eq_zero
 lemma topDualPairing_is_injective : Function.Injective ⇑(topDualPairing ℝ H).flip := by
   simp [Function.Injective]
@@ -57,6 +62,11 @@ theorem topDualPairing_eq (p : H) : ∀ y : H →L[ℝ] ℝ, (topDualPairing ℝ
 theorem topDualPairing_strong_dual [CompleteSpace H] (p : H) : ∀ y : H →L[ℝ] ℝ,
   (topDualPairing ℝ H).flip p y = ⟪(InnerProductSpace.toDual ℝ H).symm y, p⟫  := by
   simp [LinearMap.flip_apply, topDualPairing_apply]
+
+theorem topDualPairing_eq_inner [CompleteSpace H] (x y : H) :
+  (topDualPairing ℝ H).flip x ((va H y)) = ⟪x, y⟫  := by
+  rw [topDualPairing_eq]
+  simp [va]
 
 theorem topDualPairing_strong_dual_seq [CompleteSpace H] (x : ℕ → H) : ∀ y : H →L[ℝ] ℝ,
   (fun n ↦ ((topDualPairing ℝ H).flip (x n)) y) =
@@ -652,42 +662,38 @@ variable {H : Type*}
 variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
--- instance : AddCommGroup (WeakSpace ℝ H) := by
---   exact WeakSpace.instAddCommGroup
--- instance : PseudoMetricSpace (WeakSpace ℝ H) := by
---   sorry
-  -- apply?
-  -- apply pseudoMetricSpaceOfNormedAddCommGroupOfAddTorsor
-  -- dist := sorry
-  -- dist_self := sorry
-  -- dist_comm := sorry
-  -- dist_triangle := sorry
-
--- #check WeakSpace.t2Space ℝ H
-
-instance : HMul ℝ (WeakSpace ℝ H) (WeakSpace ℝ H) := by
-  exact { hMul := fun a a ↦ a }
-
-instance : HDiv (WeakSpace ℝ H) ℝ (WeakSpace ℝ H) := by
-  exact { hDiv := fun a a_1 ↦ a }
-
-instance : T2Space (WeakSpace ℝ H) where
+#check topDualPairing_eq_inner
+instance inst_WeakSpace_T2 : T2Space (WeakSpace ℝ H) where
   t2 := by
     simp [Pairwise]
     intro x y hxy
     let u := x - y
-    let w := (x + y)/(2:ℝ)
-    -- let U := {z : H | ⟪z-w,u⟫ > 0}
-
-    sorry
-
-  -- apply @Topology.IsEmbedding.t2Space (WeakSpace ℝ H) H
-
-  -- apply WeakBilin.isEmbedding
-  -- · sorry
-  -- sorry
-  -- apply (WeakBilin.isEmbedding ContinuousLinearMap.coe_injective).t2Space
-
+    let f1 := WeakSpace.map (va H u)
+    let f2 := (toWeakSpace ℝ ℝ).symm
+    let f := f2 ∘ f1
+    have feq (t : H): f t = (va H u) t := rfl
+    let c := (f x + f y)/2
+    let U := {z : H | f z > c}
+    let V := {z : H | f z < c}
+    have Uopen : @IsOpen (WeakSpace ℝ H) _ U := by
+      refine isOpen_lt ?_ ?_
+      exact continuous_const
+      simp [f]
+      refine Continuous.comp ?_ ?_
+      exact continuous_real_weakspace
+      exact ContinuousLinearMap.continuous f1
+    have Vopen : @IsOpen (WeakSpace ℝ H) _ V := by sorry
+    have xinUV : x ∈ U ∧ y ∈ V := by
+      constructor
+      simp [U]
+      change f x > c
+      simp [feq, va]
+      sorry
+      sorry
+    have dUV : Disjoint U V := by
+      simp [Disjoint]
+      sorry
+    exact ⟨U, Uopen, V, Vopen, xinUV.1, xinUV.2, dUV⟩
 
 end T2Space
 
@@ -709,7 +715,6 @@ example (s : Set H) (h : IsCompact s) : IsWeaklyCompact s := by
   simp [IsWeaklyCompact]
   -- apply?
   simp [IsCompact]
-
   sorry
   -- exact h
   -- sorry
