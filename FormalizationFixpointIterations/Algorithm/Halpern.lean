@@ -1483,11 +1483,229 @@ lemma halpern_subsequence_weak_convergence
          ⟨hm_in_C, hm_proj⟩, rfl, h_n_tendsto⟩
 
 
+-- demiclosed 的定义
+def DemiclosedAt (D : Set H) (T : H → H) (u : H) : Prop :=
+  (h_D_nonempty : D.Nonempty) →
+  (h_D_weakly_seq_closed : IsWeaklySeqClosed D) →
+  ∀ (x : ℕ → H), (∀ n, x n ∈ D) →
+  ∀ (x_lim : H), x_lim ∈ D →
+  WeakConverge x x_lim →
+  Tendsto (fun n => T (x n)) atTop (𝓝 u) →
+  T x_lim = u
+
+def Demiclosed (T : H → H) (D : Set H) : Prop :=
+  ∀ u ∈ D, DemiclosedAt D T u
 
 
 
+-- Theorem 4.27: Browder's demiclosedness principle
+theorem browder_demiclosed_principle
+  {D : Set H}
+  {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D)
+  : Demiclosed (id - T) D := by
+  intro u hu_in_D
+  intro h_D_nonempty h_D_weakly_seq_closed
+  intro x hx_in_D x_lim hx_lim_in_D h_weak_conv h_diff_tendsto
+  --取一个弱收敛到x_lim的列x n
+  simp at h_diff_tendsto
+  have h_norm_bound : ∀ n : ℕ, ‖x_lim - T x_lim - u‖ ^ 2 ≤
+    ‖x n - T (x n) - u‖ ^ 2 + 2 * ⟪x n - T (x n) - u, T (x n) - T x_lim⟫
+      - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by
+        intro n
+        calc
+          _ = ‖(x_lim - x n) + (x n - T x_lim - u)‖ ^ 2 := by
+            congr 1
+            abel_nf
+          _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
+              2 * ⟪x_lim - x n, x n - T x_lim - u⟫ := by
+            rw [← real_inner_self_eq_norm_sq]
+            simp [← real_inner_self_eq_norm_sq, inner_add_left,
+              inner_add_right, real_inner_comm, two_mul]
+            ring_nf
+          _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
+              2 * ⟪x_lim - x n, (x n - x_lim) + (x_lim - T x_lim - u)⟫ := by
+            congr 1
+            abel_nf
+          _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
+              2 * (⟪x_lim - x n, x n - x_lim⟫ + ⟪x_lim - x n, x_lim - T x_lim - u⟫) := by
+            congr 1
+            rw [inner_add_right]
+          _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
+              2 * (-‖x_lim - x n‖ ^ 2 + ⟪x_lim - x n, x_lim - T x_lim - u⟫) := by
+            congr 1
+            simp
+            rw [← real_inner_self_eq_norm_sq]
+            have : (x n - x_lim) = - (x_lim - x n) := by abel
+            rw [this]
+            rw [inner_neg_right]
+          _ = ‖x n - T x_lim - u‖ ^ 2 - ‖x n - x_lim‖ ^ 2
+              - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by
+            simp [mul_add, ← add_assoc]
+            ring_nf
+            simp [add_sub, add_comm]
+            congr 3
+            · simp
+              exact norm_sub_rev x_lim (x n)
+            · have : - (x n - x_lim) = (x_lim - x n) := by abel
+              rw [← this]
+              rw [inner_neg_left]
+              ring_nf
+          _ = ‖(x n - T (x n) - u) + (T (x n) - T x_lim)‖ ^ 2 - ‖x n - x_lim‖ ^ 2
+              - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by
+            congr 1
+            abel_nf
+          _ = ‖x n - T (x n) - u‖ ^ 2 + ‖T (x n) - T x_lim‖ ^ 2 +
+              2 * ⟪x n - T (x n) - u, T (x n) - T x_lim⟫ - ‖x n - x_lim‖ ^ 2
+              - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by
+            rw [← real_inner_self_eq_norm_sq]
+            simp [← real_inner_self_eq_norm_sq, inner_add_left,
+              inner_add_right, real_inner_comm, two_mul]
+            ring_nf
+          _ ≤ _ := by
+            have : ‖T (x n) - T x_lim‖ ^ 2 ≤ ‖x n - x_lim‖ ^ 2 := by
+              apply sq_le_sq.2
+              simp
+              rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp
+              have := hT_nonexp (hx_in_D n) hx_lim_in_D
+              simp [edist_dist] at this
+              rw [dist_eq_norm, dist_eq_norm] at this
+              exact this
+            linarith
 
+  have h1 : Tendsto (fun n => ‖x n - T (x n) - u‖) atTop (𝓝 0) := by
+    apply Metric.tendsto_atTop.mpr
+    intro ε ε_pos
+    rw [Metric.tendsto_atTop] at h_diff_tendsto
+    obtain ⟨N, hN⟩ := h_diff_tendsto ε ε_pos
+    use N
+    intro n hn
+    specialize hN n hn
+    rw [dist_eq_norm] at hN ⊢
+    simp
+    simp at hN
+    exact hN
 
+  have h2 : Tendsto (fun n => x n - T (x n) - u) atTop (𝓝 0) := by
+    rw [Metric.tendsto_atTop]
+    intro ε ε_pos
+    rw [Metric.tendsto_atTop] at h1
+    obtain ⟨N, hN⟩ := h1 ε ε_pos
+    use N
+    intro n hn
+    specialize hN n hn
+    rw [dist_eq_norm] at hN ⊢
+    simp
+    simp at hN
+    exact hN
+
+  have h3 : WeakConverge (fun n => x n - x_lim) 0 := by
+    rw [weakConverge_iff_inner_converge']
+    intro y
+    have h4 : Tendsto (fun n => ⟪x n, y⟫) atTop (𝓝 ⟪x_lim, y⟫) := by
+      apply (weakConverge_iff_inner_converge x x_lim).1 h_weak_conv
+    have h5 : Tendsto (fun (n : ℕ) => ⟪x_lim, y⟫) atTop (𝓝 ⟪x_lim, y⟫) :=
+      tendsto_const_nhds
+    have h_diff : Tendsto (fun n => ⟪x n, y⟫ - ⟪x_lim, y⟫) atTop (𝓝 (⟪x_lim, y⟫ - ⟪x_lim, y⟫)) :=
+      Tendsto.sub h4 h5
+    convert h_diff using 1
+    ext n
+    simp
+    rw [inner_sub_left]
+    ring_nf
+
+  have h4 : WeakConverge (fun n => x n - T (x n)) u := by
+    rw [weakConverge_iff_inner_converge']
+    intro y
+    by_cases hy : y = 0
+    · -- 情况1：y = 0
+      simp [hy]
+    · have h2' : Tendsto (fun n => (x n - T (x n)) - u) atTop (𝓝 0) := by
+        convert h2 using 1
+      -- 内积的连续性
+      have h_inner : Tendsto (fun n => ⟪(x n - T (x n)) - u, y⟫) atTop (𝓝 0) := by
+        rw [Metric.tendsto_atTop]
+        intro ε ε_pos
+        rw [Metric.tendsto_atTop] at h2'
+        obtain ⟨N, hN⟩ := h2' (ε / ‖y‖) (by positivity)
+        use N
+        intro n hn
+        specialize hN n hn
+        rw [dist_eq_norm] at hN ⊢
+        simp at hN ⊢
+        by_cases hy : y = 0
+        · simp [hy]
+          linarith
+        · calc
+            |⟪(x n - T (x n)) - u, y⟫|
+                ≤ ‖(x n - T (x n)) - u‖ * ‖y‖ := by apply abs_real_inner_le_norm _ _
+              _ < (ε / ‖y‖) * ‖y‖ := by
+                  gcongr
+              _ = ε := by field_simp [ne_of_gt (norm_pos_iff.mpr hy)]
+      exact h_inner
+
+  have h4 : WeakConverge (fun n => T (x n) - x n) (- u) := by
+    rw [weakConverge_iff_inner_converge'] at h4 ⊢
+    intro y
+    specialize h4 y
+    have := Tendsto.neg h4
+    convert this using 1
+    · ext n
+      simp
+      rw [← inner_neg_left]
+      simp
+      simp [inner_sub_left, inner_add_left]
+      ring_nf
+    simp
+
+  have h5 : WeakConverge (fun n => T (x n) - x n + (x n - x_lim)
+    + (x_lim - T x_lim)) (x_lim - T x_lim - u) := by
+    rw [weakConverge_iff_inner_converge]
+    intro y
+    -- 分解内积
+    have h4_inner : Tendsto (fun n => ⟪T (x n) - x n, y⟫) atTop (𝓝 ⟪-u, y⟫) := by
+      apply (weakConverge_iff_inner_converge _ _).1 h4
+    have h3_inner : Tendsto (fun n => ⟪x n - x_lim, y⟫) atTop (𝓝 ⟪(0 : H), y⟫) := by
+      apply (weakConverge_iff_inner_converge _ _).1 h3
+    have h_const : Tendsto (fun n : ℕ  => ⟪x_lim - T x_lim, y⟫) atTop (𝓝 ⟪x_lim - T x_lim, y⟫) :=
+      tendsto_const_nhds
+
+    -- 利用内积的加法性
+    have h_combined : Tendsto (fun n =>
+      ⟪T (x n) - x n, y⟫ + ⟪x n - x_lim, y⟫ + ⟪x_lim - T x_lim, y⟫)
+      atTop (𝓝 (⟪-u, y⟫ + ⟪(0 : H), y⟫ + ⟪x_lim - T x_lim, y⟫)) := by
+      apply Tendsto.add
+      · apply Tendsto.add h4_inner h3_inner
+      · exact h_const
+
+    -- 转换为目标形式
+    convert h_combined using 1
+    · ext n
+      simp only [inner_add_left]
+    · congr 1
+      simp only [inner_sub_left]
+      simp
+      abel
+
+  have h5 : WeakConverge (fun n => T (x n) - T x_lim) (x_lim - T x_lim - u) := by
+    convert h5 using 1
+    ext n
+    abel_nf
+
+  have h1' :  Tendsto (fun n ↦ ‖x n - T (x n) - u‖ ^ 2) atTop (𝓝 0) := by
+    apply Tendsto.pow at h1
+    specialize h1 2
+    convert h1
+    simp
+
+  have h6 : Tendsto (fun n ↦ 2 * inner ℝ (x n - x_lim) (x_lim - T x_lim - u)) atTop (𝓝 0) := by
+    have := (weakConverge_iff_inner_converge (fun n => x n - x_lim) 0).1 h3 (x_lim - T x_lim - u)
+    simp only [inner_zero_left] at this
+    apply Tendsto.const_mul 2 at this
+    convert this
+    simp
+
+  sorry
 
 
 
