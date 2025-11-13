@@ -24,8 +24,12 @@ def WeakConverge (x : ℕ → H) (p : H) :=
 
 def va (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] (a : H) : H →L[ℝ] ℝ where
   toFun := fun x => ⟪x, a⟫
-  map_add' := sorry
-  map_smul' := sorry
+  map_add' := by
+    intro x y
+    simp [inner_add_left]
+  map_smul' := by
+    intro c x
+    simp [inner_smul_left]
 
 theorem continuous_va (a : H) : Continuous (va H a) := by sorry
 
@@ -33,6 +37,7 @@ theorem continuous_va_weak (a : H) :
   @Continuous (WeakSpace ℝ H) ℝ _ _ (va H a) := by sorry
 
 #check inner_self_eq_zero
+
 lemma topDualPairing_is_injective : Function.Injective ⇑(topDualPairing ℝ H).flip := by
   simp [Function.Injective]
   intro a b hab
@@ -43,12 +48,20 @@ lemma topDualPairing_is_injective : Function.Injective ⇑(topDualPairing ℝ H)
     rw [hab]
   simp [LinearMap.flip_apply, topDualPairing_apply, va] at h2
   have : a - b = 0 := by
-    have h1': ⟪a - b, a⟫ = 0 := sorry
-    have h2': ⟪a - b, b⟫ = 0 := sorry
+    have h1': ⟪a - b, a⟫ = 0 := by
+      calc
+        _ = ⟪a ,a⟫ - ⟪b, a⟫ := by apply inner_sub_left a b a
+        _ = ⟪a, a⟫ - ⟪a, a⟫ := by rw [h1]
+        _ = 0 := by simp
+    have h2': ⟪a - b, b⟫ = 0 := by
+      calc
+        _ = ⟪a, b⟫ - ⟪b, b⟫ := by apply inner_sub_left a b b
+        _ = ⟪a, b⟫ - ⟪a, b⟫ := by rw [h2]
+        _ = 0 := by simp
     apply (@inner_self_eq_zero ℝ H _ _ _ (a - b)).1
     calc
       _ = ⟪a - b, a⟫ - ⟪a - b, b⟫ := inner_sub_right (a - b) a b
-      _ = 0 - 0 := by sorry
+      _ = 0 - 0 := by rw [h1', h2']
       _ = 0 := by simp
   calc
     _ = a - b + b := Eq.symm (sub_add_cancel a b)
@@ -144,6 +157,10 @@ theorem weakConverge_iff_inner_converge' [CompleteSpace H] (x : ℕ → H) (p : 
   specialize h y
   exact (tendsto_iff_sub_tendsto_zero_inner x p y).mpr h
 
+theorem tendsto_iff_weakConverge [CompleteSpace H]
+  (x : ℕ → H) (p : H) : WeakConverge x p ↔
+  ∀ y : H, Tendsto (fun i ↦ inner ℝ (x i) y) atTop (nhds (inner ℝ p y)) :=
+    weakConverge_iff_inner_converge x p
 
 omit [InnerProductSpace ℝ H] in
 theorem seq_converge_iff_norm_converge (x : ℕ → H) (p : H) :
@@ -704,7 +721,6 @@ variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 def IsWeaklyCompact (s : Set H) : Prop := @IsCompact (WeakSpace ℝ H) _ (s: Set (WeakSpace ℝ H))
-
 /-
 Lemma 1.12
 -/
