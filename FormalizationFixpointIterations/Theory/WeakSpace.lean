@@ -18,6 +18,7 @@ local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 def WeakConverge (x : ℕ → H) (p : H) :=
   Tendsto (x: ℕ → WeakSpace ℝ H) atTop (nhds p : Filter (WeakSpace ℝ H))
 
+#check continuous_id_of_le
 #check tendsto_iff_forall_eval_tendsto
 #check LinearMap.flip_inj
 #check LinearMap.flip_apply
@@ -31,10 +32,27 @@ def va (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] (a : H) : H 
     intro c x
     simp [inner_smul_left]
 
-theorem continuous_va (a : H) : Continuous (va H a) := by sorry
+theorem continuous_va (a : H) : Continuous (va H a) := by
+  simp [va]
+  apply Continuous.inner
+  · apply continuous_id
+  · apply continuous_const
+
+
 
 theorem continuous_va_weak (a : H) :
-  @Continuous (WeakSpace ℝ H) ℝ _ _ (va H a) := by sorry
+  @Continuous (WeakSpace ℝ H) ℝ _ _ (va H a) := by
+  have h1 : @Continuous (WeakSpace ℝ H) H _ _ (fun (t : WeakSpace ℝ H) => (t : H)) := by
+    apply continuous_id_of_le
+    sorry
+  have h2 : Continuous (fun (x : H) => inner ℝ x a) := by
+    apply Continuous.inner
+    · apply continuous_id
+    · apply continuous_const
+  simp [va]
+  exact Continuous.comp h2 h1
+
+
 
 #check inner_self_eq_zero
 
@@ -699,14 +717,24 @@ instance inst_WeakSpace_T2 : T2Space (WeakSpace ℝ H) where
       refine Continuous.comp ?_ ?_
       exact continuous_real_weakspace
       exact ContinuousLinearMap.continuous f1
-    have Vopen : @IsOpen (WeakSpace ℝ H) _ V := by sorry
+    have Vopen : @IsOpen (WeakSpace ℝ H) _ V := by
+      simp [V]
+      refine isOpen_lt ?_ ?_
+      · simp [f]
+        refine Continuous.comp ?_ ?_
+        exact continuous_real_weakspace
+        exact ContinuousLinearMap.continuous f1
+      exact continuous_const
     have xinUV : x ∈ U ∧ y ∈ V := by
       constructor
       simp [U]
       change f x > c
       simp [feq, va]
-      sorry
-      sorry
+      · refine (Real.add_lt_add_iff_left ?_).mp ?_
+        · exact c
+        · refine (Real.add_lt_add_iff_left c).mpr ?_
+          sorry
+      · sorry
     have dUV : Disjoint U V := by
       simp [Disjoint]
       sorry

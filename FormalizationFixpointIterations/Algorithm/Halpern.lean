@@ -15,6 +15,8 @@ import Mathlib.Analysis.Convex.Segment
 import Mathlib.Analysis.Convex.Cone.Basic
 import Mathlib.Topology.Instances.Nat
 import Mathlib.Topology.Algebra.Order.LiminfLimsup
+import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
+import Mathlib.Data.Finset.Lattice.Fold
 
 open Nonexpansive_operator Filter Topology BigOperators Function
 set_option linter.unusedSectionVars false
@@ -1496,6 +1498,225 @@ def DemiclosedAt (D : Set H) (T : H → H) (u : H) : Prop :=
 def Demiclosed (T : H → H) (D : Set H) : Prop :=
   ∀ u ∈ D, DemiclosedAt D T u
 
+--x n弱收敛到x_lim, u n强收敛到u_lim,lim ⟪x_n, u_n⟫ = ⟪x_lim, u_lim⟫
+lemma wkconv_conv_ledsto_conv
+  {x : ℕ → H}
+  {x_lim : H}
+  {u : ℕ → H}
+  {u_lim : H}
+  {h_wkconv_x : WeakConverge x x_lim}
+  {h_conv_u : Tendsto u atTop (𝓝 u_lim)}
+  : Tendsto (fun n => inner ℝ (x n) (u n)) atTop (𝓝 (inner ℝ x_lim u_lim)) := by
+  have eq : (fun n => inner ℝ (x n) (u n) - inner ℝ x_lim u_lim) =
+    (fun n => inner ℝ (x n) (u n - u_lim)) + (fun n => inner ℝ (x n - x_lim) u_lim) := by
+      funext n
+      simp [inner_sub_left, inner_sub_right]
+  have h_norm_x_n_bdd : ∃ M, ∀ n, ‖x n‖ ≤ M := by
+
+    --f为有界线性算子
+    let f : ℕ → H →L[ℝ] ℝ := fun n =>
+      LinearMap.mkContinuous
+        { toFun := fun z => ⟪x n, z⟫
+          map_add' := fun u v => inner_add_right (x n) u v
+          map_smul' := fun c u => inner_smul_right (x n) u c}
+        ‖x n‖
+        fun z => by
+          simp
+          exact abs_real_inner_le_norm (x n) z
+
+    have h_f_n_y_upbd : ∀ y : H, ∃ N : ℕ, ∃ M : ℝ, ∀ n ≥ N, |f n y| ≤ M := by
+      intro y
+      rw [weakConverge_iff_inner_converge, ] at h_wkconv_x
+      specialize h_wkconv_x y
+      rw [Metric.tendsto_atTop] at h_wkconv_x
+      specialize h_wkconv_x (1) (one_pos)
+      obtain ⟨N, hN⟩ := h_wkconv_x
+      use N
+      use |⟪x_lim, y⟫| + 1
+      intro n hn
+      specialize hN n hn
+      simp [f]
+      rw [Real.dist_eq] at hN
+      have : |inner ℝ (x n) y| - |inner ℝ x_lim y| < 1 := by
+        calc
+          _ ≤ |inner ℝ (x n) y - inner ℝ x_lim y| := by
+            apply abs_sub_abs_le_abs_sub
+          _ < 1 := hN
+      linarith
+
+    have h_f_n_y_pointwise_bounded : ∀ y : H, ∃ M : ℝ, ∀ n : ℕ, |f n y| ≤ M := by
+      intro y
+      specialize h_f_n_y_upbd y
+      obtain ⟨N, hN⟩ := h_f_n_y_upbd
+      by_cases N_zero : N = 0
+      · rw [N_zero] at hN
+        rcases hN with ⟨M, hM⟩
+        use M
+        intro n
+        exact hM n (Nat.zero_le n)
+      · let M0 := (Finset.range N).sup' ⟨0, Finset.mem_range.mpr
+          (Nat.pos_of_ne_zero ‹N ≠ 0›)⟩ (fun n => |(f n) y|)
+        have ha : ∀ a ∈ Finset.range N, |(f a) y| ≤ M0 := by
+          intro a ha
+          simp [M0]
+          use a
+          constructor
+          · exact List.mem_range.mp ha
+          · simp
+        rcases hN with ⟨M1, hM1⟩
+        use max M0 M1
+        intro n
+        by_cases hn : n < N
+        · calc
+            |f n y| ≤ M0 := by
+              apply ha n
+              exact Finset.mem_range.mpr hn
+            _ ≤ max M0 M1 := by
+              apply le_max_left
+        · push_neg at hn
+          calc
+            |f n y| ≤ M1 := by
+              apply hM1
+              exact hn
+            _ ≤ max M0 M1 := by
+              apply le_max_right
+
+    have h_norm_sup_t_n_y : ∀ y : H, ∃ M : ℝ, ⨆ n : ℕ, |f n y| ≤ M := by
+      intro y
+      rcases h_f_n_y_pointwise_bounded y with ⟨M, hM⟩
+      use M
+      exact ciSup_le hM
+
+    have h_f_bounded : ∃ C, ∀ n, ‖f n‖ ≤ C := by
+      -- 从逐点有界得到一致有界
+      have h_pointwise : ∀ y, ∃ M, ∀ n, |f n y| ≤ M := by
+        intro y
+        exact h_f_n_y_pointwise_bounded y
+      -- 应用 Banach-Steinhaus 定理
+      exact banach_steinhaus h_pointwise
+
+    obtain ⟨C, hC⟩ := h_f_bounded
+    use C
+    intro n
+    -- 关键：f n 的范数就等于 x n 的范数
+    have h_norm_eq : ‖f n‖ = ‖x n‖ := by
+      -- LinearMap.mkContinuous 的性质
+      refine ContinuousLinearMap.opNorm_eq_of_bounds ?_ ?_ ?_
+      · simp
+      · intro z
+        simp [f]
+        exact abs_real_inner_le_norm (x n) z
+      · intro M hM h
+        simp [f] at h
+        specialize h (x n)
+        rw [abs_of_nonneg] at h
+        · rw [real_inner_self_eq_norm_sq, pow_two] at h
+          have : ‖x n‖ ≥ 0 := norm_nonneg (x n)
+          by_cases h1: ‖x n‖ = 0
+          · rw [h1]
+            assumption
+          · push_neg at h1
+            have : ‖x n‖ > 0 := by
+              apply lt_of_le_of_ne
+              · exact this
+              · intro h2
+                rw [h2] at h1
+                contradiction
+            exact le_of_mul_le_mul_right h this
+        · exact real_inner_self_nonneg
+    rw [← h_norm_eq]
+    exact hC n
+
+  have h1: Tendsto (fun n => inner ℝ (x n) (u n - u_lim)) atTop (𝓝 0) := by
+    obtain ⟨M, hM⟩ := h_norm_x_n_bdd
+    have h_u_diff : Tendsto (fun n => u n - u_lim) atTop (𝓝 0) := by
+      exact (tendsto_iff_sub_tendsto_zero u u_lim).mp h_conv_u
+    by_cases M_zero : M = 0
+    · -- M = 0 时，x n 恒为 0 向量
+      have h_xn_zero : ∀ n, x n = 0 := by
+        intro n
+        specialize hM n
+        have : ‖x n‖ ≤ 0 := by
+          rw [M_zero] at hM
+          exact hM
+        have h_norm_nonneg : ‖x n‖ ≥ 0 := norm_nonneg (x n)
+        exact norm_le_zero_iff.mp this
+      rw [Metric.tendsto_atTop]
+      intro ε ε_pos
+      use 0
+      intro n hn
+      rw [h_xn_zero n]
+      simp
+      assumption
+    · have h_M_pos : M > 0 := by
+        specialize hM 0
+        have h_M_nonneg : M ≥ 0 := by
+          calc
+            M ≥ ‖x 0‖ := hM
+            _ ≥ 0 := norm_nonneg (x 0)
+        push_neg at M_zero
+        exact lt_of_le_of_ne h_M_nonneg (id (Ne.symm M_zero))
+      have h_ε_pos_div : ∀ ε > 0, ε / M > 0 := by
+        intros ε ε_pos
+        exact div_pos ε_pos h_M_pos
+      rw [Metric.tendsto_atTop] at h_u_diff ⊢
+      intro ε ε_pos
+      specialize h_u_diff (ε / M) (h_ε_pos_div ε ε_pos)
+      obtain ⟨N, hN⟩ := h_u_diff
+      use N
+      intro n hn
+      specialize hN n hn
+      rw [Real.dist_eq]
+      simp only [sub_zero]
+      rw [dist_eq_norm, sub_zero] at hN
+      calc
+        |inner ℝ (x n) (u n - u_lim)|
+            ≤ ‖x n‖ * ‖u n - u_lim‖ := by
+              exact abs_real_inner_le_norm (x n) (u n - u_lim)
+          _ ≤ M * ‖u n - u_lim‖ := by
+              apply mul_le_mul
+              · exact hM n
+              · simp
+              · exact norm_nonneg (u n - u_lim)
+              · linarith
+          _ < M * (ε / M) := by
+              apply mul_lt_mul_of_pos_left hN h_M_pos
+          _ = ε := by
+              field_simp [ne_of_gt h_M_pos]
+
+  have h2: Tendsto (fun n => inner ℝ (x n - x_lim) u_lim) atTop (𝓝 0) := by
+    rw [weakConverge_iff_inner_converge] at h_wkconv_x
+    specialize h_wkconv_x u_lim
+    rw [tendsto_iff_sub_tendsto_zero_inner] at h_wkconv_x
+    exact h_wkconv_x
+
+  rw [show Tendsto (fun n ↦ inner ℝ (x n) (u n)) atTop (𝓝 (inner ℝ x_lim u_lim))
+    ↔ Tendsto (fun n ↦ inner ℝ (x n) (u n) - inner ℝ x_lim u_lim) atTop (𝓝 0) by
+  constructor
+  · intro h
+    convert Tendsto.sub h tendsto_const_nhds using 1
+    ext n
+    simp
+  · intro h
+    exact (tendsto_iff_sub_tendsto_zero (fun n ↦ inner ℝ (x n) (u n))
+      (inner ℝ x_lim u_lim)).mpr h]
+  rw [eq]
+  have h_add : Tendsto (fun n => inner ℝ (x n) (u n - u_lim) + inner ℝ (x n - x_lim) u_lim)
+      atTop (𝓝 (0 + 0)) := Tendsto.add h1 h2
+  convert h_add
+  simp
+
+
+
+
+
+
+
+
+
+
+#check banach_steinhaus
+#check LinearMap.mkContinuous
 
 
 -- Theorem 4.27: Browder's demiclosedness principle
@@ -1705,11 +1926,71 @@ theorem browder_demiclosed_principle
     convert this
     simp
 
-  sorry
+  have h7 : Tendsto (fun n ↦ inner ℝ (T (x n) - T x_lim) (x n - T (x n) - u))
+    atTop (𝓝 (inner ℝ 0 (x_lim - T x_lim - u))) := by
+    let a := fun n => x n - T (x n) - u
+    let b := fun n => T (x n) - T x_lim
+    have h_a : Tendsto a atTop (𝓝 0) := h2
+    have h_b : WeakConverge b (x_lim - T x_lim - u) := h5
+    rw [real_inner_comm]
+    apply wkconv_conv_ledsto_conv
+    · exact h_b
+    · exact h_a
 
+  have h7' : Tendsto (fun n ↦ inner ℝ (T (x n) - T x_lim) (x n - T (x n) - u)) atTop (𝓝 0) := by
+    convert h7
+    simp
 
+  have h8 : Tendsto (fun n ↦ ‖x n - T (x n) - u‖ ^ 2 + (2 * inner ℝ (T (x n) - T x_lim)
+    (x n - T (x n) - u) - 2 * inner ℝ (x n - x_lim) (x_lim - T x_lim - u))) atTop (𝓝 (0 + (0 - 0)))
+      := by
+        apply Tendsto.add
+        · exact h1'
+        · apply Tendsto.sub
+          · apply Tendsto.const_mul 2 at h7'
+            convert h7'
+            simp
+          · exact h6
 
+  have h8' : Tendsto (fun n ↦ ‖x n - T (x n) - u‖ ^ 2 + 2 * inner ℝ (x n - T (x n) - u)
+    (T (x n) - T x_lim) - 2 * inner ℝ (x n - x_lim) (x_lim - T x_lim - u)) atTop (𝓝 0) := by
+      convert h8 using 1
+      · funext n
+        ring_nf
+        rw [add_sub]
+        rw [real_inner_comm]
+        ring
+      · simp
 
+  have h9 : ∀ ε > 0, ‖x_lim - T x_lim - u‖ ^ 2 < ε := by
+    intro ε ε_pos
+    rw [Metric.tendsto_atTop] at h8'
+    obtain ⟨N, hN⟩ := h8' (ε) ε_pos
+    specialize hN N (le_refl N)
+    rw [dist_eq_norm] at hN
+    simp at hN
+    specialize h_norm_bound N
+    calc
+      _ ≤ ‖x N - T (x N) - u‖ ^ 2 + 2 * ⟪x N - T (x N) - u, T (x N) - T x_lim⟫
+          - 2 * ⟪x N - x_lim, x_lim - T x_lim - u⟫ := h_norm_bound
+      _ < ε := by
+        exact lt_of_abs_lt hN
+
+  have h_final : ‖x_lim - T x_lim - u‖ ^ 2 ≤ 0 := by
+    apply le_of_forall_pos_le_add
+    intro ε ε_pos
+    specialize h9 ε ε_pos
+    linarith
+  have h_nonneg : 0 ≤ ‖x_lim - T x_lim - u‖ ^ 2 := by
+    apply pow_two_nonneg
+  have : ‖x_lim - T x_lim - u‖ ^ 2 = 0 := by
+    apply le_antisymm h_final h_nonneg
+  have : ‖x_lim - T x_lim - u‖ = 0 := by
+    exact pow_eq_zero this
+  have : x_lim - T x_lim - u = 0 := by
+    exact norm_eq_zero.mp this
+  rw [sub_eq_zero] at this
+  exact this
 
 
 
