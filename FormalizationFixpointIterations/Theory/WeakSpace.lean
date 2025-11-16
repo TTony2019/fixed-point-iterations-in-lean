@@ -739,7 +739,12 @@ example (s : Set H) (h : IsCompact s) : IsWeaklyCompact s := by
 /-
 Fact 2.34: Banach-Alaoglu Bourbaki
 -/
-theorem closed_unit_ball_is_weakly_compact : IsWeaklyCompact (Metric.closedBall (0:H) (1:ℝ)) := by
+theorem closed_unit_ball_is_weakly_compact : IsWeaklyCompact (closedBall (0:H) (1:ℝ)) := by
+  obtain := isCompact_closedBall
+  simp [IsWeaklyCompact]
+  
+
+
   sorry
 
 lemma isCompact_closedBall'' (x' : StrongDual ℝ H) (r : ℝ) :
