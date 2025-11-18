@@ -115,7 +115,6 @@ theorem groetsch_theorem {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsC
         _ = ‖km.x n - y‖^2 - km.stepsize n * (1 - km.stepsize n) * ‖T (km.x n) - km.x n‖^2 := by
             ring
     exact key_calc
-  -- 证明 (i) Fejér 单调性
   constructor
   · intro y hy n
     rcases km.hstepsize n with ⟨hs_nonneg, hs_le_one⟩
@@ -194,13 +193,29 @@ theorem groetsch_theorem {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsC
   -- 反证：若 a 不收敛到 0，则存在 ε>0 使得对任意 N 都能找到 n ≥ N 使 a n ≥ ε
   rw [Converge_iff _ _]
   --rw[tendsto_atTop']
-  by_contra hnot
-  push_neg at hnot
+
+  --分类讨论，若 x0 = y0 则直接取 N=0，否则利用反证法
+  by_cases h_x0_eq_y0:  km.x 0 = y0
+  intro ε εpos
+  use 0
+  intro n hn
+  rcases hy0 with ⟨-, hyfix⟩
+  rw[← h_x0_eq_y0] at hyfix
+  have fixed_point: T (km.x n) - km.x n = 0 := by
+    induction' n with n ih
+    rw[sub_eq_zero]
+    exact hyfix
+    rw [km.update n]
+    simp [ih _]
+  rw[fixed_point]
+  simpa
+  --x0 ≠ y0
+  by_contra! hnot
   rcases hnot with ⟨ε, εpos, hε⟩
 
   -- 由 km.hstepsize_sum（偏和趋于 +∞）挑出 M 使得偏和大于 ‖x0-y0‖^2 / ε
   have tend := km.hstepsize_sum
-  have tend_prop := (Filter.tendsto_atTop_atTop.mp tend) (‖km.x 0 - y0‖ ^ 2 / ε^2)
+  have tend_prop := (Filter.tendsto_atTop_atTop.mp tend) (2*‖km.x 0 - y0‖ ^ 2 / ε^2)
   rcases tend_prop with ⟨N0, hN0⟩
   -- 由 hε 在 N0 处选出 n ≥ N0 且 a n ≥ ε
   rcases (hε N0) with ⟨n0, hn0_ge, hn0_ge_eps⟩
@@ -226,11 +241,11 @@ theorem groetsch_theorem {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsC
       · exact sub_nonneg.mpr hs1
 
   -- 由 hN0（偏和下界从 N0 开始）得到 S ≥ ‖x0-y0‖^2 / ε^2，结合上面 lower 导出矛盾
-  have S_ge : ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) ≥ ‖km.x 0 - y0‖ ^ 2 / ε^2:= by
+  have S_ge : ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) ≥ 2*‖km.x 0 - y0‖ ^ 2 / ε^2:= by
     apply hN0
     exact le_trans (by linarith : N0 ≤ n0) (le_refl _)
 
-  have lb: ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) * (a i) ^ 2 ≥ (‖km.x 0 - y0‖ ^ 2 ) := by
+  have lb: ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) * (a i) ^ 2 ≥ (2* ‖km.x 0 - y0‖ ^ 2 ) := by
     calc
       ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) * (a i) ^ 2
           ≥ ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) * ε ^ 2 := by
@@ -244,15 +259,28 @@ theorem groetsch_theorem {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsC
         rw [this]
         -- 把 ε^2 提到和式外面
         rw [← @Finset.mul_sum ℕ _ _ (range (n0 + 1))  (fun i => km.stepsize i * (1 - km.stepsize i)) (ε ^ 2)]
-      _ ≥ ‖km.x 0 - y0‖ ^ 2 := by
-        -- 应用 S_ge：先把目标改写为 ε^2 * (∑ ...) ≥ ε^2 * (‖x0-y0‖^2 / ε^2)，再用 mul_le_mul_of_nonneg_left
+      _ ≥ 2*‖km.x 0 - y0‖ ^ 2 := by
+        -- 应用 S_ge：先把目标改写为 ε^2 * (∑ ...) ≥ ε^2 * (2*‖x0-y0‖^2 / ε^2)，再用 mul_le_mul_of_nonneg_left
         have hpos : 0 ≤ ε ^ 2 := by exact pow_nonneg (le_of_lt εpos) 2
         calc
           ε ^ 2 * (∑ i ∈ Finset.range (n0 + 1), km.stepsize i * (1 - km.stepsize i))
-          _ ≥ ε ^ 2 * (‖km.x 0 - y0‖ ^ 2 / ε ^ 2) := by apply mul_le_mul_of_nonneg_left S_ge hpos
-          _ = ‖km.x 0 - y0‖ ^ 2 := by
+          _ ≥ ε ^ 2 * (2* ‖km.x 0 - y0‖ ^ 2 / ε ^ 2) := by apply mul_le_mul_of_nonneg_left S_ge hpos
+          _ = 2*‖km.x 0 - y0‖ ^ 2 := by
             -- 用 field_simp 消去除数 ε^2（ε > 0）
             field_simp [ne_of_gt εpos]
 
   have ub := partial_le (n0 + 1)
+  have mid: 2 * ‖km.x 0 - y0‖ ^ 2 > ‖km.x 0 - y0‖ ^ 2 := by
+    refine lt_two_mul_self ?_
+    have h_sub_ne : km.x 0 - y0 ≠ 0 := by
+      intro h
+      apply h_x0_eq_y0
+      rw[sub_eq_zero] at h
+      exact h
+    have h_norm_pos : 0 < ‖km.x 0 - y0‖ := by
+      apply norm_pos_iff.mpr
+      exact h_sub_ne
+    have : 0 < ‖km.x 0 - y0‖ ^ 2 := pow_pos h_norm_pos (2)
+    exact this
   linarith
+  -- 证明 (iii) 弱收敛到不动点
