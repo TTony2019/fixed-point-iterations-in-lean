@@ -59,6 +59,12 @@ example (T : H → H) (D : Set H) (Fix_T_nonempty : (Fix' T D).Nonempty) :∃ y 
   · exact hyD
   · exact hyFix
 
+--ε N 语言化 收敛性
+lemma Converge_iff (u : ℕ → ℝ) (x0 : ℝ) :
+Tendsto u atTop (𝓝 x0) ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, u n ∈ Ioo (x0 - ε) (x0 + ε) := by
+  have : atTop.HasBasis (fun _ : ℕ ↦ True) Ici := atTop_basis
+  rw [this.tendsto_iff (nhds_basis_Ioo_pos x0)]
+  simp
 
 -- 定理 5.15 的形式化
 theorem groetsch_theorem {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsClosed D)
@@ -67,7 +73,7 @@ theorem groetsch_theorem {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsC
     -- (i) Fejér 单调性
     IsFejerMonotone km.x (Fix' T D) ∧
     -- (ii) 强收敛到 0
-    (Tendsto (λ n => T (km.x n) - km.x n) atTop (𝓝 0)) ∧
+    (Tendsto (λ n => ‖T (km.x n) - km.x n‖)  atTop (𝓝 0)) ∧
     -- (iii) 弱收敛到不动点
     ∃ x ∈ (Fix' T D),
       Tendsto km.x atTop (𝓝 x) := by
@@ -132,24 +138,121 @@ theorem groetsch_theorem {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsC
     exact this
   -- 证明 (ii) 强收敛到 0
   constructor
-  · intro ε hε_pos
-    -- 由 km.hstepsize_sum 可知 ∑ s_n (1 - s_n) 发散到 +∞
-    have h_sum_diverge := km.hstepsize_sum
-    -- 因为 ∑ s_n (1 - s_n) 发散到 +∞，所以存在 N 使得当 n ≥ N 时，∑_{i=0}^{n} s_i (1 - s_i) > ‖x0 - y‖^2 / ε
-    rcases (tendsto_atTop_atTop.mp h_sum_diverge) (‖km.x 0 - (Classical.choose km.fix_T_nonempty)‖ ^ 2 / ε)
-      (by linarith [norm_nonneg _]) with ⟨N, hN⟩
-    use N
-    intro n hn_ge_N
-    -- 利用关键不等式估计 ‖T(x_n) - x_n‖
-    have key_estimate : ‖T (km.x n) - km.x n‖ ^ 2 ≤
-        (‖km.x 0 - (Classical.choose km.fix_T_nonempty)‖ ^ 2) /
-        (∑ i ∈ range (n + 1), km.stepsize i * (1 - km.stepsize i)) := by
-      -- 从关键不等式出发
-      have calc1 := by
+  rcases km.fix_T_nonempty with ⟨y0, hy0⟩
+  have sum_bound : ∀ N, ∑  i ∈ range (N), km.stepsize i * (1 - km.stepsize i) * ‖T (km.x i) - km.x i‖ ^ 2 ≤
+      ‖km.x 0 - y0‖ ^ 2 - ‖km.x (N) - y0‖ ^ 2 := by
+    intro N
+    induction N with
+    | zero => simp
+    | succ N ih =>
+      have hN := key_inequality y0 hy0 N
+      simp [Finset.sum_range_succ]
+      linarith
+
+  have partial_le : ∀ N, ∑ i ∈ Finset.range N, km.stepsize i * (1 - km.stepsize i) * ‖T (km.x i) - km.x i‖ ^ 2 ≤
+      ‖km.x 0 - y0‖ ^ 2 := by
+      intro N
+      refine (sum_bound N).trans ?_
+      simp
+
+  -- 定义 a_n 并证明其非增
+  let a := fun n => ‖T (km.x n) - km.x n‖
+  have a_noninc : ∀ n, a (n + 1) ≤ a n := by
+    intro n
+    rcases km.hstepsize n with ⟨hs0, hs1⟩
+    -- x_{n+1} - x_n = s_n • (T x_n - x_n)
+    have hx : km.x (n + 1) - km.x n = km.stepsize n • (T (km.x n) - km.x n) := by
+      rw [km.update n]; simp [ smul_sub]
+    have eq : T (km.x (n + 1)) - km.x (n + 1) = (T (km.x (n + 1)) - T (km.x n)) + (1 - km.stepsize n) • (T (km.x n) - km.x n) := by
+      calc
+        T (km.x (n + 1)) - km.x (n + 1) = T (km.x (n + 1)) - T (km.x n) + T (km.x n) - km.x (n + 1) := by simp
+        _ = T (km.x (n + 1)) - T (km.x n) + (1 - km.stepsize n) • (T (km.x n) - km.x n) := by
+          nth_rw 2 [km.update n]
+          simp only [smul_sub, sub_smul, one_smul]
+          abel_nf
+
+    calc
+      a (n + 1) = ‖T (km.x (n + 1)) - km.x (n + 1)‖ := rfl
+      _ = ‖(T (km.x (n + 1)) - T (km.x n)) + (1 - km.stepsize n) • (T (km.x n) - km.x n)‖ := by rw [eq]
+      _ ≤ ‖T (km.x (n + 1)) - T (km.x n)‖ + ‖(1 - km.stepsize n) • (T (km.x n) - km.x n)‖ := by apply norm_add_le
+      _ ≤ ‖km.x (n + 1) - km.x n‖ + (1 - km.stepsize n) * ‖T (km.x n) - km.x n‖ := by
+        apply add_le_add
+        · exact (hT_nonexpansive (km.x (n + 1)) (km.x n))
+        -- 从 stepsize ∈ Icc 0 1 拆出 0 ≤ s ≤ 1
+        have h_nonneg : 0 ≤ 1 - km.stepsize n := by linarith
+        -- 证明 ‖(1 - s) • v‖ ≤ (1 - s) * ‖v‖
         calc
-          0 ≤ ‖km.x 0 - (Classical.choose km.fix_T_nonempty)‖ ^ 2 -
-              ∑ i ∈ range (n + 1), km.stepsize i * (1 - km.stepsize i) * ‖T (km.x i) - km.x i‖ ^ 2 := by
-            -- 利用关键不等式对 ‖x_{i+1} - y‖^2 进行递推展开
-            have h_rec : ∀ m ≤ n, ‖km.x (m + 1) - (Classical.choose km.fix_T_nonempty)‖ ^ 2 ≤
-                ‖km.x 0 - (Classical.choose km.fix_T_nonempty)‖ ^ 2 -
-                ∑ i ∈ range (m + 1), km.stepsize i * (1 -
+          ‖(1 - km.stepsize n) • (T (km.x n) - km.x n)‖
+              = ‖(1 - km.stepsize n)‖ * ‖T (km.x n) - km.x n‖ := by rw [norm_smul]
+          _ = |1 - km.stepsize n| * ‖T (km.x n) - km.x n‖ := by rw [Real.norm_eq_abs]
+          _ = (1 - km.stepsize n) * ‖T (km.x n) - km.x n‖ := by rw [abs_of_nonneg h_nonneg]
+        linarith
+      _= ‖km.stepsize n • (T (km.x n) - km.x n)‖ + (1 - km.stepsize n) * ‖T (km.x n) - km.x n‖ := by rw [hx]
+      _= km.stepsize n * ‖T (km.x n) - km.x n‖ + (1 - km.stepsize n) * ‖T (km.x n) - km.x n‖ := by rw [norm_smul,Real.norm_eq_abs,abs_of_nonneg (hs0)]
+      _= ‖T (km.x n) - km.x n‖ := by ring
+
+  -- 反证：若 a 不收敛到 0，则存在 ε>0 使得对任意 N 都能找到 n ≥ N 使 a n ≥ ε
+  rw [Converge_iff _ _]
+  --rw[tendsto_atTop']
+  by_contra hnot
+  push_neg at hnot
+  rcases hnot with ⟨ε, εpos, hε⟩
+
+  -- 由 km.hstepsize_sum（偏和趋于 +∞）挑出 M 使得偏和大于 ‖x0-y0‖^2 / ε
+  have tend := km.hstepsize_sum
+  have tend_prop := (Filter.tendsto_atTop_atTop.mp tend) (‖km.x 0 - y0‖ ^ 2 / ε^2)
+  rcases tend_prop with ⟨N0, hN0⟩
+  -- 由 hε 在 N0 处选出 n ≥ N0 且 a n ≥ ε
+  rcases (hε N0) with ⟨n0, hn0_ge, hn0_ge_eps⟩
+  -- 对 n0 + 1 的偏和，利用单调性 a_i ≥ a_{n0}（i ≤ n0）得到下界
+  have lower : ∑ i ∈ Finset.range (n0 + 1), km.stepsize i * (1 - km.stepsize i) * (a i) ^ 2 ≥
+      ∑ i ∈ Finset.range (n0 + 1), km.stepsize i * (1 - km.stepsize i)*ε ^ 2 := by
+    apply Finset.sum_le_sum
+    intro i hi
+    have : i ≤ n0 := (Nat.lt_succ_iff.mp (Finset.mem_range.mp hi))
+    have ai_ge : a i ≥ a n0 := by
+      exact (antitone_nat_of_succ_le a_noninc) (by omega)
+    have ai_ge_eps : ε ≤ a i := by
+      have h : ε ≤ ‖T (km.x n0) - km.x n0‖ := by
+        by_contra! H  -- H: ‖T (km.x n0) - km.x n0‖ < ε
+        rw[← zero_add ε ] at H
+        exact hn0_ge_eps ⟨by linarith [norm_nonneg (T (km.x n0) - km.x n0)], H⟩
+      linarith
+    apply mul_le_mul_of_nonneg_left
+    · exact pow_le_pow_left₀ (le_of_lt εpos) ai_ge_eps 2
+    rcases km.hstepsize i with ⟨hs0, hs1⟩
+    · apply mul_nonneg
+      · exact hs0
+      · exact sub_nonneg.mpr hs1
+
+  -- 由 hN0（偏和下界从 N0 开始）得到 S ≥ ‖x0-y0‖^2 / ε^2，结合上面 lower 导出矛盾
+  have S_ge : ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) ≥ ‖km.x 0 - y0‖ ^ 2 / ε^2:= by
+    apply hN0
+    exact le_trans (by linarith : N0 ≤ n0) (le_refl _)
+
+  have lb: ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) * (a i) ^ 2 ≥ (‖km.x 0 - y0‖ ^ 2 ) := by
+    calc
+      ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) * (a i) ^ 2
+          ≥ ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) * ε ^ 2 := by
+            exact lower
+      _ = ε ^ 2 *(∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i))  := by
+        have : (∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i) * ε ^ 2) =
+            ∑ i ∈ range (n0 + 1), ε ^ 2 * (km.stepsize i * (1 - km.stepsize i) ) := by
+          apply Finset.sum_congr rfl
+          intro i hi
+          ring
+        rw [this]
+        -- 把 ε^2 提到和式外面
+        rw [← @Finset.mul_sum ℕ _ _ (range (n0 + 1))  (fun i => km.stepsize i * (1 - km.stepsize i)) (ε ^ 2)]
+      _ ≥ ‖km.x 0 - y0‖ ^ 2 := by
+        -- 应用 S_ge：先把目标改写为 ε^2 * (∑ ...) ≥ ε^2 * (‖x0-y0‖^2 / ε^2)，再用 mul_le_mul_of_nonneg_left
+        have hpos : 0 ≤ ε ^ 2 := by exact pow_nonneg (le_of_lt εpos) 2
+        calc
+          ε ^ 2 * (∑ i ∈ Finset.range (n0 + 1), km.stepsize i * (1 - km.stepsize i))
+          _ ≥ ε ^ 2 * (‖km.x 0 - y0‖ ^ 2 / ε ^ 2) := by apply mul_le_mul_of_nonneg_left S_ge hpos
+          _ = ‖km.x 0 - y0‖ ^ 2 := by
+            -- 用 field_simp 消去除数 ε^2（ε > 0）
+            field_simp [ne_of_gt εpos]
+
+  have ub := partial_le (n0 + 1)
+  linarith
