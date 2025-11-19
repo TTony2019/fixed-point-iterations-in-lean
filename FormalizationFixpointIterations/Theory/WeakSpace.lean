@@ -6,10 +6,17 @@ import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
 import Mathlib.Analysis.InnerProductSpace.Dual
 import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Topology.Compactness.Compact
+<<<<<<< Updated upstream
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 
 open Filter WeakDual Metric WeakBilin Nonexpansive_operator Topology BigOperators Function
+=======
+import Mathlib.Topology.MetricSpace.Sequences
+
+open Filter WeakDual Metric WeakBilin TopologicalSpace
+
+>>>>>>> Stashed changes
 section WeakTopology
 
 universe u1
@@ -1245,10 +1252,19 @@ example (s : Set H) (h : IsCompact s) : IsWeaklyCompact s := by
 /-
 Fact 2.34: Banach-Alaoglu Bourbaki
 -/
-theorem closed_unit_ball_is_weakly_compact : IsWeaklyCompact (closedBall (0:H) (1:ℝ)) := by
-  obtain := isCompact_closedBall
+theorem closed_unit_ball_is_weakly_compact [CompleteSpace H] (x : H) (r : ℝ) :
+  IsWeaklyCompact (closedBall x r) := by
+  let f := va H x
+
+  obtain h := isCompact_closedBall ℝ f r
   simp [IsWeaklyCompact]
-  
+  have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by sorry
+  rw [ball_eq] at h
+  simp at h
+
+
+
+
 
 
   sorry
@@ -1273,6 +1289,33 @@ theorem weakly_compact_iff_weakly_seq_compact (C : Set H) (hC : IsWeaklyCompact 
 
 instance : SeqCompactSpace (WeakSpace ℝ H) := sorry
 
+#check TopologicalSpace.SeparableSpace
+#check TopologicalSpace.exists_countable_dense
+#check Set.Countable.exists_eq_range
+#check IsBounded
+#check tendsto_subseq_of_bounded
+
+/-
+Lemma 2.45
+-/
+theorem bounded_seq_has_weakly_converge_subseq_separable [SeparableSpace H] (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) :
+  IsWeaklySeqCompact (Set.range x) := by
+  rcases exists_countable_dense H with ⟨s, hs1, hs2⟩
+  have hsn : s.Nonempty := Dense.nonempty hs2
+  rcases Set.Countable.exists_eq_range hs1 hsn with ⟨f, hf⟩
+  let d (n : ℕ) := fun m => ⟪f m, x n⟫
+  let s' (n : ℕ):= Set.range <| d n
+
+  have (n:ℕ): Bornology.IsBounded <| s' n := sorry
+  -- have subsq (n : ℕ) : ∃ a ∈ closure (s' n), ∃ φ : ℕ → ℕ, StrictMono φ ∧
+  --   Tendsto ((d n) ∘ φ) atTop (nhds a) := by
+  --   apply tendsto_subseq_of_bounded
+  --   exact this n
+  --   intro m; simp [s']
+
+  sorry
+
 /-
 Lemma 2.45
 -/
@@ -1285,5 +1328,6 @@ theorem bounded_seq_has_weakly_converge_subseq (x : ℕ → H)
 --   IsWeaklySeqCompact (Set.range x) := by
 --   simp [IsWeaklySeqCompact, IsSeqCompact]
 
+#check mem_closure_iff_clusterPt
 
 end WeaklyCompact
