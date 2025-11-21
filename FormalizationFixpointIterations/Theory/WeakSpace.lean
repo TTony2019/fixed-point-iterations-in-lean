@@ -9,6 +9,10 @@ import Mathlib.Topology.Compactness.Compact
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 
+
+set_option linter.unusedSectionVars false
+
+
 open Filter WeakDual Metric WeakBilin Nonexpansive_operator Topology BigOperators Function
 section WeakTopology
 
@@ -315,7 +319,132 @@ lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (
 lemma EReal.liminf_mul_const (x : ℕ → H) (p : H) :
   liminf (fun n ↦ Real.toEReal (‖x n‖ * ‖p‖)) atTop
   = (liminf (fun n ↦ Real.toEReal ‖x n‖) atTop) * Real.toEReal ‖p‖ := by
-  sorry
+  by_cases hp : Real.toEReal ‖p‖ = 0
+  · simp [hp]
+  · apply le_antisymm
+    · calc
+        _ = liminf (fun n ↦ ((Real.toEReal ‖p‖) * (Real.toEReal ‖x n‖))) atTop := by
+          simp [mul_comm]
+        _ ≤ (limsup (fun n ↦ Real.toEReal ‖p‖) atTop) *
+          liminf (fun n ↦ Real.toEReal ‖x n‖) atTop := by
+          apply EReal.liminf_mul_le
+          · apply Eventually.of_forall
+            intro n
+            simp
+          · apply Eventually.of_forall
+            intro n
+            simp
+          · left
+            push_neg at hp
+            simp at hp
+            simpa
+          · left
+            simp
+        _ = ↑‖p‖ * liminf (fun n ↦ ↑‖x n‖) atTop := by
+          simp
+        _ = _ := by rw [mul_comm]
+    · simp
+      calc
+        _ = liminf (fun n ↦ Real.toEReal ‖x n‖) atTop *
+          liminf (fun n ↦ Real.toEReal ‖p‖) atTop := by
+          congr
+          symm
+          apply @Filter.liminf_const EReal ℕ _ atTop _ (Real.toEReal ‖p‖)
+        _ ≤ liminf (fun n ↦ Real.toEReal ‖x n‖ * Real.toEReal ‖p‖) atTop := by
+          apply le_liminf_mul
+          · apply Eventually.of_forall
+            intro n
+            simp
+          · apply Eventually.of_forall
+            intro n
+            simp
+
+
+
+
+
+
+
+
+-- 引理：弱收敛序列的范数有界
+lemma weakly_converge_norm_bounded (x : ℕ → H) (x_lim : H) (h_wkconv_x : WeakConverge x x_lim) :
+    ∃ M, ∀ n, ‖x n‖ ≤ M := by
+  -- f 为有界线性算子
+  let f : ℕ → H →L[ℝ] ℝ := fun n =>
+    LinearMap.mkContinuous
+      { toFun := fun z => ⟪x n, z⟫
+        map_add' := fun u v => inner_add_right (x n) u v
+        map_smul' := fun c u => inner_smul_right (x n) u c}
+      ‖x n‖
+      fun z => by
+        simp; exact abs_real_inner_le_norm (x n) z
+
+  have h_f_n_y_upbd : ∀ y : H, ∃ N : ℕ, ∃ M : ℝ, ∀ n ≥ N, |f n y| ≤ M := by
+    intro y
+    rw [weakConverge_iff_inner_converge] at h_wkconv_x
+    specialize h_wkconv_x y; rw [Metric.tendsto_atTop] at h_wkconv_x
+    specialize h_wkconv_x (1) (one_pos)
+    obtain ⟨N, hN⟩ := h_wkconv_x
+    use N, |⟪x_lim, y⟫| + 1
+    intro n hn; specialize hN n hn; simp [f]
+    rw [Real.dist_eq] at hN
+    have : |inner ℝ (x n) y| - |inner ℝ x_lim y| < 1 := by
+      calc
+        _ ≤ |inner ℝ (x n) y - inner ℝ x_lim y| := by apply abs_sub_abs_le_abs_sub
+        _ < 1 := hN
+    linarith
+
+  have h_f_n_y_pointwise_bounded : ∀ y : H, ∃ M : ℝ, ∀ n : ℕ, |f n y| ≤ M := by
+    intro y
+    specialize h_f_n_y_upbd y
+    obtain ⟨N, hN⟩ := h_f_n_y_upbd
+    by_cases N_zero : N = 0
+    · rw [N_zero] at hN; rcases hN with ⟨M, hM⟩; use M; intro n; exact hM n (Nat.zero_le n)
+    · let M0 := (Finset.range N).sup' ⟨0, Finset.mem_range.mpr
+        (Nat.pos_of_ne_zero ‹N ≠ 0›)⟩ (fun n => |(f n) y|)
+      have ha : ∀ a ∈ Finset.range N, |(f a) y| ≤ M0 := by
+        intro a ha; simp [M0]; use a
+        constructor
+        · exact List.mem_range.mp ha
+        · simp
+      rcases hN with ⟨M1, hM1⟩; use max M0 M1; intro n
+      by_cases hn : n < N
+      · calc
+          |f n y| ≤ M0 := by apply ha n; exact Finset.mem_range.mpr hn
+          _ ≤ max M0 M1 := by apply le_max_left
+      · push_neg at hn
+        calc
+          |f n y| ≤ M1 := by apply hM1; exact hn
+          _ ≤ max M0 M1 := by apply le_max_right
+
+  have h_norm_sup_t_n_y : ∀ y : H, ∃ M : ℝ, ⨆ n : ℕ, |f n y| ≤ M := by
+    intro y; rcases h_f_n_y_pointwise_bounded y with ⟨M, hM⟩; use M; exact ciSup_le hM
+
+  have h_f_bounded : ∃ C, ∀ n, ‖f n‖ ≤ C := by
+    have h_pointwise : ∀ y, ∃ M, ∀ n, |f n y| ≤ M := by intro y; exact h_f_n_y_pointwise_bounded y
+    exact banach_steinhaus h_pointwise
+
+  obtain ⟨C, hC⟩ := h_f_bounded; use C; intro n
+  have h_norm_eq : ‖f n‖ = ‖x n‖ := by
+    refine ContinuousLinearMap.opNorm_eq_of_bounds ?_ ?_ ?_
+    · simp
+    · intro z; simp [f]; exact abs_real_inner_le_norm (x n) z
+    · intro M hM h; simp [f] at h; specialize h (x n)
+      rw [abs_of_nonneg] at h
+      · rw [real_inner_self_eq_norm_sq, pow_two] at h
+        have : ‖x n‖ ≥ 0 := norm_nonneg (x n)
+        by_cases h1: ‖x n‖ = 0
+        · rw [h1]; assumption
+        · push_neg at h1
+          have : ‖x n‖ > 0 := by
+            apply lt_of_le_of_ne
+            · exact this
+            · intro h2; rw [h2] at h1; contradiction
+          exact le_of_mul_le_mul_right h this
+      · exact real_inner_self_nonneg
+  rw [← h_norm_eq]; exact hC n
+
+
 
 
 
@@ -339,53 +468,75 @@ theorem norm_weakly_lsc [CompleteSpace H] (x : ℕ → H) (p : H) (h : WeakConve
     exact EReal.coe_nonneg.mpr (norm_nonneg (x n))
   by_cases hp1 : Real.toEReal ‖p‖ = 0
   · simp [hp1]
-    simp [liminf, limsInf, sSup]
-    sorry
-  have hp2 : Real.toEReal ‖p‖ ≠ ⊥ := by
-    simp
-  have hp3 : Real.toEReal ‖p‖ ≠ ⊤ := by
-    simp
-  push_neg at hp1
-  have h_lim : Real.toEReal (‖p‖ ^ 2) ≤ liminf (fun n => Real.toEReal (y' n)) atTop :=
-    EReal.limit_le_liminf x' y' (‖p‖ ^ 2) h1 hxy
-  simp [y'] at h_lim
-  have h2 : liminf (fun n ↦ Real.toEReal ‖x n‖ * Real.toEReal ‖p‖) atTop
-  = (liminf (fun n ↦ Real.toEReal ‖x n‖) atTop) * Real.toEReal ‖p‖ := by
-    apply EReal.liminf_mul_const x p
-  rw [h2] at h_lim
-  have p_norm_eq : Real.toEReal (‖p‖ * ‖p‖)  = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
-    rw [← EReal.coe_mul]
-  have eq: ‖p‖^2 = ‖p‖ * ‖p‖ := by
-    linarith
-  have eq': Real.toEReal (‖p‖ ^ 2) = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
-    rw [eq, p_norm_eq]
-  have : Real.toEReal ‖p‖ * Real.toEReal ‖p‖
-    ≤ liminf (fun n ↦ Real.toEReal ‖x n‖) atTop * Real.toEReal ‖p‖ := by calc
-    Real.toEReal ‖p‖ * Real.toEReal ‖p‖ = Real.toEReal (‖p‖ ^ 2) := by rw [eq']
-    _ ≤ liminf (fun n => Real.toEReal (y' n)) atTop := by convert h_lim
-    _ = liminf (fun n => Real.toEReal (‖x n‖ * ‖p‖)) atTop := by simp [y']
-    _ = liminf (fun n => Real.toEReal ‖x n‖ * Real.toEReal ‖p‖ ) atTop := by congr
-    _ = liminf (fun n ↦ Real.toEReal ‖x n‖) atTop * Real.toEReal ‖p‖ := by rw [← h2]
-  calc
-    _ = Real.toEReal ‖p‖ / Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
-      symm
-      apply EReal.div_mul_cancel
-      · exact hp2
-      · exact hp3
-      exact hp1
-    _ = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ / Real.toEReal ‖p‖ := by apply EReal.mul_div_right
-    _ ≤ liminf (fun n ↦ ↑‖x n‖) atTop * Real.toEReal ‖p‖ / Real.toEReal ‖p‖ := by
-      apply EReal.div_le_div_right_of_nonneg
-      · exact nonneg1
-      exact this
-    _ = liminf (fun n ↦ ↑‖x n‖) atTop / Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
-      symm
-      apply EReal.mul_div_right
-    _ = liminf (fun n ↦ ↑‖x n‖) atTop := by
-      apply EReal.div_mul_cancel
-      · exact hp2
-      · exact hp3
-      exact hp1
+    calc
+      _ = liminf (fun n ↦ (0 : EReal)) atTop := by
+        symm
+        apply @Filter.liminf_const EReal ℕ _ atTop _ (Real.toEReal 0)
+      _ ≤ liminf (fun n ↦ Real.toEReal ‖x n‖) atTop := by
+        apply liminf_le_liminf
+        · apply Eventually.of_forall
+          intro n
+          simp
+        · simp [autoParam, IsBoundedUnder, IsBounded]
+          use 0
+          use 0
+          intro n
+          simp
+        · simp [autoParam]
+          apply Filter.IsBoundedUnder.isCoboundedUnder_ge
+          simp [IsBoundedUnder, IsBounded]
+          have h_norm_bounded : ∃ M, ∀ n, ‖x n‖ ≤ M :=
+            weakly_converge_norm_bounded x p h
+          obtain ⟨M, hM⟩ := h_norm_bounded
+          use M, 0
+          intro b_1 _
+          simp
+          exact hM b_1
+  · have hp2 : Real.toEReal ‖p‖ ≠ ⊥ := by
+      simp
+    have hp3 : Real.toEReal ‖p‖ ≠ ⊤ := by
+      simp
+    push_neg at hp1
+    have h_lim : Real.toEReal (‖p‖ ^ 2) ≤ liminf (fun n => Real.toEReal (y' n)) atTop :=
+      EReal.limit_le_liminf x' y' (‖p‖ ^ 2) h1 hxy
+    simp [y'] at h_lim
+    have h2 : liminf (fun n ↦ Real.toEReal ‖x n‖ * Real.toEReal ‖p‖) atTop
+    = (liminf (fun n ↦ Real.toEReal ‖x n‖) atTop) * Real.toEReal ‖p‖ := by
+      apply EReal.liminf_mul_const x p
+    rw [h2] at h_lim
+    have p_norm_eq : Real.toEReal (‖p‖ * ‖p‖)  = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
+      rw [← EReal.coe_mul]
+    have eq: ‖p‖^2 = ‖p‖ * ‖p‖ := by
+      linarith
+    have eq': Real.toEReal (‖p‖ ^ 2) = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
+      rw [eq, p_norm_eq]
+    have : Real.toEReal ‖p‖ * Real.toEReal ‖p‖
+      ≤ liminf (fun n ↦ Real.toEReal ‖x n‖) atTop * Real.toEReal ‖p‖ := by calc
+      Real.toEReal ‖p‖ * Real.toEReal ‖p‖ = Real.toEReal (‖p‖ ^ 2) := by rw [eq']
+      _ ≤ liminf (fun n => Real.toEReal (y' n)) atTop := by convert h_lim
+      _ = liminf (fun n => Real.toEReal (‖x n‖ * ‖p‖)) atTop := by simp [y']
+      _ = liminf (fun n => Real.toEReal ‖x n‖ * Real.toEReal ‖p‖ ) atTop := by congr
+      _ = liminf (fun n ↦ Real.toEReal ‖x n‖) atTop * Real.toEReal ‖p‖ := by rw [← h2]
+    calc
+      _ = Real.toEReal ‖p‖ / Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
+        symm
+        apply EReal.div_mul_cancel
+        · exact hp2
+        · exact hp3
+        exact hp1
+      _ = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ / Real.toEReal ‖p‖ := by apply EReal.mul_div_right
+      _ ≤ liminf (fun n ↦ ↑‖x n‖) atTop * Real.toEReal ‖p‖ / Real.toEReal ‖p‖ := by
+        apply EReal.div_le_div_right_of_nonneg
+        · exact nonneg1
+        exact this
+      _ = liminf (fun n ↦ ↑‖x n‖) atTop / Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
+        symm
+        apply EReal.mul_div_right
+      _ = liminf (fun n ↦ ↑‖x n‖) atTop := by
+        apply EReal.div_mul_cancel
+        · exact hp2
+        · exact hp3
+        exact hp1
 
 
 -- Lemma 2.51 (i)
@@ -716,6 +867,14 @@ def DemiclosedAt (D : Set H) (T : H → H) (u : H) : Prop :=
 def Demiclosed (T : H → H) (D : Set H) : Prop :=
   ∀ u : H, DemiclosedAt D T u
 
+
+
+
+
+
+
+
+
 --x n弱收敛到x_lim, u n强收敛到u_lim,lim ⟪x_n, u_n⟫ = ⟪x_lim, u_lim⟫
 lemma wkconv_conv_ledsto_conv
   {x : ℕ → H} {x_lim : H} {u : ℕ → H} {u_lim : H} {h_wkconv_x : WeakConverge x x_lim}
@@ -724,86 +883,8 @@ lemma wkconv_conv_ledsto_conv
   have eq : (fun n => inner ℝ (x n) (u n) - inner ℝ x_lim u_lim) =
     (fun n => inner ℝ (x n) (u n - u_lim)) + (fun n => inner ℝ (x n - x_lim) u_lim) := by
       funext n; simp [inner_sub_left, inner_sub_right]
-  have h_norm_x_n_bdd : ∃ M, ∀ n, ‖x n‖ ≤ M := by
-
-    --f为有界线性算子
-    let f : ℕ → H →L[ℝ] ℝ := fun n =>
-      LinearMap.mkContinuous
-        { toFun := fun z => ⟪x n, z⟫
-          map_add' := fun u v => inner_add_right (x n) u v
-          map_smul' := fun c u => inner_smul_right (x n) u c}
-        ‖x n‖
-        fun z => by
-          simp; exact abs_real_inner_le_norm (x n) z
-
-    have h_f_n_y_upbd : ∀ y : H, ∃ N : ℕ, ∃ M : ℝ, ∀ n ≥ N, |f n y| ≤ M := by
-      intro y
-      rw [weakConverge_iff_inner_converge] at h_wkconv_x
-      specialize h_wkconv_x y; rw [Metric.tendsto_atTop] at h_wkconv_x
-      specialize h_wkconv_x (1) (one_pos)
-      obtain ⟨N, hN⟩ := h_wkconv_x
-      use N, |⟪x_lim, y⟫| + 1
-      intro n hn; specialize hN n hn; simp [f]
-      rw [Real.dist_eq] at hN
-      have : |inner ℝ (x n) y| - |inner ℝ x_lim y| < 1 := by
-        calc
-          _ ≤ |inner ℝ (x n) y - inner ℝ x_lim y| := by apply abs_sub_abs_le_abs_sub
-          _ < 1 := hN
-      linarith
-
-    have h_f_n_y_pointwise_bounded : ∀ y : H, ∃ M : ℝ, ∀ n : ℕ, |f n y| ≤ M := by
-      intro y
-      specialize h_f_n_y_upbd y
-      obtain ⟨N, hN⟩ := h_f_n_y_upbd
-      by_cases N_zero : N = 0
-      · rw [N_zero] at hN; rcases hN with ⟨M, hM⟩; use M; intro n; exact hM n (Nat.zero_le n)
-      · let M0 := (Finset.range N).sup' ⟨0, Finset.mem_range.mpr
-          (Nat.pos_of_ne_zero ‹N ≠ 0›)⟩ (fun n => |(f n) y|)
-        have ha : ∀ a ∈ Finset.range N, |(f a) y| ≤ M0 := by
-          intro a ha; simp [M0]; use a
-          constructor
-          · exact List.mem_range.mp ha
-          · simp
-        rcases hN with ⟨M1, hM1⟩; use max M0 M1; intro n
-        by_cases hn : n < N
-        · calc
-            |f n y| ≤ M0 := by apply ha n; exact Finset.mem_range.mpr hn
-            _ ≤ max M0 M1 := by apply le_max_left
-        · push_neg at hn
-          calc
-            |f n y| ≤ M1 := by apply hM1; exact hn
-            _ ≤ max M0 M1 := by apply le_max_right
-
-    have h_norm_sup_t_n_y : ∀ y : H, ∃ M : ℝ, ⨆ n : ℕ, |f n y| ≤ M := by
-      intro y; rcases h_f_n_y_pointwise_bounded y with ⟨M, hM⟩; use M; exact ciSup_le hM
-
-    have h_f_bounded : ∃ C, ∀ n, ‖f n‖ ≤ C := by
-      -- 从逐点有界得到一致有界
-      have h_pointwise : ∀ y, ∃ M, ∀ n, |f n y| ≤ M := by intro y; exact h_f_n_y_pointwise_bounded y
-      -- 应用 Banach-Steinhaus 定理
-      exact banach_steinhaus h_pointwise
-
-    obtain ⟨C, hC⟩ := h_f_bounded; use C; intro n
-    -- 关键：f n 的范数就等于 x n 的范数
-    have h_norm_eq : ‖f n‖ = ‖x n‖ := by
-      -- LinearMap.mkContinuous 的性质
-      refine ContinuousLinearMap.opNorm_eq_of_bounds ?_ ?_ ?_
-      · simp
-      · intro z; simp [f]; exact abs_real_inner_le_norm (x n) z
-      · intro M hM h; simp [f] at h; specialize h (x n)
-        rw [abs_of_nonneg] at h
-        · rw [real_inner_self_eq_norm_sq, pow_two] at h
-          have : ‖x n‖ ≥ 0 := norm_nonneg (x n)
-          by_cases h1: ‖x n‖ = 0
-          · rw [h1]; assumption
-          · push_neg at h1
-            have : ‖x n‖ > 0 := by
-              apply lt_of_le_of_ne
-              · exact this
-              · intro h2; rw [h2] at h1; contradiction
-            exact le_of_mul_le_mul_right h this
-        · exact real_inner_self_nonneg
-    rw [← h_norm_eq]; exact hC n
+  have h_norm_x_n_bdd : ∃ M, ∀ n, ‖x n‖ ≤ M :=
+    weakly_converge_norm_bounded x x_lim h_wkconv_x
 
   have h1: Tendsto (fun n => inner ℝ (x n) (u n - u_lim)) atTop (𝓝 0) := by
     obtain ⟨M, hM⟩ := h_norm_x_n_bdd
