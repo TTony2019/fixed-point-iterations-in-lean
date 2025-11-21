@@ -1971,14 +1971,12 @@ lemma halpern_limsup_bound_from_prod
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
   (m : H)
   (hm_in_C : m ∈ C)
-  (hm_proj : ‖alg.u - m‖ = ⨅ w : C, ‖alg.u - w‖)
   (h_induction : ∀ z ∈ C, ∀ n,
     ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧
     ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
   (h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0)
   (h_inner_bounded : ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M)
-  (y : H) (hy_in_C : y ∈ C)
-  (h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - y‖ ≤ M)
+  (y : H) (h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - y‖ ≤ M)
   : ∀ ε > 0, ∃ N : ℕ, ∀ (n k : ℕ), n ≥ k → n ≥ N → k ≥ N →
       limsup (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop ≤ 3 * ε := by
   have h_α_le_one : ∀ n, 1 - alg.α n ≤ 1 := by
@@ -2074,8 +2072,40 @@ lemma halpern_limsup_bound_from_prod
           · linarith
           · linarith
           · assumption
-        · sorry--‖alg.x (n + 1) - m‖ ^ 2有界
-        · sorry--3 * ε + ‖alg.x k - m‖ ^ 2 * ∏ l ∈ Finset.Icc k n, (1 - alg.α l)有界
+        · simp [autoParam, IsCoboundedUnder, IsCobounded]
+          rcases h_xn_sub_m_bdd with ⟨M, hM⟩
+          use 0
+          intro a p q
+          specialize q (p + 1) (by linarith)
+          have h_norm_sq_nonneg : 0 ≤ ‖alg.x (p + 1 + 1) - m‖ ^ 2 := by
+            apply sq_nonneg
+          linarith
+        · simp [autoParam, IsBoundedUnder, IsBounded]
+          rcases h_xn_sub_m_bdd with ⟨M, hM⟩
+          use (3 * ε + M)
+          use 0
+          intro b
+          simp
+          calc
+            _ ≤ M * ∏ l ∈ Finset.Icc k b, (1 - alg.α l) := by
+              apply mul_le_mul
+              · convert hM k
+              · simp
+              · apply Finset.prod_nonneg
+                intro i hi
+                exact h_nonneg_one_sub_α i
+              · have h_norm_sq_nonneg : 0 ≤ ‖alg.x b - m‖ ^ 2 := by
+                  apply sq_nonneg
+                have := hM b
+                linarith
+            _ ≤ M := by
+              nth_rewrite 2 [← mul_one M]
+              apply mul_le_mul_of_nonneg_left
+              · exact Finset.prod_le_one (fun i a ↦ h_nonneg_one_sub_α i) fun i a ↦ h_α_le_one i
+              · have h_norm_sq_nonneg : 0 ≤ ‖alg.x b - m‖ ^ 2 := by
+                  apply sq_nonneg
+                have := hM b
+                linarith
     _ = limsup (fun n ↦ ‖alg.x k - m‖ ^ 2 *
       ∏ l ∈ Finset.Icc k n, (1 - alg.α l) + 3 * ε) atTop := by
       apply congr
@@ -2129,7 +2159,16 @@ lemma halpern_limsup_bound_from_prod
           intro i hi
           exact h_nonneg_one_sub_α i
         · exact h_M_nonneg
-      · sorry--‖alg.x k - m‖ ^ 2 * ∏ l ∈ Finset.Icc k n, (1 - alg.α l)有界
+      · --‖alg.x k - m‖ ^ 2 * ∏ l ∈ Finset.Icc k n, (1 - alg.α l)有界
+        simp [IsCoboundedUnder, IsCobounded]
+        use 0
+        intro a p q
+        specialize q (p + 1) (by linarith)
+        have : ‖alg.x k - m‖ ^ 2 * ∏ l ∈ Finset.Icc k (p + 1), (1 - alg.α l) ≥ 0 := by
+          apply mul_nonneg
+          · apply sq_nonneg
+          · exact Finset.prod_nonneg fun i a ↦ h_nonneg_one_sub_α i
+        linarith
     _ = limsup (fun n ↦ ‖alg.x k - m‖ ^ 2) atTop * 0 + 3 * ε := by
       congr
       · rw [h_prod_zero k]
@@ -2152,14 +2191,12 @@ lemma halpern_convergence_aux
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
   (m : H)
   (hm_in_C : m ∈ C)
-  (hm_proj : ‖alg.u - m‖ = ⨅ w : C, ‖alg.u - w‖)
   (h_induction : ∀ z ∈ C, ∀ n,
     ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧
     ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
   (h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0)
   (h_inner_bounded : ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M)
   (z : H)
-  (h_z_in_C : z ∈ C)
   (h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - z‖ ≤ M)
   : Tendsto alg.x atTop (𝓝 m) := by
   -- limsup上界被ε控制
@@ -2173,8 +2210,8 @@ lemma halpern_convergence_aux
           _ ≤ ‖alg.x n - z‖ + ‖z - z‖ := norm_add_le _ _
           _ ≤ M + ‖z - z‖ := by linarith [hM n]⟩
     obtain ⟨N, hN⟩ := halpern_limsup_bound_from_prod hT_nonexp hC alg halg_x_in_D
-      h_α_range h_α_limit h_α_sum_inf m hm_in_C hm_proj h_induction
-      h_limsup_neg h_inner_bounded z h_z_in_C h_seq_bound_z ε hε
+      h_α_range h_α_limit h_α_sum_inf m hm_in_C h_induction
+      h_limsup_neg h_inner_bounded z h_seq_bound_z ε hε
     exact hN N N (le_refl N) (le_refl N) (le_refl N)
 
   -- limsup下界被0控制
@@ -2462,8 +2499,8 @@ lemma halpern_convergence_point_same
   -- x n收敛到 m
   have h_x_conv : Tendsto alg.x atTop (𝓝 m) := by
     apply halpern_convergence_aux hT_nonexp hC alg halg_x_in_D
-      h_α_range h_α_limit h_α_sum_inf m hm_in_C hm_proj h_induction
-      h_limsup_neg h_inner_bounded z h_z_in_C h_seq_bound_z
+      h_α_range h_α_limit h_α_sum_inf m hm_in_C h_induction
+      h_limsup_neg h_inner_bounded z h_seq_bound_z
 
   use m; use hm_in_C; use h_x_conv
   intro w hw_in_C
