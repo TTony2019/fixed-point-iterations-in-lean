@@ -21,7 +21,7 @@ section WeakTopology
 
 -- universe u1
 variable {H : Type*}
-variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
+variable [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 def WeakConverge (x : ℕ → H) (p : H) :=
