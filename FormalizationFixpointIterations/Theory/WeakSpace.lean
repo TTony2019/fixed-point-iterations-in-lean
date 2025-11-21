@@ -6,22 +6,18 @@ import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
 import Mathlib.Analysis.InnerProductSpace.Dual
 import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Topology.Compactness.Compact
-<<<<<<< Updated upstream
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
-
-open Filter WeakDual Metric WeakBilin Nonexpansive_operator Topology BigOperators Function
-=======
 import Mathlib.Topology.MetricSpace.Sequences
 
-open Filter WeakDual Metric WeakBilin TopologicalSpace
+open Filter WeakDual Metric WeakBilin Nonexpansive_operator Topology BigOperators Function
+open TopologicalSpace
 
->>>>>>> Stashed changes
 section WeakTopology
 
-universe u1
-variable {H : Type u1}
-variable [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H]
+-- universe u1
+variable {H : Type*}
+variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 def WeakConverge (x : ℕ → H) (p : H) :=
@@ -724,7 +720,7 @@ def Demiclosed (T : H → H) (D : Set H) : Prop :=
   ∀ u : H, DemiclosedAt D T u
 
 --x n弱收敛到x_lim, u n强收敛到u_lim,lim ⟪x_n, u_n⟫ = ⟪x_lim, u_lim⟫
-lemma wkconv_conv_ledsto_conv
+lemma wkconv_conv_ledsto_conv [CompleteSpace H]
   {x : ℕ → H} {x_lim : H} {u : ℕ → H} {u_lim : H} {h_wkconv_x : WeakConverge x x_lim}
   {h_conv_u : Tendsto u atTop (𝓝 u_lim)}
   : Tendsto (fun n => inner ℝ (x n) (u n)) atTop (𝓝 (inner ℝ x_lim u_lim)) := by
@@ -869,7 +865,7 @@ lemma wkconv_conv_ledsto_conv
 
 
 -- Theorem 4.27: Browder's demiclosedness principle
-theorem browder_demiclosed_principle
+theorem browder_demiclosed_principle [CompleteSpace H]
   {D : Set H}
   {T : H → H}
   (hT_nonexp : NonexpansiveOn T D)
@@ -1085,7 +1081,7 @@ theorem browder_demiclosed_principle
   exact this
 
 -- Corollary 4.28: 弱收敛且误差趋零蕴含固定点
-lemma corollary_4_28
+lemma corollary_4_28 [CompleteSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) (x : ℕ → H) (h_x_in_D : ∀ n, x n ∈ D)
   (p : H) (h_p_in_D : p ∈ D) (h_weak_conv : WeakConverge x p)
@@ -1239,39 +1235,89 @@ Lemma 1.12
 example (s : Set H) (h : IsWeaklyCompact s) : IsWeaklyClosed s := IsCompact.isClosed h
 #check IsCompact.of_isClosed_subset
 
-example (s : Set H) (h : IsCompact s) : IsWeaklyCompact s := by
-  simp [IsWeaklyCompact, IsCompact] at h ⊢
-  sorry
+lemma WeakSpace.continuous_of_continuous_eval
+    {X : Type*} [TopologicalSpace X]
+    {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
+    {f : X → WeakSpace ℝ E}
+    (hf : ∀ ℓ : E →L[ℝ] ℝ, Continuous fun x => ℓ (f x)) :
+    Continuous f := continuous_induced_rng.2 <| continuous_pi_iff.mpr <| fun y => hf y
 
+noncomputable def weakToWeakDual [CompleteSpace H] : WeakSpace ℝ H ≃ₗ[ℝ] WeakDual ℝ H :=
+  (InnerProductSpace.toDual ℝ H).toLinearEquiv
 
+#check WeakSpace
+#check WeakBilin.eval_continuous
+#check InnerProductSpace.toDual_symm_apply
+noncomputable def weakHomeomorph [CompleteSpace H] : WeakSpace ℝ H ≃ₜ WeakDual ℝ H where
+  toFun := weakToWeakDual
+  invFun := weakToWeakDual.symm
+  left_inv := weakToWeakDual.left_inv
+  right_inv := weakToWeakDual.right_inv
+  continuous_toFun := by
+    apply WeakDual.continuous_of_continuous_eval
+    intro x
+    have : (fun v : WeakSpace ℝ H => (weakToWeakDual v) x)
+      = fun v => (InnerProductSpace.toDual ℝ H x) v := by
+        ext v
+        simp [weakToWeakDual, InnerProductSpace.toDual_apply]
+        change (InnerProductSpace.toDual ℝ H v) x = ⟪x, v⟫
+        simp
+        exact real_inner_comm x v
+    simp [this]
+    simp only [← topDualPairing_eq_inner]
+    have : (fun v ↦ ((topDualPairing ℝ H).flip x) (va H v)) =
+      (fun v ↦ ((topDualPairing ℝ H).flip v) (va H x)) := by
+      ext v
+      rw [topDualPairing_eq_inner, topDualPairing_eq_inner]
+      exact congrFun (id (Eq.symm this)) v
+    rw [this]
+    apply WeakBilin.eval_continuous
+  continuous_invFun := by
+    apply WeakSpace.continuous_of_continuous_eval
+    intro y
+    obtain ⟨x, rfl⟩ := (InnerProductSpace.toDual ℝ H).surjective y
+    have : (fun φ : WeakDual ℝ H => (InnerProductSpace.toDual ℝ H x)
+        (weakToWeakDual.symm φ))
+        = fun φ => φ x := by
+        ext φ
+        simp [weakToWeakDual]
+        change ⟪x, ((InnerProductSpace.toDual ℝ H).symm φ) ⟫  = φ x
+        rw [real_inner_comm, InnerProductSpace.toDual_symm_apply]
+    rw [this]
+    exact WeakDual.eval_continuous x
 
-  -- exact h
-  -- sorry
+#check weakHomeomorph.isCompact_image
 
--- open
+lemma weakHom_image_eq [CompleteSpace H] {x : H} {r : ℝ} :
+  weakHomeomorph '' ((closedBall x r) : Set H) =
+  toStrongDual ⁻¹' closedBall ((InnerProductSpace.toDual ℝ H) x) r := by
+  ext y
+  constructor
+  · rintro ⟨x', h1, h2⟩
+    simp; rw [← h2]; simp [weakHomeomorph, weakToWeakDual]
+    change dist ((InnerProductSpace.toDual ℝ H) x') ((InnerProductSpace.toDual ℝ H) x) ≤ r
+    simpa
+  intro hy
+  simp at hy; simp [weakHomeomorph, weakToWeakDual]
+  obtain ⟨v, rfl⟩ := (InnerProductSpace.toDual ℝ H).surjective y
+  use v
+  constructor
+  · simp at hy; exact hy
+  change (InnerProductSpace.toDual ℝ H) v = (InnerProductSpace.toDual ℝ H) v
+  rfl
+
 /-
 Fact 2.34: Banach-Alaoglu Bourbaki
 -/
 theorem closed_unit_ball_is_weakly_compact [CompleteSpace H] (x : H) (r : ℝ) :
   IsWeaklyCompact (closedBall x r) := by
-  let f := va H x
-
+  let f := InnerProductSpace.toDual ℝ H x
   obtain h := isCompact_closedBall ℝ f r
   simp [IsWeaklyCompact]
-  have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by sorry
-  rw [ball_eq] at h
-  simp at h
+  have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by simp [f]
+  simp [ball_eq] at h
+  rwa [← weakHomeomorph.isCompact_image, weakHom_image_eq]
 
-
-
-
-
-
-  sorry
-
-lemma isCompact_closedBall'' (x' : StrongDual ℝ H) (r : ℝ) :
-    IsCompact (toStrongDual ⁻¹' closedBall x' r) := by
-      exact WeakDual.isCompact_closedBall ℝ x' r
 
 #check WeakDual.isCompact_closedBall
 
