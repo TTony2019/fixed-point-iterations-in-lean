@@ -1372,7 +1372,23 @@ lemma bounded_seq_weakly_convergent_subsequence
   ∃ (φ : ℕ → ℕ) (p : H),
     (∀ m n, m < n → φ m < φ n) ∧  -- φ 是严格递增的
     WeakConverge (x ∘ φ) p := by
-      sorry
+  -- 从 ∃ M, ∀ n, ‖x n‖ ≤ M 构造 BddAbove
+  obtain ⟨M, hM⟩ := h_bounded
+  have h_bdd_above : BddAbove (Set.range (fun n => ‖x n‖)) := by
+    use M
+    intro y hy
+    simp [Set.range] at hy
+    obtain ⟨n, rfl⟩ := hy
+    exact hM n
+  -- 应用已证明的定理
+  obtain ⟨a, φ, h_strict_mono, h_weak_conv⟩ :=
+    bounded_seq_has_weakly_converge_subseq x h_bdd_above
+  -- 展开 StrictMono φ 为显式形式
+  have h_phi_explicit : ∀ m n, m < n → φ m < φ n := by
+    exact fun m n a ↦ h_strict_mono a
+  exact ⟨φ, a, h_phi_explicit, h_weak_conv⟩
+
+
 
 theorem existence_of_projection_point (C : Set H) (hC1 : C.Nonempty) (hC2 : Convex ℝ C)
   (hC3 : IsClosed C) (x : H) : ∃ u ∈ C, ‖x - u‖ = ⨅ w : C, ‖x - w‖ :=
@@ -1384,11 +1400,11 @@ theorem proj_pt_inner_le_zero (x PxC : H) (C : Set H) (hC2 : Convex ℝ C)
 
 --有子列的极限收敛到数列上极限
 theorem lim_subsequence_eq_limsup
-  (x : ℕ → ℝ) :
-  ∃ (φ : ℕ → ℕ) (L : ℝ),
-    (∀ m n, m < n → φ m < φ n) ∧
-    (L = limsup x atTop) ∧
-    (Tendsto (x ∘ φ) atTop (𝓝 L)) := by
+    (x : ℕ → ℝ) :
+    ∃ (φ : ℕ → ℕ) (L : ℝ),
+      (∀ m n, m < n → φ m < φ n) ∧
+      (L = limsup x atTop) ∧
+      (Tendsto (x ∘ φ) atTop (𝓝 L)) := by
   sorry
 
 -- 引理 30.15：提取子列的弱收敛性和内积序列的收敛性

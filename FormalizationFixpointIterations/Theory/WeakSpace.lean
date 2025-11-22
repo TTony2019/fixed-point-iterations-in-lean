@@ -21,7 +21,7 @@ section WeakTopology
 
 -- universe u1
 variable {H : Type*}
-variable [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H]
+variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 def WeakConverge (x : ℕ → H) (p : H) :=
@@ -370,7 +370,8 @@ lemma EReal.liminf_mul_const (x : ℕ → H) (p : H) :
 
 
 -- 引理：弱收敛序列的范数有界
-lemma weakly_converge_norm_bounded (x : ℕ → H) (x_lim : H) (h_wkconv_x : WeakConverge x x_lim) :
+lemma weakly_converge_norm_bounded [CompleteSpace H]
+  (x : ℕ → H) (x_lim : H) (h_wkconv_x : WeakConverge x x_lim) :
     ∃ M, ∀ n, ‖x n‖ ≤ M := by
   -- f 为有界线性算子
   let f : ℕ → H →L[ℝ] ℝ := fun n =>
@@ -446,11 +447,6 @@ lemma weakly_converge_norm_bounded (x : ℕ → H) (x_lim : H) (h_wkconv_x : Wea
           exact le_of_mul_le_mul_right h this
       · exact real_inner_self_nonneg
   rw [← h_norm_eq]; exact hC n
-
-
-
-
-
 
 
 
@@ -1440,20 +1436,54 @@ theorem bounded_seq_has_weakly_converge_subseq_separable [SeparableSpace H] (x :
   --   apply tendsto_subseq_of_bounded
   --   exact this n
   --   intro m; simp [s']
-
   sorry
+
+
+lemma IsWeaklySeqCompact_mono {s t : Set H}
+  (x : ℕ → H) (hx : ∀ n : ℕ, x n ∈ s):
+  (IsWeaklySeqCompact t) → s ⊆ t → ∃ a, ∃ φ, StrictMono φ ∧ WeakConverge (x ∘ φ) a := by
+  intro ht hsub
+  simp [IsWeaklySeqCompact, IsSeqCompact] at ht ⊢
+  have hx' : ∀ n : ℕ, x n ∈ t := fun n => hsub (hx n)
+  have := ht hx'
+  rcases this with ⟨a, ha_in_t, φ, hφ_strict, hφ_conv⟩
+  use a, φ, hφ_strict, hφ_conv
 
 /-
 Lemma 2.45
 -/
-theorem bounded_seq_has_weakly_converge_subseq (x : ℕ → H)
+theorem bounded_seq_has_weakly_converge_subseq [CompleteSpace H]
+  (x : ℕ → H)
   (hx : BddAbove (Set.range (fun n => ‖x n‖))) :
-  IsWeaklySeqCompact (Set.range x) := sorry
-
--- theorem bounded_seq_has_weakly_converge_subseq' (x : ℕ → H)
---   (hx : BddAbove (Set.range (fun n => ‖x n‖))) :
---   IsWeaklySeqCompact (Set.range x) := by
---   simp [IsWeaklySeqCompact, IsSeqCompact]
+  ∃ (a : H), ∃ φ, StrictMono φ ∧ WeakConverge (x ∘ φ) a := by
+  let M := sSup (Set.range (fun n => ‖x n‖))
+  let ρ := M + 1
+  have h_in_ball : Set.range x ⊆ closedBall 0 ρ := by
+    intro y hy
+    simp [Set.range] at hy
+    obtain ⟨n, rfl⟩ := hy
+    simp [closedBall, dist_zero_right]
+    -- ‖x n‖ ≤ M ≤ ρ
+    have : ‖x n‖ ≤ M := by
+      simp [M]
+      refine (Real.le_sSup_iff hx ?_).mpr ?_
+      · exact Set.range_nonempty fun n ↦ ‖x n‖
+      · intro ε hε
+        use ‖x n‖
+        constructor
+        · simp
+        · linarith
+    simp [ρ]
+    linarith
+  -- 应用 Banach-Alaoglu：闭球是弱紧的
+  have h_ball_compact : IsWeaklyCompact (closedBall (0 : H) ρ) := by
+    apply closed_unit_ball_is_weakly_compact
+  -- 应用 Eberlein-Šmulian：弱紧 ⟹ 弱序列紧
+  have h_ball_seq_compact : IsWeaklySeqCompact (closedBall (0 : H) ρ) :=
+    weakly_compact_iff_weakly_seq_compact _ h_ball_compact
+  have hx_in : ∀ n : ℕ, x n ∈ Set.range x := by
+    exact fun n ↦ Set.mem_range_self n
+  apply IsWeaklySeqCompact_mono x hx_in h_ball_seq_compact h_in_ball
 
 #check mem_closure_iff_clusterPt
 
