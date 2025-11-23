@@ -17,6 +17,7 @@ import Mathlib.Topology.Instances.Nat
 import Mathlib.Topology.Algebra.Order.LiminfLimsup
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 import Mathlib.Data.Finset.Lattice.Fold
+import Mathlib.Order.LiminfLimsup
 
 open Nonexpansive_operator Filter Topology BigOperators Function
 set_option linter.unusedSectionVars false
@@ -1398,14 +1399,87 @@ theorem proj_pt_inner_le_zero (x PxC : H) (C : Set H) (hC2 : Convex ℝ C)
   (hPxC : PxC ∈ C) (hP : ‖x - PxC‖ = ⨅ w : C, ‖x - w‖) :
   ∀ w ∈ C, inner ℝ (x - PxC) (w - PxC) ≤ 0 := (norm_eq_iInf_iff_real_inner_le_zero hC2 hPxC).1 hP
 
---有子列的极限收敛到数列上极限
 theorem lim_subsequence_eq_limsup
     (x : ℕ → ℝ) :
     ∃ (φ : ℕ → ℕ) (L : ℝ),
       (∀ m n, m < n → φ m < φ n) ∧
       (L = limsup x atTop) ∧
       (Tendsto (x ∘ φ) atTop (𝓝 L)) := by
-  sorry
+  classical
+  -- 步骤1：定义 L := limsup x atTop
+  set L := limsup x atTop with hL_def
+
+  -- 步骤2：从 limsup 的定义提取逼近性质
+  have h_limsup_spec : ∀ ε > 0, ∀ N : ℕ, ∃ n ≥ N, x n ≥ L - ε := by
+    intro ε hε N
+    -- 利用 limsup 的定义：对任意 ε > 0，存在无穷多个 n 使得 x_n > limsup - ε
+    by_contra h_contra
+    push_neg at h_contra
+    -- 反证：若上式不成立，则存在 N 使得所有 n ≥ N 都有 x_n ≤ L - ε
+    have h_le: ∀ n ≥ N, x n ≤ L - ε := by
+      intro n hn
+      specialize h_contra n hn
+      linarith
+
+    have h_eventually : ∀ᶠ n in atTop, x n ≤ L - ε := by
+      rw [eventually_atTop]
+      exact ⟨N, h_le⟩
+
+    -- limsup 不能小于所有足够大项的上界
+    have h_limsup_le : limsup x atTop ≤ L - ε := by
+      have : limsup (fun (n : ℕ) => (L - ε : ℝ)) atTop = (L - ε : ℝ) := by
+        simp [limsup_const]
+      rw [← this]
+      apply limsup_le_limsup
+      · apply eventually_atTop.2
+        exact ⟨N, h_le⟩
+      · simp [autoParam]
+        apply Filter.IsCoboundedUnder.of_frequently_ge
+      · simp [autoParam, IsBoundedUnder, IsBounded]
+        use L
+        use 0
+        intro n
+        simp
+        linarith
+    linarith
+
+
+  -- 步骤3：递归构造严格递增子序列 φ
+  have h_exists_subseq : ∃ φ : ℕ → ℕ,
+      (∀ m n, m < n → φ m < φ n) ∧
+      (∀ k, x (φ k) ≥ L - 1 / (k + 1)) := by
+    -- 对每个 k，用 h_limsup_spec 选择 φ k
+    sorry
+  obtain ⟨φ, h_φ_strict, h_φ_lower⟩ := h_exists_subseq
+
+  -- 步骤4：证明子列收敛到 L：下界来自 h_φ_lower，上界来自 limsup ≤ L
+  have h_x_phi_tendsto : Tendsto (x ∘ φ) atTop (𝓝 L) := by
+    rw [Metric.tendsto_atTop]
+    intro ε hε
+    -- 选择 k 足够大使得 1/(k+1) < ε/2
+    have h_eps_half_pos : 0 < ε / 2 := by linarith
+    have h_inv : ∃ k : ℕ, 1 / (k + 1 : ℝ) < ε / 2 := by
+      use ⌈(2 / ε)⌉.natAbs
+      sorry  -- 由阿基米德性质
+    obtain ⟨k₀, hk₀⟩ := h_inv
+    use k₀
+    intro n hn
+    rw [Function.comp_apply]
+    rw [Real.dist_eq]
+    simp only [sub_le_iff_le_add, le_sub_iff_add_le]
+    -- 下界：x(φ n) ≥ L - 1/(n+1) 从而 x(φ n) - L ≥ -1/(n+1) > -ε/2
+    have h_lower : x (φ n) - L ≥ -1 / ((n : ℝ) + 1) := by
+      linarith [h_φ_lower n]
+    -- 上界：x(φ n) ≤ limsup x = L （由 limsup 定义）
+    have h_upper : x (φ n) ≤ L + ε / 2 := by
+      sorry  -- 由 limsup 的上界性质和 ε/2 可任意取
+    constructor
+    · nlinarith [h_lower, hk₀]
+    · nlinarith [h_upper]
+
+  -- 步骤5：整理结论
+  exact ⟨φ, L, h_φ_strict, rfl, h_x_phi_tendsto⟩
+
 
 -- 引理 30.15：提取子列的弱收敛性和内积序列的收敛性
 lemma halpern_subsequence_weak_convergence
@@ -2266,30 +2340,46 @@ lemma halpern_convergence_aux
 
   -- limsup下界被0控制
   have h_limsup_udbd : limsup (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop ≥ 0 := by
-    have : ∀ n, 0 ≤ ‖alg.x (n + 1) - m‖ ^ 2 := fun n => sq_nonneg _
-    obtain ⟨φ, L, _h_φ_strict_mono, h_L_eq, h_tendsto⟩ :=
-      lim_subsequence_eq_limsup (fun n => ‖alg.x (n + 1) - m‖ ^ 2)
-    have h_subseq_nonneg : ∀ k, 0 ≤ (fun n => ‖alg.x (n + 1) - m‖ ^ 2) (φ k) := fun k =>
-      this (φ k)
-    have h_L_nonneg : 0 ≤ L := by
-      have h_limit_nonneg : Tendsto (fun k => (fun n => ‖alg.x (n + 1) - m‖ ^ 2) (φ k))
-        atTop (𝓝 L) := h_tendsto
-      rw [Metric.tendsto_atTop] at h_limit_nonneg
-      by_contra h_neg
-      push_neg at h_neg
-      have h_eps_pos : 0 < -L / 2 := by linarith
-      obtain ⟨N, hN⟩ := h_limit_nonneg (-L / 2) h_eps_pos
-      specialize hN N
-      have h_subseq_N := h_subseq_nonneg N
-      have h_contradiction : dist ((fun n => ‖alg.x (n + 1) - m‖ ^ 2) (φ N)) L <
-        -L / 2 := hN (le_refl N)
-      rw [Real.dist_eq] at h_contradiction
-      simp at h_contradiction
-      have ⟨h1, h2⟩ := abs_lt.1 h_contradiction
-      have h_contra : ‖alg.x (φ N + 1) - m‖ ^ 2 < L / 2 := by linarith
-      linarith
-    rw [← h_L_eq]
-    exact h_L_nonneg
+    have h0 : limsup (fun (n : ℕ) => (0 : ℝ)) atTop = (0 : ℝ) := by
+      exact limsup_const 0
+    rw [← h0]
+    apply limsup_le_limsup
+    · apply eventually_atTop.2
+      use 0
+      intro n hn
+      simp
+    · simp [autoParam]
+      apply Filter.IsCoboundedUnder.of_frequently_ge
+      exact frequently_const.mpr h_limsup_neg
+    · simp [autoParam, IsBoundedUnder, IsBounded]
+      have h_seq_bounded' : ∃ M, ∀ (n : ℕ), ‖alg.x (n + 1) - z‖ ≤ M := by
+        rcases h_seq_bounded with ⟨M,hM⟩
+        use M
+        intro n
+        exact hM (n + 1)
+      rcases h_seq_bounded' with ⟨M,hM⟩
+      use (M + ‖z - m‖)^2
+      use 0
+      intro n; simp
+      calc
+        _ = ‖alg.x (n + 1) - z + z - m‖ ^ 2 := by
+          simp
+        _ ≤ (‖alg.x (n + 1) - z‖ + ‖z - m‖) ^ 2 := by
+          apply sq_le_sq.mpr
+          simp
+          have : ‖alg.x (n + 1) - z‖ + ‖z - m‖ ≥ 0 := add_nonneg (norm_nonneg _) (norm_nonneg _)
+          rw [abs_of_nonneg this]
+          exact norm_sub_le_norm_sub_add_norm_sub (alg.x (n + 1)) z m
+        _ ≤ (M + ‖z - m‖) ^ 2 := by
+          apply sq_le_sq.mpr
+          simp [abs_of_nonneg (add_nonneg (norm_nonneg _) (norm_nonneg _))]
+          rw [abs_of_nonneg]
+          · exact add_le_add_right (hM n) ‖z - m‖
+          · apply add_nonneg
+            · specialize hM 0
+              have : ‖alg.x (0 + 1) - z‖ ≥ 0 := norm_nonneg _
+              linarith
+            · exact norm_nonneg _
 
   -- 结合上下界得到极限为0
   have h_limsup_zero : limsup (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop = 0 := by
