@@ -1407,10 +1407,17 @@ Fact 2.37 Eberlein Smulian
 -/
 theorem weakly_compact_iff_weakly_seq_compact (C : Set H) (hC : IsWeaklyCompact C) :
   IsWeaklySeqCompact C := by
-  simp [IsWeaklySeqCompact, IsWeaklyCompact] at hC ⊢
+  simp [IsWeaklySeqCompact, IsWeaklyCompact, IsSeqCompact] at hC ⊢
+  intro x hx
+  let M : Submodule ℝ H := Submodule.topologicalClosure (Submodule.span ℝ (Set.range x))
+  -- simp at M
+  -- have hsM : IsSeparable M := by sorry
   sorry
 
-instance : SeqCompactSpace (WeakSpace ℝ H) := sorry
+-- instance : SeqCompactSpace (WeakSpace ℝ H) where
+--   isSeqCompact_univ := by
+--     show IsWeaklySeqCompact Set.univ
+--     sorry
 
 #check TopologicalSpace.SeparableSpace
 #check TopologicalSpace.exists_countable_dense
@@ -1484,6 +1491,11 @@ theorem bounded_seq_has_weakly_converge_subseq [CompleteSpace H]
   have hx_in : ∀ n : ℕ, x n ∈ Set.range x := by
     exact fun n ↦ Set.mem_range_self n
   apply IsWeaklySeqCompact_mono x hx_in h_ball_seq_compact h_in_ball
+
+-- theorem bounded_seq_has_weakly_converge_subseq' (x : ℕ → H)
+--   (hx : BddAbove (Set.range (fun n => ‖x n‖))) :
+--   IsWeaklySeqCompact (Set.range x) := by
+--   simp [IsWeaklySeqCompact, IsSeqCompact]
 
 #check mem_closure_iff_clusterPt
 
