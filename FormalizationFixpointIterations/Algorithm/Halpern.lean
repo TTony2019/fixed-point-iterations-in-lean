@@ -18,6 +18,7 @@ import Mathlib.Topology.Algebra.Order.LiminfLimsup
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 import Mathlib.Data.Finset.Lattice.Fold
 import Mathlib.Order.LiminfLimsup
+import Mathlib.Data.PNat.Basic
 
 open Nonexpansive_operator Filter Topology BigOperators Function
 set_option linter.unusedSectionVars false
@@ -1427,20 +1428,14 @@ theorem lim_subsequence_eq_limsup
 
     -- limsup 不能小于所有足够大项的上界
     have h_limsup_le : limsup x atTop ≤ L - ε := by
-      have : limsup (fun (n : ℕ) => (L - ε : ℝ)) atTop = (L - ε : ℝ) := by
-        simp [limsup_const]
-      rw [← this]
-      apply limsup_le_limsup
-      · apply eventually_atTop.2
-        exact ⟨N, h_le⟩
-      · simp [autoParam]
-        apply Filter.IsCoboundedUnder.of_frequently_ge
-      · simp [autoParam, IsBoundedUnder, IsBounded]
-        use L
-        use 0
-        intro n
-        simp
+      rw [Filter.limsup_le_iff ?_ ?_]
+      · intro y hy
+        filter_upwards [h_eventually] with n hn
         linarith
+      · sorry
+      · simp [IsBoundedUnder, IsBounded]
+        use (L - ε)
+        use N
     linarith
 
 
@@ -1448,8 +1443,72 @@ theorem lim_subsequence_eq_limsup
   have h_exists_subseq : ∃ φ : ℕ → ℕ,
       (∀ m n, m < n → φ m < φ n) ∧
       (∀ k, x (φ k) ≥ L - 1 / (k + 1)) := by
-    -- 对每个 k，用 h_limsup_spec 选择 φ k
-    sorry
+    let find_next (N : ℕ) (ε : ℝ) (hε_pos : 0 < ε) : ℕ :=
+      (h_limsup_spec ε hε_pos N).choose
+
+    -- 验证 find_next 的性质
+    have h_find_next_ge : ∀ N ε (hε : 0 < ε),
+      find_next N ε hε ≥ N := fun N ε _ =>
+      (h_limsup_spec ε (by positivity) N).choose_spec.1
+
+    have h_find_next_value : ∀ N ε (hε : 0 < ε),
+      x (find_next N ε hε) ≥ L - ε := fun N ε _ =>
+      (h_limsup_spec ε (by positivity) N).choose_spec.2
+
+    -- 递归构造序列 φ
+    let φ : ℕ → ℕ := fun k =>
+      Nat.recOn k
+        (find_next 0 1 (by positivity))  -- φ(0)：从 N=0, ε=1 找起
+        (fun k' φk' =>
+          find_next (φk' + 1) (1 / (k' + 2)) (by positivity))
+    use φ
+    constructor
+    · -- 证明 φ 严格递增
+      intro m n hmn
+      induction n with
+      | zero => omega  -- m < 0 不可能
+      | succ n' ih =>
+        by_cases hm : m < n'
+        · have h_ih := ih hm
+          calc φ m < φ n' := h_ih
+            _ < φ (n' + 1) := by
+              unfold φ
+              apply h_find_next_ge
+              positivity
+        · push_neg at hm
+          have : m = n' := by omega
+          rw [this]
+          unfold φ
+          have : find_next (φ n' + 1) (1 / (n' + 2)) (by positivity) ≥ φ n' + 1 := by
+            apply h_find_next_ge
+            positivity
+          exact this
+    · -- 证明 x (φ k) ≥ L - 1 / (k + 1)
+      intro k
+      induction k with
+      | zero =>
+        unfold φ
+        have h1 : (0 : ℝ) < 1 := by norm_num
+        simp
+        exact
+          (OrderedSub.tsub_le_iff_right L 1
+                (x
+                  (find_next 0 1
+                    (Mathlib.Meta.Positivity.pos_of_isNat
+                      (Mathlib.Meta.NormNum.isNat_ofNat ℝ Nat.cast_one)
+                      (Eq.refl (Nat.ble 1 1)))))).mp
+            (h_find_next_value 0 1 h1)
+      | succ k' ih =>
+        unfold φ
+        have hε_pos : (0 : ℝ) < 1 / (k' + 2) := by positivity
+        have h_value := h_find_next_value
+          (φ (Nat.recOn k'
+            (find_next 0 1 (by norm_num : 0 < (1 : ℝ)))  -- 添加证明
+            (fun k'' φk'' => find_next (φk'' + 1) (1 / (k'' + 2)) (by positivity))) + 1)
+          (1 / (k' + 2)) hε_pos
+        sorry
+
+
   obtain ⟨φ, h_φ_strict, h_φ_lower⟩ := h_exists_subseq
 
   -- 步骤4：证明子列收敛到 L：下界来自 h_φ_lower，上界来自 limsup ≤ L
@@ -1459,24 +1518,57 @@ theorem lim_subsequence_eq_limsup
     -- 选择 k 足够大使得 1/(k+1) < ε/2
     have h_eps_half_pos : 0 < ε / 2 := by linarith
     have h_inv : ∃ k : ℕ, 1 / (k + 1 : ℝ) < ε / 2 := by
-      use ⌈(2 / ε)⌉.natAbs
-      sorry  -- 由阿基米德性质
+      have h_eps_pos : (0 : ℝ) < ε := by linarith
+      -- 反证法：如果对所有 k 都有 1/(k+1) ≥ ε/2，则序列不趋于零，矛盾
+      by_contra h_contra
+      push_neg at h_contra
+      have h_absurd : ¬ Tendsto (fun k : ℕ => (1 : ℝ) / (k + 1)) atTop (𝓝 0) := by
+        intro h_tend
+        rw [Metric.tendsto_atTop] at h_tend
+        obtain ⟨N, hN⟩ := h_tend (ε / 2) (by linarith)
+        specialize hN N (by omega)
+        rw [dist_eq_norm] at hN
+        simp at hN
+        have := h_contra N
+        rw [abs_of_pos] at hN
+        simp at this
+        linarith
+        linarith
+      -- 这与已知的极限矛盾
+      have : Tendsto (fun k : ℕ => (1 : ℝ) / (k + 1)) atTop (𝓝 0) := by
+        exact tendsto_one_div_add_atTop_nhds_zero_nat
+      exact h_absurd this
+
     obtain ⟨k₀, hk₀⟩ := h_inv
     use k₀
     intro n hn
     rw [Function.comp_apply]
     rw [Real.dist_eq]
-    simp only [sub_le_iff_le_add, le_sub_iff_add_le]
     -- 下界：x(φ n) ≥ L - 1/(n+1) 从而 x(φ n) - L ≥ -1/(n+1) > -ε/2
     have h_lower : x (φ n) - L ≥ -1 / ((n : ℝ) + 1) := by
-      linarith [h_φ_lower n]
-    -- 上界：x(φ n) ≤ limsup x = L （由 limsup 定义）
-    have h_upper : x (φ n) ≤ L + ε / 2 := by
-      sorry  -- 由 limsup 的上界性质和 ε/2 可任意取
+      have := h_φ_lower n
+      calc
+        _ ≥ L - 1 / (↑n + 1) - L := by
+          linarith
+        _ = -1 / (↑n + 1) := by ring
+    -- 上界：x (φ n) ≤ limsup x = L （由 limsup 定义）
+    have h_upper : x (φ n) < L + ε := by
+      sorry
+    apply abs_lt.mpr
     constructor
-    · nlinarith [h_lower, hk₀]
+    · calc
+      x (φ n) - L ≥ -1 / (↑n + 1) := h_lower
+      _ = - (1 / (↑n + 1)) := by ring
+      _ ≥ - (1 / (↑k₀ + 1)) := by
+        simp
+        refine (inv_le_inv₀ ?_ ?_).mpr ?_
+        · linarith
+        · linarith
+        refine add_le_add ?_ ?_
+        · exact Nat.cast_le.mpr hn
+        · linarith
+      _ > -ε := by linarith
     · nlinarith [h_upper]
-
   -- 步骤5：整理结论
   exact ⟨φ, L, h_φ_strict, rfl, h_x_phi_tendsto⟩
 
