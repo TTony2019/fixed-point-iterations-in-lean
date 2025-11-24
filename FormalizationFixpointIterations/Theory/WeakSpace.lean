@@ -5,19 +5,25 @@ import Mathlib.Topology.Defs.Filter
 import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
 import Mathlib.Analysis.InnerProductSpace.Dual
 import Mathlib.Analysis.Normed.Module.WeakDual
+import Mathlib.Topology.Compactness.Compact
+import FormalizationFixpointIterations.Nonexpansive.Definitions
+import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
+import Mathlib.Topology.MetricSpace.Sequences
 
-open Filter WeakDual Metric WeakBilin
+open Filter WeakDual Metric WeakBilin Nonexpansive_operator Topology BigOperators Function
+open TopologicalSpace
 
 section WeakTopology
 
-universe u1
-variable {H : Type u1}
+-- universe u1
+variable {H : Type*}
 variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 def WeakConverge (x : ℕ → H) (p : H) :=
   Tendsto (x: ℕ → WeakSpace ℝ H) atTop (nhds p : Filter (WeakSpace ℝ H))
 
+#check continuous_id_of_le
 #check tendsto_iff_forall_eval_tendsto
 #check LinearMap.flip_inj
 #check LinearMap.flip_apply
@@ -31,10 +37,27 @@ def va (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] (a : H) : H 
     intro c x
     simp [inner_smul_left]
 
-theorem continuous_va (a : H) : Continuous (va H a) := by sorry
+theorem continuous_va (a : H) : Continuous (va H a) := by
+  simp [va]
+  apply Continuous.inner
+  · apply continuous_id
+  · apply continuous_const
+
+
 
 theorem continuous_va_weak (a : H) :
-  @Continuous (WeakSpace ℝ H) ℝ _ _ (va H a) := by sorry
+  @Continuous (WeakSpace ℝ H) ℝ _ _ (va H a) := by
+  have h1 : @Continuous (WeakSpace ℝ H) H _ _ (fun (t : WeakSpace ℝ H) => (t : H)) := by
+    apply continuous_id_of_le
+    sorry
+  have h2 : Continuous (fun (x : H) => inner ℝ x a) := by
+    apply Continuous.inner
+    · apply continuous_id
+    · apply continuous_const
+  simp [va]
+  exact Continuous.comp h2 h1
+
+
 
 #check inner_self_eq_zero
 
@@ -615,7 +638,10 @@ theorem continuous_real_weakspace : Continuous (toWeakSpace ℝ ℝ).symm := by
   exact eval_continuous (topDualPairing ℝ ℝ).flip 1
 
 #check isOpenMap_toWeakSpace_symm
-theorem closed_is_weakly_closed [CompleteSpace H] (s : Set H) (hs : Convex ℝ s) (hw : IsClosed s) :
+
+-- Theorem 3.34 (iii) → (iv)
+theorem closed_is_weakly_closed [CompleteSpace H] (s : Set H)
+  (hs : Convex ℝ s) (hw : IsClosed s) :
   IsWeaklyClosed s := by
   simp [IsWeaklyClosed]
   refine { isOpen_compl := ?_ }
@@ -666,6 +692,415 @@ theorem weakly_closed_seq_closed (s : Set H) (hs : IsWeaklyClosed s) :
   simp [IsWeaklySeqClosed]
   exact IsClosed.isSeqClosed hs
 
+
+-- Theorem 3.34 (iii) → (i)
+theorem closed_is_weakly_seq_closed [CompleteSpace H] (s : Set H)
+  (hs : Convex ℝ s) (hc : IsClosed s) : IsWeaklySeqClosed s := by
+  have hwkclosed := closed_is_weakly_closed s hs hc
+  exact weakly_closed_seq_closed s hwkclosed
+
+
+
+
+
+
+
+
+-- demiclosed 的定义
+def DemiclosedAt (D : Set H) (T : H → H) (u : H) : Prop :=
+  (h_D_nonempty : D.Nonempty) →
+  (h_D_weakly_seq_closed : IsWeaklySeqClosed D) →
+  ∀ (x : ℕ → H), (∀ n, x n ∈ D) →
+  ∀ (x_lim : H), x_lim ∈ D →
+  WeakConverge x x_lim →
+  Tendsto (fun n => T (x n)) atTop (𝓝 u) →
+  T x_lim = u
+
+def Demiclosed (T : H → H) (D : Set H) : Prop :=
+  ∀ u : H, DemiclosedAt D T u
+
+--x n弱收敛到x_lim, u n强收敛到u_lim,lim ⟪x_n, u_n⟫ = ⟪x_lim, u_lim⟫
+lemma wkconv_conv_ledsto_conv [CompleteSpace H]
+  {x : ℕ → H} {x_lim : H} {u : ℕ → H} {u_lim : H} {h_wkconv_x : WeakConverge x x_lim}
+  {h_conv_u : Tendsto u atTop (𝓝 u_lim)}
+  : Tendsto (fun n => inner ℝ (x n) (u n)) atTop (𝓝 (inner ℝ x_lim u_lim)) := by
+  have eq : (fun n => inner ℝ (x n) (u n) - inner ℝ x_lim u_lim) =
+    (fun n => inner ℝ (x n) (u n - u_lim)) + (fun n => inner ℝ (x n - x_lim) u_lim) := by
+      funext n; simp [inner_sub_left, inner_sub_right]
+  have h_norm_x_n_bdd : ∃ M, ∀ n, ‖x n‖ ≤ M := by
+
+    --f为有界线性算子
+    let f : ℕ → H →L[ℝ] ℝ := fun n =>
+      LinearMap.mkContinuous
+        { toFun := fun z => ⟪x n, z⟫
+          map_add' := fun u v => inner_add_right (x n) u v
+          map_smul' := fun c u => inner_smul_right (x n) u c}
+        ‖x n‖
+        fun z => by
+          simp; exact abs_real_inner_le_norm (x n) z
+
+    have h_f_n_y_upbd : ∀ y : H, ∃ N : ℕ, ∃ M : ℝ, ∀ n ≥ N, |f n y| ≤ M := by
+      intro y
+      rw [weakConverge_iff_inner_converge] at h_wkconv_x
+      specialize h_wkconv_x y; rw [Metric.tendsto_atTop] at h_wkconv_x
+      specialize h_wkconv_x (1) (one_pos)
+      obtain ⟨N, hN⟩ := h_wkconv_x
+      use N, |⟪x_lim, y⟫| + 1
+      intro n hn; specialize hN n hn; simp [f]
+      rw [Real.dist_eq] at hN
+      have : |inner ℝ (x n) y| - |inner ℝ x_lim y| < 1 := by
+        calc
+          _ ≤ |inner ℝ (x n) y - inner ℝ x_lim y| := by apply abs_sub_abs_le_abs_sub
+          _ < 1 := hN
+      linarith
+
+    have h_f_n_y_pointwise_bounded : ∀ y : H, ∃ M : ℝ, ∀ n : ℕ, |f n y| ≤ M := by
+      intro y
+      specialize h_f_n_y_upbd y
+      obtain ⟨N, hN⟩ := h_f_n_y_upbd
+      by_cases N_zero : N = 0
+      · rw [N_zero] at hN; rcases hN with ⟨M, hM⟩; use M; intro n; exact hM n (Nat.zero_le n)
+      · let M0 := (Finset.range N).sup' ⟨0, Finset.mem_range.mpr
+          (Nat.pos_of_ne_zero ‹N ≠ 0›)⟩ (fun n => |(f n) y|)
+        have ha : ∀ a ∈ Finset.range N, |(f a) y| ≤ M0 := by
+          intro a ha; simp [M0]; use a
+          constructor
+          · exact List.mem_range.mp ha
+          · simp
+        rcases hN with ⟨M1, hM1⟩; use max M0 M1; intro n
+        by_cases hn : n < N
+        · calc
+            |f n y| ≤ M0 := by apply ha n; exact Finset.mem_range.mpr hn
+            _ ≤ max M0 M1 := by apply le_max_left
+        · push_neg at hn
+          calc
+            |f n y| ≤ M1 := by apply hM1; exact hn
+            _ ≤ max M0 M1 := by apply le_max_right
+
+    have h_norm_sup_t_n_y : ∀ y : H, ∃ M : ℝ, ⨆ n : ℕ, |f n y| ≤ M := by
+      intro y; rcases h_f_n_y_pointwise_bounded y with ⟨M, hM⟩; use M; exact ciSup_le hM
+
+    have h_f_bounded : ∃ C, ∀ n, ‖f n‖ ≤ C := by
+      -- 从逐点有界得到一致有界
+      have h_pointwise : ∀ y, ∃ M, ∀ n, |f n y| ≤ M := by intro y; exact h_f_n_y_pointwise_bounded y
+      -- 应用 Banach-Steinhaus 定理
+      exact banach_steinhaus h_pointwise
+
+    obtain ⟨C, hC⟩ := h_f_bounded; use C; intro n
+    -- 关键：f n 的范数就等于 x n 的范数
+    have h_norm_eq : ‖f n‖ = ‖x n‖ := by
+      -- LinearMap.mkContinuous 的性质
+      refine ContinuousLinearMap.opNorm_eq_of_bounds ?_ ?_ ?_
+      · simp
+      · intro z; simp [f]; exact abs_real_inner_le_norm (x n) z
+      · intro M hM h; simp [f] at h; specialize h (x n)
+        rw [abs_of_nonneg] at h
+        · rw [real_inner_self_eq_norm_sq, pow_two] at h
+          have : ‖x n‖ ≥ 0 := norm_nonneg (x n)
+          by_cases h1: ‖x n‖ = 0
+          · rw [h1]; assumption
+          · push_neg at h1
+            have : ‖x n‖ > 0 := by
+              apply lt_of_le_of_ne
+              · exact this
+              · intro h2; rw [h2] at h1; contradiction
+            exact le_of_mul_le_mul_right h this
+        · exact real_inner_self_nonneg
+    rw [← h_norm_eq]; exact hC n
+
+  have h1: Tendsto (fun n => inner ℝ (x n) (u n - u_lim)) atTop (𝓝 0) := by
+    obtain ⟨M, hM⟩ := h_norm_x_n_bdd
+    have h_u_diff : Tendsto (fun n => u n - u_lim) atTop (𝓝 0) := by
+      exact (tendsto_iff_sub_tendsto_zero u u_lim).mp h_conv_u
+    by_cases M_zero : M = 0
+    · -- M = 0 时，x n 恒为 0 向量
+      have h_xn_zero : ∀ n, x n = 0 := by
+        intro n; specialize hM n
+        have : ‖x n‖ ≤ 0 := by rw [M_zero] at hM; exact hM
+        have h_norm_nonneg : ‖x n‖ ≥ 0 := norm_nonneg (x n)
+        exact norm_le_zero_iff.mp this
+      rw [Metric.tendsto_atTop]; intro ε ε_pos; use 0; intro n hn; rw [h_xn_zero n]; simpa
+    · have h_M_pos : M > 0 := by
+        specialize hM 0; push_neg at M_zero
+        have h_M_nonneg : M ≥ 0 := by
+          calc
+            M ≥ ‖x 0‖ := hM
+            _ ≥ 0 := norm_nonneg (x 0)
+        exact lt_of_le_of_ne h_M_nonneg (id (Ne.symm M_zero))
+      have h_ε_pos_div : ∀ ε > 0, ε / M > 0 := by
+        intros ε ε_pos; exact div_pos ε_pos h_M_pos
+      rw [Metric.tendsto_atTop] at h_u_diff ⊢; intro ε ε_pos
+      specialize h_u_diff (ε / M) (h_ε_pos_div ε ε_pos)
+      obtain ⟨N, hN⟩ := h_u_diff
+      use N; intro n hn; specialize hN n hn; rw [Real.dist_eq]; simp only [sub_zero]
+      rw [dist_eq_norm, sub_zero] at hN
+      calc
+        |inner ℝ (x n) (u n - u_lim)|
+            ≤ ‖x n‖ * ‖u n - u_lim‖ := by exact abs_real_inner_le_norm (x n) (u n - u_lim)
+          _ ≤ M * ‖u n - u_lim‖ := by
+              apply mul_le_mul
+              · exact hM n
+              · simp
+              · exact norm_nonneg (u n - u_lim)
+              · linarith
+          _ < M * (ε / M) := by apply mul_lt_mul_of_pos_left hN h_M_pos
+          _ = ε := by field_simp [ne_of_gt h_M_pos]
+
+  have h2: Tendsto (fun n => inner ℝ (x n - x_lim) u_lim) atTop (𝓝 0) := by
+    rw [weakConverge_iff_inner_converge] at h_wkconv_x; specialize h_wkconv_x u_lim
+    rw [tendsto_iff_sub_tendsto_zero_inner] at h_wkconv_x; exact h_wkconv_x
+
+  rw [show Tendsto (fun n ↦ inner ℝ (x n) (u n)) atTop (𝓝 (inner ℝ x_lim u_lim))
+    ↔ Tendsto (fun n ↦ inner ℝ (x n) (u n) - inner ℝ x_lim u_lim) atTop (𝓝 0) by
+  constructor
+  · intro h; convert Tendsto.sub h tendsto_const_nhds using 1; ext n; simp
+  · intro h
+    exact (tendsto_iff_sub_tendsto_zero (fun n ↦ inner ℝ (x n) (u n))
+      (inner ℝ x_lim u_lim)).mpr h]
+  rw [eq]
+  have h_add : Tendsto (fun n => inner ℝ (x n) (u n - u_lim) + inner ℝ (x n - x_lim) u_lim)
+      atTop (𝓝 (0 + 0)) := Tendsto.add h1 h2
+  convert h_add; simp
+
+
+
+-- Theorem 4.27: Browder's demiclosedness principle
+theorem browder_demiclosed_principle [CompleteSpace H]
+  {D : Set H}
+  {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D)
+  : Demiclosed (id - T) D := by
+  intro u
+  intro h_D_nonempty h_D_weakly_seq_closed
+  intro x hx_in_D x_lim hx_lim_in_D h_weak_conv h_diff_tendsto
+  --取一个弱收敛到x_lim的列x n
+  simp at h_diff_tendsto
+  have h_norm_bound : ∀ n : ℕ, ‖x_lim - T x_lim - u‖ ^ 2 ≤
+    ‖x n - T (x n) - u‖ ^ 2 + 2 * ⟪x n - T (x n) - u, T (x n) - T x_lim⟫
+      - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by
+        intro n
+        calc
+          _ = ‖(x_lim - x n) + (x n - T x_lim - u)‖ ^ 2 := by congr 1; abel_nf
+          _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
+              2 * ⟪x_lim - x n, x n - T x_lim - u⟫ := by
+            rw [← real_inner_self_eq_norm_sq]
+            simp [← real_inner_self_eq_norm_sq, inner_add_left,
+              inner_add_right, real_inner_comm, two_mul]; ring_nf
+          _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
+              2 * ⟪x_lim - x n, (x n - x_lim) + (x_lim - T x_lim - u)⟫ := by congr 1; abel_nf
+          _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
+              2 * (⟪x_lim - x n, x n - x_lim⟫ + ⟪x_lim - x n, x_lim - T x_lim - u⟫) := by
+              congr 1; rw [inner_add_right]
+          _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
+              2 * (-‖x_lim - x n‖ ^ 2 + ⟪x_lim - x n, x_lim - T x_lim - u⟫) := by
+            congr 1; simp; rw [← real_inner_self_eq_norm_sq]
+            have : (x n - x_lim) = - (x_lim - x n) := by abel
+            rw [this]; rw [inner_neg_right]
+          _ = ‖x n - T x_lim - u‖ ^ 2 - ‖x n - x_lim‖ ^ 2
+              - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by
+            simp [mul_add, ← add_assoc]; ring_nf; simp [add_sub, add_comm]
+            congr 3
+            · simp; exact norm_sub_rev x_lim (x n)
+            · have : - (x n - x_lim) = (x_lim - x n) := by abel
+              rw [← this]; rw [inner_neg_left]; ring_nf
+          _ = ‖(x n - T (x n) - u) + (T (x n) - T x_lim)‖ ^ 2 - ‖x n - x_lim‖ ^ 2
+              - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by congr 1; abel_nf
+          _ = ‖x n - T (x n) - u‖ ^ 2 + ‖T (x n) - T x_lim‖ ^ 2 +
+              2 * ⟪x n - T (x n) - u, T (x n) - T x_lim⟫ - ‖x n - x_lim‖ ^ 2
+              - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by
+            rw [← real_inner_self_eq_norm_sq]
+            simp [← real_inner_self_eq_norm_sq, inner_add_left,
+              inner_add_right, real_inner_comm, two_mul]; ring_nf
+          _ ≤ _ := by
+            have : ‖T (x n) - T x_lim‖ ^ 2 ≤ ‖x n - x_lim‖ ^ 2 := by
+              apply sq_le_sq.2; simp
+              rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp
+              have := hT_nonexp (hx_in_D n) hx_lim_in_D
+              simp [edist_dist] at this; rw [dist_eq_norm, dist_eq_norm] at this; exact this
+            linarith
+
+  have h1 : Tendsto (fun n => ‖x n - T (x n) - u‖) atTop (𝓝 0) := by
+    apply Metric.tendsto_atTop.mpr
+    intro ε ε_pos
+    rw [Metric.tendsto_atTop] at h_diff_tendsto
+    obtain ⟨N, hN⟩ := h_diff_tendsto ε ε_pos
+    use N
+    intro n hn
+    specialize hN n hn
+    rw [dist_eq_norm] at hN ⊢
+    simp at ⊢ hN
+    exact hN
+
+  have h2 : Tendsto (fun n => x n - T (x n) - u) atTop (𝓝 0) := by
+    rw [Metric.tendsto_atTop]
+    intro ε ε_pos
+    rw [Metric.tendsto_atTop] at h1
+    obtain ⟨N, hN⟩ := h1 ε ε_pos
+    use N
+    intro n hn
+    specialize hN n hn
+    rw [dist_eq_norm] at hN ⊢
+    simp at ⊢ hN
+    exact hN
+
+  have h3 : WeakConverge (fun n => x n - x_lim) 0 := by
+    rw [weakConverge_iff_inner_converge']
+    intro y
+    have h4 : Tendsto (fun n => ⟪x n, y⟫) atTop (𝓝 ⟪x_lim, y⟫) := by
+      apply (weakConverge_iff_inner_converge x x_lim).1 h_weak_conv
+    have h5 : Tendsto (fun (n : ℕ) => ⟪x_lim, y⟫) atTop (𝓝 ⟪x_lim, y⟫) := tendsto_const_nhds
+    have h_diff : Tendsto (fun n => ⟪x n, y⟫ - ⟪x_lim, y⟫) atTop (𝓝 (⟪x_lim, y⟫ - ⟪x_lim, y⟫)) :=
+      Tendsto.sub h4 h5
+    convert h_diff using 1
+    ext n; simp; rw [inner_sub_left]; ring_nf
+
+  have h4 : WeakConverge (fun n => x n - T (x n)) u := by
+    rw [weakConverge_iff_inner_converge']
+    intro y
+    by_cases hy : y = 0
+    · -- 情况1：y = 0
+      simp [hy]
+    · have h2' : Tendsto (fun n => (x n - T (x n)) - u) atTop (𝓝 0) := by
+        convert h2 using 1
+      -- 内积的连续性
+      have h_inner : Tendsto (fun n => ⟪(x n - T (x n)) - u, y⟫) atTop (𝓝 0) := by
+        rw [Metric.tendsto_atTop]
+        intro ε ε_pos
+        rw [Metric.tendsto_atTop] at h2'
+        obtain ⟨N, hN⟩ := h2' (ε / ‖y‖) (by positivity)
+        use N
+        intro n hn
+        specialize hN n hn
+        simp [dist_eq_norm] at hN ⊢
+        by_cases hy : y = 0
+        · simp [hy]; linarith
+        · calc
+            |⟪(x n - T (x n)) - u, y⟫|
+                ≤ ‖(x n - T (x n)) - u‖ * ‖y‖ := by apply abs_real_inner_le_norm _ _
+              _ < (ε / ‖y‖) * ‖y‖ := by gcongr
+              _ = ε := by field_simp [ne_of_gt (norm_pos_iff.mpr hy)]
+      exact h_inner
+
+  have h4 : WeakConverge (fun n => T (x n) - x n) (- u) := by
+    rw [weakConverge_iff_inner_converge'] at h4 ⊢
+    intro y
+    specialize h4 y
+    have := Tendsto.neg h4
+    convert this using 1
+    · ext n; simp; rw [← inner_neg_left]; simp [inner_sub_left, inner_add_left]; ring_nf
+    simp
+
+  have h5 : WeakConverge (fun n => T (x n) - x n + (x n - x_lim)
+    + (x_lim - T x_lim)) (x_lim - T x_lim - u) := by
+    rw [weakConverge_iff_inner_converge]
+    intro y
+    -- 分解内积
+    have h4_inner : Tendsto (fun n => ⟪T (x n) - x n, y⟫) atTop (𝓝 ⟪-u, y⟫) := by
+      apply (weakConverge_iff_inner_converge _ _).1 h4
+    have h3_inner : Tendsto (fun n => ⟪x n - x_lim, y⟫) atTop (𝓝 ⟪(0 : H), y⟫) := by
+      apply (weakConverge_iff_inner_converge _ _).1 h3
+    have h_const : Tendsto (fun n : ℕ  => ⟪x_lim - T x_lim, y⟫) atTop (𝓝 ⟪x_lim - T x_lim, y⟫) :=
+      tendsto_const_nhds
+
+    -- 利用内积的加法性
+    have h_combined : Tendsto (fun n =>
+      ⟪T (x n) - x n, y⟫ + ⟪x n - x_lim, y⟫ + ⟪x_lim - T x_lim, y⟫)
+      atTop (𝓝 (⟪-u, y⟫ + ⟪(0 : H), y⟫ + ⟪x_lim - T x_lim, y⟫)) := by
+      apply Tendsto.add
+      · apply Tendsto.add h4_inner h3_inner
+      · exact h_const
+
+    -- 转换为目标形式
+    convert h_combined using 1
+    · ext n; simp only [inner_add_left]
+    · congr 1; simp [inner_sub_left]; abel
+
+  have h5 : WeakConverge (fun n => T (x n) - T x_lim) (x_lim - T x_lim - u) := by
+    convert h5 using 1; ext n; abel_nf
+
+  have h1' :  Tendsto (fun n ↦ ‖x n - T (x n) - u‖ ^ 2) atTop (𝓝 0) := by
+    apply Tendsto.pow at h1; specialize h1 2; convert h1; simp
+
+  have h6 : Tendsto (fun n ↦ 2 * inner ℝ (x n - x_lim) (x_lim - T x_lim - u)) atTop (𝓝 0) := by
+    have := (weakConverge_iff_inner_converge (fun n => x n - x_lim) 0).1 h3 (x_lim - T x_lim - u)
+    simp only [inner_zero_left] at this; apply Tendsto.const_mul 2 at this; convert this; simp
+
+  have h7 : Tendsto (fun n ↦ inner ℝ (T (x n) - T x_lim) (x n - T (x n) - u))
+    atTop (𝓝 (inner ℝ 0 (x_lim - T x_lim - u))) := by
+    let a := fun n => x n - T (x n) - u; let b := fun n => T (x n) - T x_lim
+    have h_a : Tendsto a atTop (𝓝 0) := h2
+    have h_b : WeakConverge b (x_lim - T x_lim - u) := h5
+    rw [real_inner_comm]; apply wkconv_conv_ledsto_conv
+    · exact h_b
+    · exact h_a
+
+  have h7' : Tendsto (fun n ↦ inner ℝ (T (x n) - T x_lim) (x n - T (x n) - u)) atTop (𝓝 0) := by
+    convert h7; simp
+
+  have h8 : Tendsto (fun n ↦ ‖x n - T (x n) - u‖ ^ 2 + (2 * inner ℝ (T (x n) - T x_lim)
+    (x n - T (x n) - u) - 2 * inner ℝ (x n - x_lim) (x_lim - T x_lim - u))) atTop (𝓝 (0 + (0 - 0)))
+      := by
+        apply Tendsto.add
+        · exact h1'
+        · apply Tendsto.sub
+          · apply Tendsto.const_mul 2 at h7'; convert h7'; simp
+          · exact h6
+
+  have h8' : Tendsto (fun n ↦ ‖x n - T (x n) - u‖ ^ 2 + 2 * inner ℝ (x n - T (x n) - u)
+    (T (x n) - T x_lim) - 2 * inner ℝ (x n - x_lim) (x_lim - T x_lim - u)) atTop (𝓝 0) := by
+      convert h8 using 1
+      · funext n; ring_nf; rw [add_sub]; rw [real_inner_comm]; ring
+      · simp
+
+  have h9 : ∀ ε > 0, ‖x_lim - T x_lim - u‖ ^ 2 < ε := by
+    intro ε ε_pos
+    rw [Metric.tendsto_atTop] at h8'
+    obtain ⟨N, hN⟩ := h8' (ε) ε_pos
+    specialize hN N (le_refl N)
+    simp [dist_eq_norm] at hN
+    specialize h_norm_bound N
+    calc
+      _ ≤ ‖x N - T (x N) - u‖ ^ 2 + 2 * ⟪x N - T (x N) - u, T (x N) - T x_lim⟫
+          - 2 * ⟪x N - x_lim, x_lim - T x_lim - u⟫ := h_norm_bound
+      _ < ε := by exact lt_of_abs_lt hN
+
+  have h_final : ‖x_lim - T x_lim - u‖ ^ 2 ≤ 0 := by
+    apply le_of_forall_pos_le_add
+    intro ε ε_pos
+    specialize h9 ε ε_pos
+    linarith
+  have h_nonneg : 0 ≤ ‖x_lim - T x_lim - u‖ ^ 2 := by
+    apply pow_two_nonneg
+  have : ‖x_lim - T x_lim - u‖ ^ 2 = 0 := by
+    apply le_antisymm h_final h_nonneg
+  have : ‖x_lim - T x_lim - u‖ = 0 := by
+    exact pow_eq_zero this
+  have : x_lim - T x_lim - u = 0 := by
+    exact norm_eq_zero.mp this
+  rw [sub_eq_zero] at this
+  exact this
+
+-- Corollary 4.28: 弱收敛且误差趋零蕴含固定点
+lemma corollary_4_28 [CompleteSpace H]
+  {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
+  {T : H → H} (hT_nonexp : NonexpansiveOn T D) (x : ℕ → H) (h_x_in_D : ∀ n, x n ∈ D)
+  (p : H) (h_p_in_D : p ∈ D) (h_weak_conv : WeakConverge x p)
+  (h_error_zero : Tendsto (fun n => x n - T (x n)) atTop (𝓝 0)) : p ∈ Fix T := by
+  have h_wk_seq_closed : IsWeaklySeqClosed D := by
+    apply closed_is_weakly_seq_closed; exact hD_convex; exact hD_closed
+  have h_demiclosed := browder_demiclosed_principle hT_nonexp
+  have h_p_minus_Tp_zero : p - T p = 0 := by
+    apply h_demiclosed; exact hD_nonempty; exact h_wk_seq_closed; exact h_x_in_D
+    exact h_p_in_D; exact h_weak_conv; exact h_error_zero
+  simp [Fix, IsFixedPt]; simp [sub_eq_zero] at h_p_minus_Tp_zero
+  exact id (Eq.symm h_p_minus_Tp_zero)
+
+
+
+
+
+
+
 end WeakTopology
 
 
@@ -699,17 +1134,90 @@ instance inst_WeakSpace_T2 : T2Space (WeakSpace ℝ H) where
       refine Continuous.comp ?_ ?_
       exact continuous_real_weakspace
       exact ContinuousLinearMap.continuous f1
-    have Vopen : @IsOpen (WeakSpace ℝ H) _ V := by sorry
+    have Vopen : @IsOpen (WeakSpace ℝ H) _ V := by
+      simp [V]
+      refine isOpen_lt ?_ ?_
+      · simp [f]
+        refine Continuous.comp ?_ ?_
+        exact continuous_real_weakspace
+        exact ContinuousLinearMap.continuous f1
+      exact continuous_const
     have xinUV : x ∈ U ∧ y ∈ V := by
       constructor
       simp [U]
       change f x > c
       simp [feq, va]
-      sorry
-      sorry
+      · refine (Real.add_lt_add_iff_left ?_).mp ?_
+        · exact c
+        · refine (Real.add_lt_add_iff_left c).mpr ?_
+          simp [c, f, f1, va, f2, toWeakSpace]
+          rw [LinearEquiv.refl]
+          simp [LinearMap.id, u]
+          simp [inner_sub_right]
+          let xH : H := (toWeakSpace ℝ H).symm x
+          let yH : H := (toWeakSpace ℝ H).symm y
+          simp [real_inner_comm]
+          have h_ne : xH ≠ yH := by
+            have h_inj : Function.Injective ((toWeakSpace ℝ H).symm : WeakSpace ℝ H → H) :=
+              LinearEquiv.injective _
+            intro heq
+            have : x = y := h_inj (by simp; exact heq)
+            exact hxy this
+          have h_sub : xH - yH ≠ 0 := sub_ne_zero_of_ne h_ne
+          have h_pos : 0 < ‖xH - yH‖ := norm_pos_iff.mpr h_sub
+          have h1: ‖xH - yH‖ ^ 2 > 0 := sq_pos_of_pos h_pos
+          rw [← real_inner_self_eq_norm_sq] at h1
+          simp [inner_sub_right, real_inner_comm] at h1
+          -- 关键：使用 xH 和 yH 而不是转换后的形式
+          have h_calc : (⟪xH, xH⟫ - ⟪yH, yH⟫) / 2 < ⟪xH, xH⟫ - ⟪xH, yH⟫ := by
+            nlinarith [h1, sq_nonneg (‖xH - yH‖)]
+          -- 因为 x 和 y 就是通过 toWeakSpace 从 xH 和 yH 得到的
+          have h_eq_x : (toWeakSpace ℝ H) xH = x := by simp [xH]
+          have h_eq_y : (toWeakSpace ℝ H) yH = y := by simp [yH]
+          -- 转换目标中的内积
+          convert h_calc using 3
+      simp [V]
+      change f y < c
+      simp [feq, va]
+      · refine (Real.add_lt_add_iff_left ?_).mp ?_
+        · exact c
+        · refine (Real.add_lt_add_iff_left c).mpr ?_
+          simp [c, f, f1, va, f2, toWeakSpace]
+          rw [LinearEquiv.refl]
+          simp [LinearMap.id, u]
+          simp [inner_sub_right]
+          let xH : H := (toWeakSpace ℝ H).symm x
+          let yH : H := (toWeakSpace ℝ H).symm y
+          simp [real_inner_comm]
+          have h_ne : xH ≠ yH := by
+            have h_inj : Function.Injective ((toWeakSpace ℝ H).symm : WeakSpace ℝ H → H) :=
+              LinearEquiv.injective _
+            intro heq
+            have : x = y := h_inj (by simp; exact heq)
+            exact hxy this
+          have h_sub : xH - yH ≠ 0 := sub_ne_zero_of_ne h_ne
+          have h_pos : 0 < ‖xH - yH‖ := norm_pos_iff.mpr h_sub
+          have h1: ‖xH - yH‖ ^ 2 > 0 := sq_pos_of_pos h_pos
+          rw [← real_inner_self_eq_norm_sq] at h1
+          simp [inner_sub_right, real_inner_comm] at h1
+          -- 关键：使用 xH 和 yH 而不是转换后的形式
+          have h_calc : ⟪xH, yH⟫ - ⟪yH, yH⟫ < (⟪xH, xH⟫ - ⟪yH, yH⟫) / 2 := by
+            nlinarith [h1, sq_nonneg (‖xH - yH‖)]
+          -- 因为 x 和 y 就是通过 toWeakSpace 从 xH 和 yH 得到的
+          have h_eq_x : (toWeakSpace ℝ H) xH = x := by simp [xH]
+          have h_eq_y : (toWeakSpace ℝ H) yH = y := by simp [yH]
+          -- 转换目标中的内积
+          convert h_calc using 3
     have dUV : Disjoint U V := by
       simp [Disjoint]
-      sorry
+      intro Z hU hV
+      simp [U, V] at hU hV
+      have h_contradiction : ∀ z ∈ Z, False := by
+        intro z hz
+        have h1 : c < f z := hU hz
+        have h2 : f z < c := hV hz
+        linarith
+      exact Set.subset_eq_empty h_contradiction rfl
     exact ⟨U, Uopen, V, Vopen, xinUV.1, xinUV.2, dUV⟩
 
 end T2Space
@@ -727,24 +1235,89 @@ Lemma 1.12
 example (s : Set H) (h : IsWeaklyCompact s) : IsWeaklyClosed s := IsCompact.isClosed h
 #check IsCompact.of_isClosed_subset
 
-example (s : Set H) (h : IsCompact s) : IsWeaklyCompact s := by
-  simp [IsWeaklyCompact]
-  -- apply?
-  simp [IsCompact]
-  sorry
-  -- exact h
-  -- sorry
+lemma WeakSpace.continuous_of_continuous_eval
+    {X : Type*} [TopologicalSpace X]
+    {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
+    {f : X → WeakSpace ℝ E}
+    (hf : ∀ ℓ : E →L[ℝ] ℝ, Continuous fun x => ℓ (f x)) :
+    Continuous f := continuous_induced_rng.2 <| continuous_pi_iff.mpr <| fun y => hf y
 
--- open
+noncomputable def weakToWeakDual [CompleteSpace H] : WeakSpace ℝ H ≃ₗ[ℝ] WeakDual ℝ H :=
+  (InnerProductSpace.toDual ℝ H).toLinearEquiv
+
+#check WeakSpace
+#check WeakBilin.eval_continuous
+#check InnerProductSpace.toDual_symm_apply
+noncomputable def weakHomeomorph [CompleteSpace H] : WeakSpace ℝ H ≃ₜ WeakDual ℝ H where
+  toFun := weakToWeakDual
+  invFun := weakToWeakDual.symm
+  left_inv := weakToWeakDual.left_inv
+  right_inv := weakToWeakDual.right_inv
+  continuous_toFun := by
+    apply WeakDual.continuous_of_continuous_eval
+    intro x
+    have : (fun v : WeakSpace ℝ H => (weakToWeakDual v) x)
+      = fun v => (InnerProductSpace.toDual ℝ H x) v := by
+        ext v
+        simp [weakToWeakDual, InnerProductSpace.toDual_apply]
+        change (InnerProductSpace.toDual ℝ H v) x = ⟪x, v⟫
+        simp
+        exact real_inner_comm x v
+    simp [this]
+    simp only [← topDualPairing_eq_inner]
+    have : (fun v ↦ ((topDualPairing ℝ H).flip x) (va H v)) =
+      (fun v ↦ ((topDualPairing ℝ H).flip v) (va H x)) := by
+      ext v
+      rw [topDualPairing_eq_inner, topDualPairing_eq_inner]
+      exact congrFun (id (Eq.symm this)) v
+    rw [this]
+    apply WeakBilin.eval_continuous
+  continuous_invFun := by
+    apply WeakSpace.continuous_of_continuous_eval
+    intro y
+    obtain ⟨x, rfl⟩ := (InnerProductSpace.toDual ℝ H).surjective y
+    have : (fun φ : WeakDual ℝ H => (InnerProductSpace.toDual ℝ H x)
+        (weakToWeakDual.symm φ))
+        = fun φ => φ x := by
+        ext φ
+        simp [weakToWeakDual]
+        change ⟪x, ((InnerProductSpace.toDual ℝ H).symm φ) ⟫  = φ x
+        rw [real_inner_comm, InnerProductSpace.toDual_symm_apply]
+    rw [this]
+    exact WeakDual.eval_continuous x
+
+#check weakHomeomorph.isCompact_image
+
+lemma weakHom_image_eq [CompleteSpace H] {x : H} {r : ℝ} :
+  weakHomeomorph '' ((closedBall x r) : Set H) =
+  toStrongDual ⁻¹' closedBall ((InnerProductSpace.toDual ℝ H) x) r := by
+  ext y
+  constructor
+  · rintro ⟨x', h1, h2⟩
+    simp; rw [← h2]; simp [weakHomeomorph, weakToWeakDual]
+    change dist ((InnerProductSpace.toDual ℝ H) x') ((InnerProductSpace.toDual ℝ H) x) ≤ r
+    simpa
+  intro hy
+  simp at hy; simp [weakHomeomorph, weakToWeakDual]
+  obtain ⟨v, rfl⟩ := (InnerProductSpace.toDual ℝ H).surjective y
+  use v
+  constructor
+  · simp at hy; exact hy
+  change (InnerProductSpace.toDual ℝ H) v = (InnerProductSpace.toDual ℝ H) v
+  rfl
+
 /-
 Fact 2.34: Banach-Alaoglu Bourbaki
 -/
-theorem closed_unit_ball_is_weakly_compact : IsWeaklyCompact (Metric.closedBall (0:H) (1:ℝ)) := by
-  sorry
+theorem closed_unit_ball_is_weakly_compact [CompleteSpace H] (x : H) (r : ℝ) :
+  IsWeaklyCompact (closedBall x r) := by
+  let f := InnerProductSpace.toDual ℝ H x
+  obtain h := isCompact_closedBall ℝ f r
+  simp [IsWeaklyCompact]
+  have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by simp [f]
+  simp [ball_eq] at h
+  rwa [← weakHomeomorph.isCompact_image, weakHom_image_eq]
 
-lemma isCompact_closedBall'' (x' : StrongDual ℝ H) (r : ℝ) :
-    IsCompact (toStrongDual ⁻¹' closedBall x' r) := by
-      exact WeakDual.isCompact_closedBall ℝ x' r
 
 #check WeakDual.isCompact_closedBall
 
@@ -757,9 +1330,37 @@ Fact 2.37 Eberlein Smulian
 -/
 theorem weakly_compact_iff_weakly_seq_compact (C : Set H) (hC : IsWeaklyCompact C) :
   IsWeaklySeqCompact C := by
+  simp [IsWeaklySeqCompact, IsWeaklyCompact] at hC ⊢
   sorry
 
 instance : SeqCompactSpace (WeakSpace ℝ H) := sorry
+
+#check TopologicalSpace.SeparableSpace
+#check TopologicalSpace.exists_countable_dense
+#check Set.Countable.exists_eq_range
+#check IsBounded
+#check tendsto_subseq_of_bounded
+
+/-
+Lemma 2.45
+-/
+theorem bounded_seq_has_weakly_converge_subseq_separable [SeparableSpace H] (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) :
+  IsWeaklySeqCompact (Set.range x) := by
+  rcases exists_countable_dense H with ⟨s, hs1, hs2⟩
+  have hsn : s.Nonempty := Dense.nonempty hs2
+  rcases Set.Countable.exists_eq_range hs1 hsn with ⟨f, hf⟩
+  let d (n : ℕ) := fun m => ⟪f m, x n⟫
+  let s' (n : ℕ):= Set.range <| d n
+
+  have (n:ℕ): Bornology.IsBounded <| s' n := sorry
+  -- have subsq (n : ℕ) : ∃ a ∈ closure (s' n), ∃ φ : ℕ → ℕ, StrictMono φ ∧
+  --   Tendsto ((d n) ∘ φ) atTop (nhds a) := by
+  --   apply tendsto_subseq_of_bounded
+  --   exact this n
+  --   intro m; simp [s']
+
+  sorry
 
 /-
 Lemma 2.45
@@ -773,5 +1374,6 @@ theorem bounded_seq_has_weakly_converge_subseq (x : ℕ → H)
 --   IsWeaklySeqCompact (Set.range x) := by
 --   simp [IsWeaklySeqCompact, IsSeqCompact]
 
+#check mem_closure_iff_clusterPt
 
 end WeaklyCompact
