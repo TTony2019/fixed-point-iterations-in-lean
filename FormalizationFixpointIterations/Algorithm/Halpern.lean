@@ -21,14 +21,10 @@ import Mathlib.Order.LiminfLimsup
 import Mathlib.Data.PNat.Basic
 
 open Nonexpansive_operator Filter Topology BigOperators Function
-set_option linter.unusedSectionVars false
-set_option linter.style.commandStart false
-set_option maxRecDepth 2000
 
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
-variable {H : Type*}
-variable [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H]
+variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 
 structure Halpern (T : H → H) where
   x0 : H
@@ -212,6 +208,7 @@ lemma quasinonexpansive_fixedPoint_closed_convex
   · exact convex_iInter₂ fun x _ => (intersection_set_is_closed_convex hD_closed hD_convex x).2
 
 -- quasi可以推出nonexpansive
+omit [InnerProductSpace ℝ H] in
 lemma nonexpansive_leadsto_quasinonexpansive
   {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D) :
     QuasiNonexpansiveOn T D := by
@@ -318,6 +315,7 @@ lemma halpern_mu_bound
         linarith [μ, (le_trans (norm_nonneg _) (hM1 0)), (le_trans (norm_nonneg _) (hM3 0))]
 
 -- ‖x(n+2)-x(n+1)‖≤μ* Σ|λ(n+1)-λn| +(1-λ(n+1))*∏‖x(n+1)-x(n)‖
+omit [InnerProductSpace ℝ H] in
 lemma halpern_telescoping_bound
   {x : ℕ → H} {α : ℕ → ℝ} {μ : ℝ} (hμ_nonneg : 0 ≤ μ)
   (hα_range : ∀ n, α n ∈ Set.Ioo 0 1)
@@ -538,6 +536,7 @@ lemma halpern_prod_tail_tendsto_zero
     _ = ε := by field_simp [ne_of_gt hμ_pos]
 
 -- 相邻差序列收敛到零
+omit [InnerProductSpace ℝ H] in
 lemma adjacent_diff_from_shifted
   {f : ℕ → H} : Tendsto (fun n => (f (n + 2) - f (n + 1))) atTop (𝓝 0) →
   Tendsto (fun n => (f (n + 1) - f n)) atTop (𝓝 0) := by
@@ -636,7 +635,7 @@ lemma halpern_x_sub_Tx_tendsto_zero
 #check exists_norm_eq_iInf_of_complete_convex
 
 -- Lemma 2.45: 有界序列存在弱收敛子序列
-lemma bounded_seq_weakly_convergent_subsequence
+lemma bounded_seq_weakly_convergent_subsequence [CompleteSpace H]
   (x : ℕ → H) (h_bounded : ∃ M, ∀ n, ‖x n‖ ≤ M) :
   ∃ (φ : ℕ → ℕ) (p : H), (∀ m n, m < n → φ m < φ n) ∧ WeakConverge (x ∘ φ) p := by
   -- 从 ∃ M, ∀ n, ‖x n‖ ≤ M 构造 BddAbove
@@ -651,7 +650,7 @@ lemma bounded_seq_weakly_convergent_subsequence
   exact ⟨φ, a, h_phi_explicit, h_weak_conv⟩
 
 -- 投影点定义
-theorem existence_of_projection_point
+theorem existence_of_projection_point [CompleteSpace H]
   (C : Set H) (hC1 : C.Nonempty) (hC2 : Convex ℝ C) (hC3 : IsClosed C) (x : H) :
   ∃ u ∈ C, ‖x - u‖ = ⨅ w : C, ‖x - w‖ :=
   exists_norm_eq_iInf_of_complete_convex hC1 (IsClosed.isComplete hC3) hC2 x
@@ -728,7 +727,7 @@ lemma one_div_tendsto_zero
 
 -- 有界数列必有子列收敛到上极限
 theorem lim_subsequence_eq_limsup
-  (x : ℕ → ℝ) (hx_bdd : ∃ M : ℝ ,∀ k : ℕ, |x k| ≤ M) :
+  (x : ℕ → ℝ) (hx_bdd : ∃ M : ℝ, ∀ k : ℕ, |x k| ≤ M) :
   ∃ (φ : ℕ → ℕ) (L : ℝ), (∀ m n, m < n → φ m < φ n) ∧ (L = limsup x atTop) ∧
     (Tendsto (x ∘ φ) atTop (𝓝 L)) := by
   set L := limsup x atTop with hL_def
@@ -799,7 +798,7 @@ theorem lim_subsequence_eq_limsup
   rw [dist_eq_norm]; simp [Function.comp_apply]; apply abs_lt.2; constructor; repeat linarith
 
 -- 引理 30.15：提取子列的弱收敛性和内积序列的收敛性
-lemma halpern_subsequence_weak_convergence
+lemma halpern_subsequence_weak_convergence [CompleteSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) {T : H → H} {C : Set H}
   (hT_fixpoint : C.Nonempty) (alg : Halpern T)
   (halg_x_in_D : ∀ n, alg.x n ∈ D) (h_C_closed_convex : IsClosed C ∧ Convex ℝ C)
@@ -872,7 +871,7 @@ lemma halpern_subseq_x_sub_Tx_tendsto_zero
   rw [dist_eq_norm] at hN ⊢; exact hN
 
 -- 引理：子列的固定点性质
-lemma halpern_subseq_fixed_point
+lemma halpern_subseq_fixed_point [CompleteSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) (alg : Halpern T) (n : ℕ → ℕ) (z : H)
   (h_z_in_D : z ∈ D) (h_z_weak_limit : WeakConverge (alg.x ∘ n) z) (halg_x_in_D : ∀ n, alg.x n ∈ D)
@@ -882,7 +881,7 @@ lemma halpern_subseq_fixed_point
     (fun k => halg_x_in_D (n k)) z h_z_in_D h_z_weak_limit h_subseq_x_Tx_limit
 
 -- 引理 30.16：子列内积序列的上极限不等式
-lemma halpern_limsup_inner_le_zero
+lemma halpern_limsup_inner_le_zero [CompleteSpace H]
   {D : Set H} {T : H → H} {C : Set H} (hC : C = Fix T ∩ D)
   (hC_closed_convex : IsClosed C ∧ Convex ℝ C) (alg : Halpern T) (n : ℕ → ℕ) (z : H)
   (h_z_in_C : z ∈ C) (h_weak_xn_to_z : WeakConverge (alg.x ∘ n) z) (m : H) (hm_in_C : m ∈ C)
@@ -992,7 +991,7 @@ lemma halpern_eps_exists_of_limsup_and_alpha
           _ = ε := by field_simp [ne_of_gt h_um_sq_pos]
 
 -- 30.18：投影距离的上界
-lemma halpern_xn_sub_PCx_upbd
+lemma halpern_xn_sub_PCx_upbd [CompleteSpace H]
   {T : H → H} {C : Set H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_α_limit : Tendsto alg.α atTop (𝓝 0)) (m : H) (hm_in_C : m ∈ C)
   (h_induction : ∀ z ∈ C, ∀ n, ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧ ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
@@ -1050,7 +1049,7 @@ lemma halpern_xn_sub_PCx_upbd
                 _ = 2 * alg.α n * ε := by ring
 
 -- 引理 30.19：归纳得到乘积形式
-lemma halpern_xn_sub_PCx_prod
+lemma halpern_xn_sub_PCx_prod [CompleteSpace H]
   {T : H → H} {C : Set H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_α_limit : Tendsto alg.α atTop (𝓝 0)) (m : H) (hm_in_C : m ∈ C)
   (h_induction : ∀ z ∈ C, ∀ n, ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧ ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
@@ -1129,7 +1128,7 @@ lemma halpern_inner_bounded_of_limsup
   rcases this with ⟨N, hN⟩; use N; filter_upwards [hN] with n hn; linarith
 
 -- 引理：由(30.19)和步长条件得到 limsup 的上界
-lemma halpern_limsup_bound_from_prod
+lemma halpern_limsup_bound_from_prod [CompleteSpace H]
   {T : H → H} {C : Set H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_α_limit : Tendsto alg.α atTop (𝓝 0))
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop) (m : H)
@@ -1235,7 +1234,7 @@ lemma halpern_limsup_bound_from_prod
 
 -- 辅助引理：有界性的相互推导
 lemma halpern_norm_sq_bounded
-  {T : H → H}(alg : Halpern T)(z m : H) (h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - z‖ ≤ M)
+  {T : H → H} (alg : Halpern T) (z m : H) (h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - z‖ ≤ M)
   : ∃ M : ℝ, ∀ n : ℕ, ‖alg.x (n + 1) - m‖ ^ 2 ≤ M := by
   obtain ⟨M, hM⟩ : ∃ M, ∀ (n : ℕ), ‖alg.x (n + 1) - z‖ ≤ M := by
     rcases h_seq_bounded with ⟨M,hM⟩; use M; intro n; exact hM (n + 1)
@@ -1253,7 +1252,7 @@ lemma halpern_norm_sq_bounded
         have : ‖alg.x (0 + 1) - z‖ ≥ 0 := norm_nonneg _; linarith
 
 -- x n收敛到PCx
-lemma halpern_convergence_aux
+lemma halpern_convergence_aux [CompleteSpace H]
   {T : H → H} {C : Set H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_α_limit : Tendsto alg.α atTop (𝓝 0))
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop) (m : H)
@@ -1325,7 +1324,7 @@ lemma halpern_convergence_aux
 #check norm_eq_iInf_iff_real_inner_le_zero--投影的形式
 
 -- x 0 = u
-lemma halpern_convergence_point_same
+lemma halpern_convergence_point_same [CompleteSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
   (hT_fixpoint : C.Nonempty) (alg : Halpern T) (halg_x0 : alg.x0 ∈ D)
@@ -1435,13 +1434,13 @@ lemma halpern_convergence_point_same
   rcases hC_closed_convex with ⟨h1,h2⟩; rw [← hC]; assumption
 
 -- 结合两种情况的主定理
-theorem halpern_convergence
+theorem halpern_convergence [CompleteSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
   (hT_fixpoint : C.Nonempty) (hT_invariant : ∀ x ∈ D, T x ∈ D) (alg : Halpern T)
   (halg_x0 : alg.x0 ∈ D) (halg_u : alg.u ∈ D) (halg_x_in_D : ∀ n, alg.x n ∈ D)
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (h_α_limit : Tendsto alg.α atTop (𝓝 0))
-  (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N,alg.α n) atTop atTop)
+  (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
   (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|))
   : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (𝓝 p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
   by_cases h_coincidence : alg.u = alg.x0
