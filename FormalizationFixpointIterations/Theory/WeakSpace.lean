@@ -9,6 +9,7 @@ import Mathlib.Topology.Compactness.Compact
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 import Mathlib.Topology.MetricSpace.Sequences
+import Mathlib.Topology.UniformSpace.Ascoli
 
 
 set_option linter.unusedSectionVars false
@@ -1402,6 +1403,17 @@ theorem closed_unit_ball_is_weakly_compact [CompleteSpace H] (x : H) (r : ℝ) :
 
 def IsWeaklySeqCompact (s : Set H) := @IsSeqCompact (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
 
+#check TopologicalSpace.MetrizableSpace
+#check SequentialSpace
+#check FirstCountableTopology
+#check FrechetUrysohnSpace
+-- #check SeqClusterPt
+#check MapClusterPt
+-- #check IsSeqClusterPt
+def IsWeaklySeqClusterPt (p : H) (x : ℕ → H):= @MapClusterPt (WeakSpace ℝ H) _ ℕ p atTop x
+
+-- instance : MetrizableSpace (WeakSpace ℝ H) := sorry
+
 /-
 Fact 2.37 Eberlein Smulian
 -/
@@ -1410,8 +1422,9 @@ theorem weakly_compact_iff_weakly_seq_compact (C : Set H) (hC : IsWeaklyCompact 
   simp [IsWeaklySeqCompact, IsWeaklyCompact, IsSeqCompact] at hC ⊢
   intro x hx
   let M : Submodule ℝ H := Submodule.topologicalClosure (Submodule.span ℝ (Set.range x))
-  -- simp at M
-  -- have hsM : IsSeparable M := by sorry
+  haveI : SeparableSpace M := by
+    refine { exists_countable_dense := ?_ }
+    sorry
   sorry
 
 -- instance : SeqCompactSpace (WeakSpace ℝ H) where
@@ -1419,31 +1432,332 @@ theorem weakly_compact_iff_weakly_seq_compact (C : Set H) (hC : IsWeaklyCompact 
 --     show IsWeaklySeqCompact Set.univ
 --     sorry
 
+#check MapClusterPt
 #check TopologicalSpace.SeparableSpace
 #check TopologicalSpace.exists_countable_dense
 #check Set.Countable.exists_eq_range
 #check IsBounded
 #check tendsto_subseq_of_bounded
+#check subseq_tendsto_of_neBot
+
+
+#check ArzelaAscoli.isCompact_closure_of_isClosedEmbedding
+
+-- structure dense_f
+
+structure convergent_Subseq (x : ℕ → H) (f : ℕ → H) (m : ℕ) where
+  φ : ℕ → ℕ
+  monotone' : StrictMono φ
+  lim : ℝ
+  convergent : Tendsto (fun n => ⟪f m, x (φ n)⟫) atTop (𝓝 lim)
+
+-- 有界实数序列有收敛子列
+lemma extract_subseq' (x : ℕ → H) (hx : Bornology.IsBounded <| Set.range fun n => ‖x n‖)
+    (f : ℕ → H) (m : ℕ) :
+    Nonempty <| convergent_Subseq x f m := by
+    sorry
+  -- classical
+  -- obtain ⟨R, hR0⟩ := hx.subset_closedBall (0 : ℝ)
+  -- have hnorm : ∀ n, ‖x n‖ ≤ R := by
+  --   intro n
+  --   have hxmem : ‖x n‖ ∈ Set.range fun n => ‖x n‖ := ⟨n, rfl⟩
+  --   have hclosed := hR hxmem
+  --   have hdist := Metric.mem_closedBall.mp hclosed
+  --   simpa [Real.dist_eq, abs_of_nonneg (norm_nonneg _)] using hdist
+  -- set y : ℕ → ℝ := fun n => ⟪f m, x n⟫
+  -- set B : ℝ := ‖f m‖ * R
+  -- have hB0 : 0 ≤ B := mul_nonneg (norm_nonneg _) hR0
+  -- have hy_bounds : ∀ n, |y n| ≤ B := by
+  --   intro n
+  --   have h₁ : |y n| ≤ ‖f m‖ * ‖x n‖ := by
+  --     simpa [y] using abs_realInner_le_norm (f m) (x n)
+  --   have h₂ : ‖f m‖ * ‖x n‖ ≤ B := by
+  --     have := mul_le_mul_of_nonneg_left (hnorm n) (norm_nonneg _)
+  --     simpa [B] using this
+  --   exact h₁.trans h₂
+  -- have hy_mem : ∀ n, y n ∈ Set.Icc (-B) B := by
+  --   intro n
+  --   have := abs_le.mp (hy_bounds n)
+  --   simpa [Set.mem_Icc] using this
+  -- obtain ⟨φ, hφmono, l, -, hlim⟩ :=
+  --   (isCompact_Icc (-B) B).exists_seq_tendsto y hy_mem
+  -- refine ⟨⟨φ, hφmono, l, ?_⟩⟩
+  -- simpa [y] using hlim
+
+-- 有界序列的子列也是有界序列
+lemma bdd_subseq_bdd (x : ℕ → H) (hx : Bornology.IsBounded <| Set.range fun n => ‖x n‖)
+  (φ : ℕ → ℕ) :
+  Bornology.IsBounded <| Set.range fun n => ‖(x ∘ φ) n‖ := by
+  refine hx.subset ?_
+  intro y hy
+  rcases hy with ⟨n, rfl⟩
+  exact ⟨φ n, rfl⟩
+
+-- 存放 x ∘ φ 和 φ
+structure subseq_x (x : ℕ → H) where
+  xφ : ℕ → H -- x ∘ φ1 ∘ φ2 ∘ ... φ m
+  phi_comp : ℕ → ℕ -- φ1 ∘ φ2 ∘ ... φ m
+  φ : ℕ → ℕ -- φ m
+  hφ : StrictMono φ -- φ m strict mono
+  hbb : Bornology.IsBounded <| Set.range (fun n => ‖xφ n‖) -- x ∘ φ1 ∘ φ2 ∘ ... φ m bdd
+  lim : ℝ
+  fm : H
+  hlim : Tendsto (fun n => ⟪fm, xφ n⟫) atTop (𝓝 lim)
+
+-- noncomputable def xφ (x : ℕ → H)
+--   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+--   (f : ℕ → H) : ℕ → subseq_x x
+-- | 0       => ⟨x, id, id, by exact fun ⦃a b⦄ a ↦ a, hx⟩
+-- | (m + 1) => by
+--   -- let ⟨xφm, φm, phi_comp, hφm, hbb⟩ := xφ x hx f m
+--   have he := extract_subseq' (xφ x hx f m).1 (xφ x hx f m).5 f (m+1)
+--   let h := Classical.choice <| he
+--   have bdd := bdd_subseq_bdd (xφ x hx f m).1 (xφ x hx f m).5 h.1 h.2
+--   exact ⟨(xφ x hx f m).1 ∘ h.1, (xφ x hx f m).2 ∘ h.1, h.1, h.2, bdd⟩
+
+noncomputable def xφ (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+  (f : ℕ → H) : ℕ → subseq_x x
+| 0       => by
+  have he := extract_subseq' x hx f 0
+  let h := Classical.choice <| he
+  have bdd := bdd_subseq_bdd x hx h.1
+  exact ⟨x ∘ h.1, h.1, h.1, h.2, bdd, h.3, f 0, h.4⟩
+| (m + 1) => by
+  have he := extract_subseq' (xφ x hx f m).1 (xφ x hx f m).5 f (m+1)
+  let h := Classical.choice <| he
+  have bdd := bdd_subseq_bdd (xφ x hx f m).1 (xφ x hx f m).5 h.1
+  exact ⟨(xφ x hx f m).1 ∘ h.1, (xφ x hx f m).2 ∘ h.1, h.1, h.2, bdd, h.3, f (m+1), h.4⟩
+
+-- lemma dense_weakly_converge [CompleteSpace H] (x : ℕ → H) (f : ℕ → H) (a : ℕ → ℝ)
+--   (hf : Dense (Set.range f)) (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+--   (hf2 : ∀ m, Tendsto (fun n => ⟪f m, x n⟫) atTop (nhds (a m))) :
+--   ∃ p : H, WeakConverge x p := by
+--   simp [weakConverge_iff_inner_converge]
+--   sorry
+
+-- ∀ m, φ0 ∘ φ1 ∘ φ2 ∘ ⋯ ∘ φ(m+1) = (φ0 ∘ φ1 ∘ φ2 ∘ ⋯ ∘ φm) ∘ φ(m+1)
+lemma phi_comp_eq (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+  (f : ℕ → H) (m : ℕ) :
+  (xφ x hx f (m+1)).2 = ((xφ x hx f m).2) ∘ ((xφ x hx f (m+1)).3) :=
+  match m with
+  | 0 => rfl
+  | (_ + 1) => rfl
+
+-- lemma phi_comp_eq (x : ℕ → H)
+--   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+--   (f : ℕ → H) (m : ℕ) :
+--   (xφ x hx f (m+1)).2 = ((xφ x hx f m).2) ∘ ((xφ x hx f (m+1)).3) :=
+--   match m with
+--   | 0 => rfl
+--   | (_ + 1) => rfl
+
+-- ∀ m, φm is StrictMono.
+lemma phim_mono (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+  (f : ℕ → H) (m : ℕ) :
+  StrictMono (xφ x hx f m).3 := (xφ x hx f m).4
+
+-- diagonal argument (sub-sequence of x)
+noncomputable def phi_diag (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H)
+  : ℕ → ℕ := fun (n:ℕ) => (xφ x hx f n).2 n
+
+#check StrictMono.comp
+
+-- ∀ m, φ0 ∘ φ1 ∘ φ2 ∘ ⋯ ∘ φm is StrictMono.
+lemma StrictMono_phi_comp (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ)
+  : StrictMono (xφ x hx f m).2 := by
+  induction' m with k hk
+  · exact (xφ x hx f 0).4
+  rw [phi_comp_eq]
+  apply StrictMono.comp hk <| phim_mono x hx f (k + 1)
+
+lemma StrictMono_nge (x : ℕ → ℕ) (hx : StrictMono x) (n : ℕ) : n < x (n + 1) := by
+  have hle : ∀ k, k ≤ x k := by
+    intro k
+    induction' k with k hk
+    · exact Nat.zero_le _
+    · have h₁ : k + 1 ≤ x k + 1 := Nat.succ_le_succ hk
+      have h₂ : x k + 1 ≤ x (k + 1) :=
+        Nat.succ_le_of_lt (hx (Nat.lt_succ_self k))
+      exact h₁.trans h₂
+  have hn1 : n + 1 ≤ x (n + 1) := hle (n + 1)
+  exact Nat.lt_of_lt_of_le (Nat.lt_succ_self n) hn1
+
+lemma StrictMono_phi_diag (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H)
+  : StrictMono <| phi_diag x hx f := by
+  refine strictMono_nat_of_lt_succ ?_
+  intro n
+  simp [phi_diag]
+  rw [phi_comp_eq x hx f n]
+  have h : n < (xφ x hx f (n + 1)).φ (n + 1) := by
+    refine StrictMono_nge (xφ x hx f (n + 1)).φ ?_ n
+    exact phim_mono x hx f (n + 1)
+  exact StrictMono_phi_comp x hx f n h
+
+lemma bdd_iff_exist_bound (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) :
+  ∃ M > 0, ∀ n, ‖x n‖ ≤ M := by
+  obtain ⟨R, hR⟩ := hx.subset_closedBall 0
+  refine ⟨max 1 R, ?_, ?_⟩
+  · exact lt_of_lt_of_le zero_lt_one (le_max_left _ _)
+  · intro n
+    have hx_mem : ‖x n‖ ∈ Set.range fun n => ‖x n‖ := ⟨n, rfl⟩
+    have hx_dist : dist (‖x n‖) 0 ≤ R := by
+      simpa [Metric.closedBall] using hR hx_mem
+    have hx_le : ‖x n‖ ≤ R := by
+      simpa [Real.dist_eq, abs_of_nonneg (norm_nonneg _)] using hx_dist
+    exact hx_le.trans (le_max_right _ _)
+
+lemma upperbdd_phi_diag (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H)
+  : ∃ M > 0, ∀ n, ‖(x ∘ (phi_diag x hx f)) n‖ ≤ M := by
+  have h := bdd_subseq_bdd x hx (phi_diag x hx f)
+  exact bdd_iff_exist_bound (x ∘ phi_diag x hx f) h
+
+-- ∀ m : ℕ, Tendsto (fun n => ⟪f m, (x ∘ φ0 ∘ ⋯ ∘ φm) n⟫) atTop (nhds (a m))
+lemma converge_inner_subseq_fm (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+  (f : ℕ → H) (m : ℕ) :
+  Tendsto (fun n => ⟪f m, (xφ x hx f m).1 n⟫) atTop (𝓝 (xφ x hx f m).6) := by
+  match m with
+  | 0 => exact (xφ x hx f 0).8
+  | k + 1 => exact (xφ x hx f (k + 1)).8
+
+-- ∀ m : ℕ, Tendsto (fun n => ⟪f m, (x ∘ φ) n⟫) atTop (nhds (a m))
+-- 用极限定义
+lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+  (f : ℕ → H) (m : ℕ) :
+  Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (xφ x hx f m).6) := by
+  sorry
+
+-- ∀ y:H, (fun n => ⟪y, (x ∘ φ) n⟫) converges
+-- 用柯西列的定义
+-- 要用dense的定义
+lemma dense_f_forall (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+  (f : ℕ → H) (hf : Dense (Set.range f)) :
+  ∀ y:H, CauchySeq (fun n => ⟪y, (x ∘ (phi_diag x hx f)) n⟫) := by
+  intro y
+  simp [Metric.cauchySeq_iff]
+  intro ε hε
+  sorry
+  -- refine _root_.cauchySeq_iff.mpr ?_
+
+
+#check cauchySeq_tendsto_of_complete
+
+lemma dense_f_forall_exist_lim (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+  (f : ℕ → H) (hf : Dense (Set.range f)) :
+  ∀ y : H, ∃ a : ℝ, Tendsto (fun n => ⟪y, (x ∘ (phi_diag x hx f)) n⟫) atTop (nhds a):= by
+  intro y
+  apply cauchySeq_tendsto_of_complete
+  exact dense_f_forall x hx f hf y
+
+-- 证明线性映射，这个比较好证
+def y_linearmap (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+  (f : ℕ → H) (hf : Dense (Set.range f)) :
+  IsLinearMap ℝ (fun y => Classical.choose <| dense_f_forall_exist_lim x hx f hf y) where
+  map_add := by
+    intro a b
+    let lima := Classical.choose <| dense_f_forall_exist_lim x hx f hf a
+    let limb := Classical.choose <| dense_f_forall_exist_lim x hx f hf b
+    let limab := Classical.choose <| dense_f_forall_exist_lim x hx f hf (a+b)
+    change limab = lima + limb
+    have ha : Tendsto (fun n ↦ ⟪a, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (lima))
+      := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf a)
+    have hb : Tendsto (fun n ↦ ⟪b, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (limb))
+      := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf b)
+    have hab : Tendsto (fun n ↦ ⟪a + b, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (limab))
+      := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf (a + b))
+    sorry
+  map_smul := by
+    intro c y
+    let limy := Classical.choose <| dense_f_forall_exist_lim x hx f hf y
+    let limcy := Classical.choose <| dense_f_forall_exist_lim x hx f hf (c • y)
+    change limcy = c * limy
+    have hy : Tendsto (fun n ↦ ⟪y, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (limy))
+      := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf y)
+    have hb : Tendsto (fun n ↦ ⟪c • y, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (limcy))
+      := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf (c • y))
+    sorry
+
+lemma tendsto_upper_bdd (x : ℕ → H) (M : ℝ)
+  (hx : ∀ n, ‖x n‖ ≤ M) (a : ℝ)
+  (y : H) (hc : Tendsto (fun n => ⟪y, x n⟫) atTop (nhds a)) :
+  |a| ≤ M * ‖y‖ := by
+  have hbound : ∀ n, |⟪y, x n⟫| ≤ M * ‖y‖ := by
+    intro n
+    calc
+      _ ≤ ‖y‖ * ‖x n‖ := abs_real_inner_le_norm y (x n)
+      _ ≤ ‖y‖ * M := mul_le_mul_of_nonneg_left (hx n) (norm_nonneg _)
+      _ = M * ‖y‖ := CommMonoid.mul_comm ‖y‖ M
+  exact (isClosed_le continuous_abs continuous_const).mem_of_tendsto hc
+    (Eventually.of_forall hbound)
+
+noncomputable def y_StrongDual (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
+  (f : ℕ → H) (hf : Dense (Set.range f)) : StrongDual ℝ H where
+  toFun := fun y => Classical.choose <| dense_f_forall_exist_lim x hx f hf y
+  map_add' := (y_linearmap x hx f hf).1
+  map_smul' := (y_linearmap x hx f hf).2
+  cont := by
+    apply @IsBoundedLinearMap.continuous ℝ _ H
+    refine { toIsLinearMap := ?_, bound := ?_ }
+    · exact y_linearmap x hx f hf
+    rcases (upperbdd_phi_diag x hx f) with ⟨M1,hM1,hxn⟩
+    use M1, hM1
+    intro y
+    let limy := Classical.choose <| dense_f_forall_exist_lim x hx f hf y
+    change |limy| ≤ M1 * ‖y‖
+    have hy : Tendsto (fun n ↦ ⟪y, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (limy))
+      := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf y)
+    exact tendsto_upper_bdd (fun n ↦ (x ∘ (phi_diag x hx f)) n) M1 hxn limy y hy
 
 /-
 Lemma 2.45
+可分的版本
 -/
-theorem bounded_seq_has_weakly_converge_subseq_separable [SeparableSpace H] (x : ℕ → H)
+theorem bounded_seq_has_weakly_converge_subseq_separable [SeparableSpace H]
+  [CompleteSpace H] (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) :
-  IsWeaklySeqCompact (Set.range x) := by
+  ∃ φ, StrictMono φ ∧ (∃ (a : H), WeakConverge (x ∘ φ) a) := by
   rcases exists_countable_dense H with ⟨s, hs1, hs2⟩
   have hsn : s.Nonempty := Dense.nonempty hs2
   rcases Set.Countable.exists_eq_range hs1 hsn with ⟨f, hf⟩
-  let d (n : ℕ) := fun m => ⟪f m, x n⟫
-  let s' (n : ℕ):= Set.range <| d n
-
-  have (n:ℕ): Bornology.IsBounded <| s' n := sorry
-  -- have subsq (n : ℕ) : ∃ a ∈ closure (s' n), ∃ φ : ℕ → ℕ, StrictMono φ ∧
-  --   Tendsto ((d n) ∘ φ) atTop (nhds a) := by
-  --   apply tendsto_subseq_of_bounded
-  --   exact this n
-  --   intro m; simp [s']
-  sorry
+  let φ := phi_diag x hx f
+  have hdense : Dense (Set.range f) := by
+    rwa [hf] at hs2
+  let yh := dense_f_forall_exist_lim x hx f hdense
+  choose fy hhh using yh
+  obtain sφ := StrictMono_phi_diag x hx f
+  obtain ⟨a, h⟩ := (InnerProductSpace.toDual ℝ H).surjective (y_StrongDual x hx f hdense)
+  have hy (y : H) :
+    (y_StrongDual x hx f hdense).toFun y = ((InnerProductSpace.toDual ℝ H) a) y := by
+    exact
+      congrFun
+        (congrArg AddHom.toFun
+          (congrArg LinearMap.toAddHom (congrArg ContinuousLinearMap.toLinearMap (id (Eq.symm h)))))
+        y
+  have hy2 (y : H): ⟪a,y⟫ = (y_StrongDual x hx f hdense).toFun y := by
+    specialize hy y
+    simp [InnerProductSpace.toDual_apply] at hy
+    symm
+    exact hy
+  have xφc : WeakConverge (x ∘ φ) a := by
+    refine (weakConverge_iff_inner_converge (x ∘ φ) a).mpr ?_
+    intro y
+    rw [hy2]
+    simp only [real_inner_comm]
+    exact Classical.choose_spec (dense_f_forall_exist_lim x hx f hdense y)
+  exact ⟨φ, sφ, a, xφc⟩
 
 
 lemma IsWeaklySeqCompact_mono {s t : Set H}
