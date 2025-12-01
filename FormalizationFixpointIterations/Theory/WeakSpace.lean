@@ -53,7 +53,6 @@ theorem continuous_va (a : H) : Continuous (va H a) := by
 theorem continuous_va_weak (a : H) :
   @Continuous (WeakSpace ℝ H) ℝ _ _ (va H a) := by
   have h1 : @Continuous (WeakSpace ℝ H) H _ _ (fun (t : WeakSpace ℝ H) => (t : H)) := by
-    apply continuous_id_of_le
     sorry
   have h2 : Continuous (fun (x : H) => inner ℝ x a) := by
     apply Continuous.inner
@@ -1432,6 +1431,153 @@ theorem weakly_compact_iff_weakly_seq_compact (C : Set H) (hC : IsWeaklyCompact 
 --     show IsWeaklySeqCompact Set.univ
 --     sorry
 
+
+
+
+
+-- ∀ k, φ k ≥ k
+lemma StrictMono.nat_id_le
+  {φ : ℕ → ℕ} (h_strict : ∀ i j, i < j → φ i < φ j) : ∀ k, φ k ≥ k := by
+  intro k; induction k with
+  | zero =>
+    exact Nat.zero_le (φ 0)
+  | succ k' ih =>
+    have h_strict_at_succ : φ (k' + 1) > φ k' := h_strict k' (k' + 1) (by omega); omega
+
+-- 辅助引理：limsup的下界逼近性质
+lemma limsup_spec_lower
+  (x : ℕ → ℝ) (hx_bdd : ∃ M : ℝ, ∀ k : ℕ, |x k| ≤ M) :
+  ∀ ε > 0, ∀ N : ℕ, ∃ n ≥ N, x n ≥ limsup x atTop - ε := by
+  intro ε hε N; by_contra! h_contra
+  have h_le: ∀ n ≥ N, x n ≤ limsup x atTop - ε := by intro n hn; specialize h_contra n hn; linarith
+  have h_eventually : ∀ᶠ n in atTop, x n ≤ limsup x atTop - ε := by
+    rw [eventually_atTop]; exact ⟨N, h_le⟩
+  have h_limsup_le : limsup x atTop ≤ limsup x atTop - ε := by
+    rw [Filter.limsup_le_iff ?_ ?_]
+    · intro y hy; filter_upwards [h_eventually] with n hn; linarith
+    · rcases hx_bdd with ⟨M, hM⟩; apply Filter.IsCoboundedUnder.of_frequently_ge ?_
+      · exact - M
+      · rw [@frequently_atTop]; intro a; use a + 1; simp; specialize hM (a + 1)
+        apply abs_le.1 at hM; rcases hM with ⟨hM1, hM2⟩; assumption
+    · simp [IsBoundedUnder, IsBounded]; use (limsup x atTop - ε); use N
+  linarith
+
+-- 辅助引理：limsup的上界逼近性质
+lemma limsup_spec_upper
+  (x : ℕ → ℝ) (hx_bdd : ∃ M : ℝ, ∀ k : ℕ, |x k| ≤ M) :
+  ∀ ε > 0, ∀ᶠ n in atTop, x n ≤ limsup x atTop + ε := by
+    set L := limsup x atTop with hL_def
+    intro ε hε; rw [Filter.eventually_atTop]; simp [limsup, limsSup] at hL_def
+    rcases hx_bdd with ⟨M, hM⟩
+    have h_set_nonempty : {a | ∃ a_1, ∀ (b : ℕ), a_1 ≤ b → x b ≤ a}.Nonempty := by
+      use M; simp; use 0; simp; intro n; have := hM n; apply abs_le.1 at this; exact this.2
+    have h_set_bdd_below : BddBelow {a | ∃ a_1, ∀ (b : ℕ), a_1 ≤ b → x b ≤ a} := by
+      use -M - 1; intro y hy; simp at hy; by_contra! h_contra; rcases hy with ⟨a, ha⟩
+      specialize ha (a + 1); simp at ha
+      have contra: x (a + 1) < -M - 1 := by linarith
+      specialize hM (a + 1); apply abs_le.1 at hM; rcases hM with ⟨hM1, hM2⟩; linarith
+    -- 现在可以使用 csInf_lt_iff
+    have h2 : L < L + ε := by linarith
+    nth_rewrite 1 [hL_def] at h2
+    have ⟨b, ⟨N, hN_bound⟩, hb_lt⟩ : ∃ b ∈ {a | ∃ a_1, ∀ (b : ℕ), a_1 ≤ b → x b ≤ a}, b < L + ε :=
+      (csInf_lt_iff h_set_bdd_below h_set_nonempty).mp h2
+    use N; intro n hn; specialize hN_bound n hn; linarith
+
+-- 辅助引理：倒数可以任意小
+lemma one_div_tendsto_zero
+  (ε : ℝ) (hε : ε > 0) : ∃ k₀ : ℕ, ∀ k : ℕ, k ≥ k₀ → 1 / (↑k + 1) < ε := by
+  use Nat.ceil (1 / ε); intro k hk
+  have hk' : (1 : ℝ) / ε ≤ k := by
+    have h_ceil_nonneg : 0 ≤ Nat.ceil (1 / ε) := by simp
+    calc
+      1 / ε ≤ Nat.ceil (1 / ε) := Nat.le_ceil (1 / ε)
+      _ ≤ k := by norm_cast
+  have h_one_div_eps_pos : 0 < 1 / ε := one_div_pos.mpr hε
+  have hk_plus_one : (1 : ℝ) / ε < k + 1 := by linarith
+  have h_pos_k : 0 < (k : ℝ) + 1 := by norm_cast; omega
+  exact (one_div_lt hε h_pos_k).mp hk_plus_one
+
+theorem lim_subsequence_eq_limsup
+  (x : ℕ → ℝ) (hx_bdd : ∃ M : ℝ, ∀ k : ℕ, |x k| ≤ M) :
+  ∃ (φ : ℕ → ℕ) (L : ℝ), (∀ m n, m < n → φ m < φ n) ∧ (L = limsup x atTop) ∧
+    (Tendsto (x ∘ φ) atTop (𝓝 L)) := by
+  set L := limsup x atTop with hL_def
+  have h_limsup_spec := limsup_spec_lower x hx_bdd
+  have h_limsup_spec' := limsup_spec_upper x hx_bdd
+
+  -- 步骤3：递归构造严格递增子序列 φ
+  have ⟨φ, ⟨hφ_mono, h_φ_lower⟩⟩ : ∃ φ : ℕ → ℕ, (∀ m n, m < n → φ m < φ n) ∧
+    (∀ k, x (φ k) ≥ L - 1 / (k + 1)) := by
+    let find_next (N : ℕ) (ε : ℝ) (hε_pos : 0 < ε) : ℕ := (h_limsup_spec ε hε_pos N).choose
+
+    have h_find_next_ge : ∀ N ε (hε : 0 < ε), find_next N ε hε ≥ N := fun N ε _ =>
+      (h_limsup_spec ε (by positivity) N).choose_spec.1
+
+    have h_find_next_value : ∀ N ε (hε : 0 < ε), x (find_next N ε hε) ≥ L - ε := fun N ε _ =>
+      (h_limsup_spec ε (by positivity) N).choose_spec.2
+
+    -- 递归构造序列 φ
+    let φ : ℕ → ℕ := fun k => Nat.recOn k (find_next 0 1 (by positivity))
+      (fun k' φk' => find_next (φk' + 1) (1 / (k' + 2)) (by positivity))
+    use φ
+    constructor
+    · intro m n hmn
+      induction n with
+      | zero => omega
+      | succ n' ih =>
+        by_cases hm : m < n'
+        · have h_ih := ih hm
+          calc _ < φ n' := h_ih
+            _ < φ (n' + 1) := by unfold φ; apply h_find_next_ge; positivity
+        · push_neg at hm; have : m = n' := by omega
+          rw [this]; unfold φ
+          have : find_next (φ n' + 1) (1 / (n' + 2)) (by positivity) ≥ φ n' + 1 := by
+            apply h_find_next_ge; positivity
+          exact this
+    · -- 证明 x (φ k) ≥ L - 1 / (k + 1)
+      intro k; induction k with
+      | zero =>
+        unfold φ; have h1 : (0 : ℝ) < 1 := by norm_num
+        simp
+        exact (OrderedSub.tsub_le_iff_right L 1 (x (find_next 0 1
+          (Mathlib.Meta.Positivity.pos_of_isNat (Mathlib.Meta.NormNum.isNat_ofNat ℝ Nat.cast_one)
+            (Eq.refl (Nat.ble 1 1)))))).mp (h_find_next_value 0 1 h1)
+      | succ k' ih =>
+        have hε_pos : (0 : ℝ) < 1 / (k' + 2) := by positivity
+        have h_value := h_find_next_value (φ (Nat.recOn k' (find_next 0 1
+          (by norm_num : 0 < (1 : ℝ))) (fun k'' φk'' => find_next (φk'' + 1)
+            (1 / (k'' + 2)) (by positivity))) + 1) (1 / (k' + 2)) hε_pos
+        calc
+          _ ≥ L - 1 / (k' + 2) := by
+            exact h_find_next_value (Nat.rec (find_next 0 1 (Mathlib.Meta.Positivity.pos_of_isNat
+              (Mathlib.Meta.NormNum.isNat_ofNat ℝ Nat.cast_one) (Eq.refl (Nat.ble 1 1))))
+                (fun k' φk' ↦find_next (φk' + 1) (1 / (↑k' + 2)) (div_pos
+                  (Mathlib.Meta.Positivity.pos_of_isNat
+                    (Mathlib.Meta.NormNum.isNat_ofNat ℝ Nat.cast_one) (Eq.refl (Nat.ble 1 1)))
+                        (Right.add_pos_of_nonneg_of_pos (Nat.cast_nonneg' k')
+                          (Mathlib.Meta.Positivity.pos_of_isNat (Mathlib.Meta.NormNum.isNat_ofNat ℝ
+                            (Eq.refl 2)) (Eq.refl (Nat.ble 1 2)))))) k' +1) (1 / (↑k' + 2)) hε_pos
+          _ = L - 1 / (↑(k' + 1) + 1) := by norm_num; ring
+  -- 步骤4：证明子列收敛到 L：下界来自 h_φ_lower，上界来自 limsup ≤ L
+  use φ, L, hφ_mono, rfl; rw [Metric.tendsto_atTop]; intro ε ε_pos
+  obtain ⟨N_up, hN_up⟩ := (eventually_atTop).mp (h_limsup_spec' (ε / 2) (by linarith))
+  obtain ⟨k₀, hk₀⟩ := one_div_tendsto_zero ε ε_pos; have h_phi_ge := StrictMono.nat_id_le hφ_mono
+  use max N_up k₀; intro k hk
+  have hk_up := le_of_max_le_left hk; have hk_k₀ := le_of_max_le_right hk
+  have h_upper := hN_up (φ k) (Nat.le_trans hk_up (h_phi_ge k))
+  have h_lower := h_φ_lower k; have h_one_div_small := hk₀ k hk_k₀
+  rw [dist_eq_norm]; simp [Function.comp_apply]; apply abs_lt.2; constructor; repeat linarith
+
+
+
+
+
+
+
+
+
+
+
 #check MapClusterPt
 #check TopologicalSpace.SeparableSpace
 #check TopologicalSpace.exists_countable_dense
@@ -1455,34 +1601,23 @@ structure convergent_Subseq (x : ℕ → H) (f : ℕ → H) (m : ℕ) where
 lemma extract_subseq' (x : ℕ → H) (hx : Bornology.IsBounded <| Set.range fun n => ‖x n‖)
     (f : ℕ → H) (m : ℕ) :
     Nonempty <| convergent_Subseq x f m := by
-    sorry
-  -- classical
-  -- obtain ⟨R, hR0⟩ := hx.subset_closedBall (0 : ℝ)
-  -- have hnorm : ∀ n, ‖x n‖ ≤ R := by
-  --   intro n
-  --   have hxmem : ‖x n‖ ∈ Set.range fun n => ‖x n‖ := ⟨n, rfl⟩
-  --   have hclosed := hR hxmem
-  --   have hdist := Metric.mem_closedBall.mp hclosed
-  --   simpa [Real.dist_eq, abs_of_nonneg (norm_nonneg _)] using hdist
-  -- set y : ℕ → ℝ := fun n => ⟪f m, x n⟫
-  -- set B : ℝ := ‖f m‖ * R
-  -- have hB0 : 0 ≤ B := mul_nonneg (norm_nonneg _) hR0
-  -- have hy_bounds : ∀ n, |y n| ≤ B := by
-  --   intro n
-  --   have h₁ : |y n| ≤ ‖f m‖ * ‖x n‖ := by
-  --     simpa [y] using abs_realInner_le_norm (f m) (x n)
-  --   have h₂ : ‖f m‖ * ‖x n‖ ≤ B := by
-  --     have := mul_le_mul_of_nonneg_left (hnorm n) (norm_nonneg _)
-  --     simpa [B] using this
-  --   exact h₁.trans h₂
-  -- have hy_mem : ∀ n, y n ∈ Set.Icc (-B) B := by
-  --   intro n
-  --   have := abs_le.mp (hy_bounds n)
-  --   simpa [Set.mem_Icc] using this
-  -- obtain ⟨φ, hφmono, l, -, hlim⟩ :=
-  --   (isCompact_Icc (-B) B).exists_seq_tendsto y hy_mem
-  -- refine ⟨⟨φ, hφmono, l, ?_⟩⟩
-  -- simpa [y] using hlim
+  obtain ⟨R, hR⟩ := hx.subset_closedBall 0
+  have hnorm : ∀ n, ‖x n‖ ≤ R := by
+    intro n
+    have hxmem : ‖x n‖ ∈ Set.range fun n => ‖x n‖ := ⟨n, rfl⟩
+    have hclosed := hR hxmem
+    simpa [Metric.mem_closedBall, Real.dist_eq, abs_of_nonneg (norm_nonneg _)] using hclosed
+  set y : ℕ → ℝ := fun n => ⟪f m, x n⟫
+  set B : ℝ := ‖f m‖ * R
+  have hy_bounds : ∀ n, |y n| ≤ B := by
+    intro n
+    calc |⟪f m, x n⟫|
+        ≤ ‖f m‖ * ‖x n‖ := abs_real_inner_le_norm (f m) (x n)
+      _ ≤ ‖f m‖ * R := mul_le_mul_of_nonneg_left (hnorm n) (norm_nonneg _)
+      _ = B := rfl
+  obtain ⟨φ, L, hφ_mono, _, h_tendsto⟩ := lim_subsequence_eq_limsup y ⟨B, hy_bounds⟩
+  apply Nonempty.intro
+  exact ⟨φ, hφ_mono, L, h_tendsto⟩
 
 -- 有界序列的子列也是有界序列
 lemma bdd_subseq_bdd (x : ℕ → H) (hx : Bornology.IsBounded <| Set.range fun n => ‖x n‖)
@@ -1575,6 +1710,7 @@ lemma StrictMono_phi_comp (x : ℕ → H)
   rw [phi_comp_eq]
   apply StrictMono.comp hk <| phim_mono x hx f (k + 1)
 
+-- ∀ n, n < φ (n + 1)
 lemma StrictMono_nge (x : ℕ → ℕ) (hx : StrictMono x) (n : ℕ) : n < x (n + 1) := by
   have hle : ∀ k, k ≤ x k := by
     intro k
@@ -1587,6 +1723,7 @@ lemma StrictMono_nge (x : ℕ → ℕ) (hx : StrictMono x) (n : ℕ) : n < x (n 
   have hn1 : n + 1 ≤ x (n + 1) := hle (n + 1)
   exact Nat.lt_of_lt_of_le (Nat.lt_succ_self n) hn1
 
+-- ∀ n, φ_diag n ≥ n
 lemma StrictMono_phi_diag (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H)
   : StrictMono <| phi_diag x hx f := by
@@ -1599,6 +1736,7 @@ lemma StrictMono_phi_diag (x : ℕ → H)
     exact phim_mono x hx f (n + 1)
   exact StrictMono_phi_comp x hx f n h
 
+-- 序列存在有界上界
 lemma bdd_iff_exist_bound (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) :
   ∃ M > 0, ∀ n, ‖x n‖ ≤ M := by
@@ -1613,6 +1751,7 @@ lemma bdd_iff_exist_bound (x : ℕ → H)
       simpa [Real.dist_eq, abs_of_nonneg (norm_nonneg _)] using hx_dist
     exact hx_le.trans (le_max_right _ _)
 
+-- ∀ n, ‖(x ∘ φ_diag) n‖ 有界
 lemma upperbdd_phi_diag (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H)
   : ∃ M > 0, ∀ n, ‖(x ∘ (phi_diag x hx f)) n‖ ≤ M := by
@@ -1628,6 +1767,38 @@ lemma converge_inner_subseq_fm (x : ℕ → H)
   | 0 => exact (xφ x hx f 0).8
   | k + 1 => exact (xφ x hx f (k + 1)).8
 
+
+
+
+lemma phi_diag_succ_in_xφ_m (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
+  x (phi_diag x hx f (m + 1)) ∈ Set.range (fun k => (xφ x hx f m).1 k) := by
+  -- phi_diag x hx f (m + 1) = (xφ x hx f (m + 1)).2 (m + 1)
+  unfold phi_diag
+  -- 根据 phi_comp_eq，(xφ x hx f (m + 1)).2 = (xφ x hx f m).2 ∘ (xφ x hx f (m + 1)).3
+  rw [phi_comp_eq x hx f m]
+  -- 所以 (xφ x hx f (m + 1)).2 (m + 1) = (xφ x hx f m).2 ((xφ x hx f (m + 1)).3 (m + 1))
+  simp only [Function.comp_apply]
+  -- 现在需要说明 x ((xφ x hx f m).2 ((xφ x hx f (m + 1)).3 (m + 1))) 在像中
+  -- 这正是 (xφ x hx f m).1 = x ∘ (xφ x hx f m).2 的定义
+  use (xφ x hx f (m + 1)).3 (m + 1)
+  simp
+
+
+
+
+
+
+
+
+lemma phi_diag_in_xφ_image (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
+  ∀ n ≥ m, x (phi_diag x hx f n) ∈ Set.range (fun k => (xφ x hx f m).1 k) := by
+  sorry
+
+
+
+
 -- ∀ m : ℕ, Tendsto (fun n => ⟪f m, (x ∘ φ) n⟫) atTop (nhds (a m))
 -- 用极限定义
 lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
@@ -1635,6 +1806,7 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
   (f : ℕ → H) (m : ℕ) :
   Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (xφ x hx f m).6) := by
   sorry
+
 
 -- ∀ y:H, (fun n => ⟪y, (x ∘ φ) n⟫) converges
 -- 用柯西列的定义
@@ -1677,7 +1849,15 @@ def y_linearmap (x : ℕ → H)
       := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf b)
     have hab : Tendsto (fun n ↦ ⟪a + b, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (limab))
       := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf (a + b))
-    sorry
+    have h_add_inner : (fun n ↦ ⟪a + b, (x ∘ (phi_diag x hx f)) n⟫) =
+      fun n ↦ ⟪a, (x ∘ (phi_diag x hx f)) n⟫ + ⟪b, (x ∘ (phi_diag x hx f)) n⟫ := by
+      ext n
+      exact inner_add_left a b ((x ∘ (phi_diag x hx f)) n)
+    rw [h_add_inner] at hab
+    have h_tendsto_add : Tendsto
+      (fun n ↦ ⟪a, (x ∘ (phi_diag x hx f)) n⟫ + ⟪b, (x ∘ (phi_diag x hx f)) n⟫)
+      atTop (𝓝 (lima + limb)) := Tendsto.add ha hb
+    exact tendsto_nhds_unique hab h_tendsto_add
   map_smul := by
     intro c y
     let limy := Classical.choose <| dense_f_forall_exist_lim x hx f hf y
@@ -1687,7 +1867,16 @@ def y_linearmap (x : ℕ → H)
       := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf y)
     have hb : Tendsto (fun n ↦ ⟪c • y, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (limcy))
       := Classical.choose_spec (dense_f_forall_exist_lim x hx f hf (c • y))
-    sorry
+    have h_smul_inner : (fun n ↦ ⟪c • y, (x ∘ (phi_diag x hx f)) n⟫) =
+      fun n ↦ c * ⟪y, (x ∘ (phi_diag x hx f)) n⟫ := by
+      ext n
+      exact real_inner_smul_left y ((x ∘ phi_diag x hx f) n) c
+    rw [h_smul_inner] at hb
+    have h_tendsto_smul : Tendsto
+      (fun n ↦ c * ⟪y, (x ∘ (phi_diag x hx f)) n⟫)
+      atTop (𝓝 (c * limy)) := by
+      exact Tendsto.const_mul c hy
+    exact tendsto_nhds_unique hb h_tendsto_smul
 
 lemma tendsto_upper_bdd (x : ℕ → H) (M : ℝ)
   (hx : ∀ n, ‖x n‖ ≤ M) (a : ℝ)
