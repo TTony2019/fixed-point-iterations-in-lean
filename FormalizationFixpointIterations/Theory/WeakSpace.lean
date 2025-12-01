@@ -1783,6 +1783,7 @@ lemma phi_diag_succ_in_xφ_m (x : ℕ → H)
   -- 这正是 (xφ x hx f m).1 = x ∘ (xφ x hx f m).2 的定义
   use (xφ x hx f (m + 1)).3 (m + 1)
   simp
+  sorry
 
 
 
