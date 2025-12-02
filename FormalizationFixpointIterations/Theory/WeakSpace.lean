@@ -10,7 +10,7 @@ import FormalizationFixpointIterations.Nonexpansive.Definitions
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 import Mathlib.Topology.MetricSpace.Sequences
 import Mathlib.Topology.UniformSpace.Ascoli
-
+import Mathlib.Data.Nat.Init
 
 set_option linter.unusedSectionVars false
 
@@ -47,20 +47,6 @@ theorem continuous_va (a : H) : Continuous (va H a) := by
   apply Continuous.inner
   · apply continuous_id
   · apply continuous_const
-
-
-
-theorem continuous_va_weak (a : H) :
-  @Continuous (WeakSpace ℝ H) ℝ _ _ (va H a) := by
-  have h1 : @Continuous (WeakSpace ℝ H) H _ _ (fun (t : WeakSpace ℝ H) => (t : H)) := by
-    sorry
-  have h2 : Continuous (fun (x : H) => inner ℝ x a) := by
-    apply Continuous.inner
-    · apply continuous_id
-    · apply continuous_const
-  simp [va]
-  exact Continuous.comp h2 h1
-
 
 
 #check inner_self_eq_zero
@@ -1630,15 +1616,16 @@ lemma bdd_subseq_bdd (x : ℕ → H) (hx : Bornology.IsBounded <| Set.range fun 
 
 -- 存放 x ∘ φ 和 φ
 structure subseq_x (x : ℕ → H) where
-  xφ : ℕ → H -- x ∘ φ1 ∘ φ2 ∘ ... φ m
-  phi_comp : ℕ → ℕ -- φ1 ∘ φ2 ∘ ... φ m
-  φ : ℕ → ℕ -- φ m
-  hφ : StrictMono φ -- φ m strict mono
-  hbb : Bornology.IsBounded <| Set.range (fun n => ‖xφ n‖) -- x ∘ φ1 ∘ φ2 ∘ ... φ m bdd
+  phi_comp : ℕ → ℕ     -- φ1 ∘ φ2 ∘ ... ∘ φm
+  φ : ℕ → ℕ            -- φm
+  hφ : StrictMono φ    -- φm strict mono
+  hbb : Bornology.IsBounded <| Set.range (fun n => ‖(x ∘ phi_comp) n‖)  -- x ∘ phi_comp 有界
   lim : ℝ
   fm : H
-  hlim : Tendsto (fun n => ⟪fm, xφ n⟫) atTop (𝓝 lim)
+  hlim : Tendsto (fun n => ⟪fm, (x ∘ phi_comp) n⟫) atTop (𝓝 lim)
 
+
+def subseq_x.xφ (x : ℕ → H) (s : subseq_x x) : ℕ → H := x ∘ s.phi_comp
 -- noncomputable def xφ (x : ℕ → H)
 --   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
 --   (f : ℕ → H) : ℕ → subseq_x x
@@ -1657,12 +1644,12 @@ noncomputable def xφ (x : ℕ → H)
   have he := extract_subseq' x hx f 0
   let h := Classical.choice <| he
   have bdd := bdd_subseq_bdd x hx h.1
-  exact ⟨x ∘ h.1, h.1, h.1, h.2, bdd, h.3, f 0, h.4⟩
+  exact ⟨h.1, h.1, h.2, bdd, h.3, f 0, h.4⟩
 | (m + 1) => by
-  have he := extract_subseq' (xφ x hx f m).1 (xφ x hx f m).5 f (m+1)
+  have he := extract_subseq' ((xφ x hx f m).xφ) (xφ x hx f m).hbb f (m+1)
   let h := Classical.choice <| he
-  have bdd := bdd_subseq_bdd (xφ x hx f m).1 (xφ x hx f m).5 h.1
-  exact ⟨(xφ x hx f m).1 ∘ h.1, (xφ x hx f m).2 ∘ h.1, h.1, h.2, bdd, h.3, f (m+1), h.4⟩
+  have bdd := bdd_subseq_bdd ((xφ x hx f m).xφ) (xφ x hx f m).hbb h.1
+  exact ⟨(xφ x hx f m).phi_comp ∘ h.1, h.1, h.2, bdd, h.3, f (m+1), h.4⟩
 
 -- lemma dense_weakly_converge [CompleteSpace H] (x : ℕ → H) (f : ℕ → H) (a : ℕ → ℝ)
 --   (hf : Dense (Set.range f)) (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
@@ -1675,7 +1662,7 @@ noncomputable def xφ (x : ℕ → H)
 lemma phi_comp_eq (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
   (f : ℕ → H) (m : ℕ) :
-  (xφ x hx f (m+1)).2 = ((xφ x hx f m).2) ∘ ((xφ x hx f (m+1)).3) :=
+  (xφ x hx f (m+1)).phi_comp = ((xφ x hx f m).phi_comp) ∘ ((xφ x hx f (m+1)).φ) :=
   match m with
   | 0 => rfl
   | (_ + 1) => rfl
@@ -1692,21 +1679,21 @@ lemma phi_comp_eq (x : ℕ → H)
 lemma phim_mono (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
   (f : ℕ → H) (m : ℕ) :
-  StrictMono (xφ x hx f m).3 := (xφ x hx f m).4
+  StrictMono (xφ x hx f m).φ := (xφ x hx f m).hφ
 
 -- diagonal argument (sub-sequence of x)
 noncomputable def phi_diag (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H)
-  : ℕ → ℕ := fun (n:ℕ) => (xφ x hx f n).2 n
+  : ℕ → ℕ := fun (n:ℕ) => (xφ x hx f n).phi_comp n
 
 #check StrictMono.comp
 
 -- ∀ m, φ0 ∘ φ1 ∘ φ2 ∘ ⋯ ∘ φm is StrictMono.
 lemma StrictMono_phi_comp (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ)
-  : StrictMono (xφ x hx f m).2 := by
+  : StrictMono (xφ x hx f m).phi_comp := by
   induction' m with k hk
-  · exact (xφ x hx f 0).4
+  · exact (xφ x hx f 0).hφ
   rw [phi_comp_eq]
   apply StrictMono.comp hk <| phim_mono x hx f (k + 1)
 
@@ -1762,51 +1749,193 @@ lemma upperbdd_phi_diag (x : ℕ → H)
 lemma converge_inner_subseq_fm (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
   (f : ℕ → H) (m : ℕ) :
-  Tendsto (fun n => ⟪f m, (xφ x hx f m).1 n⟫) atTop (𝓝 (xφ x hx f m).6) := by
+  Tendsto (fun n => ⟪f m, ((xφ x hx f m).xφ) n⟫) atTop (𝓝 (xφ x hx f m).lim) := by
   match m with
-  | 0 => exact (xφ x hx f 0).8
-  | k + 1 => exact (xφ x hx f (k + 1)).8
+  | 0 => exact (xφ x hx f 0).hlim
+  | k + 1 => exact (xφ x hx f (k + 1)).hlim
 
 
 
 
-lemma phi_diag_succ_in_xφ_m (x : ℕ → H)
+lemma xφ_succ_range_subset (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
-  x (phi_diag x hx f (m + 1)) ∈ Set.range (fun k => (xφ x hx f m).1 k) := by
-  -- phi_diag x hx f (m + 1) = (xφ x hx f (m + 1)).2 (m + 1)
-  unfold phi_diag
-  -- 根据 phi_comp_eq，(xφ x hx f (m + 1)).2 = (xφ x hx f m).2 ∘ (xφ x hx f (m + 1)).3
+  Set.range (fun k => ((xφ x hx f (m + 1)).xφ) k) ⊆
+  Set.range (fun k => ((xφ x hx f m).xφ) k) := by
+  intro y hy
+  rcases hy with ⟨j, rj⟩
+  rw [← rj]
+  unfold subseq_x.xφ
+  -- ((xφ x hx f (m + 1)).xφ) j = x ((xφ x hx f (m + 1)).phi_comp j)
+  -- 利用 phi_comp_eq：(xφ x hx f (m+1)).phi_comp = (xφ x hx f m).phi_comp ∘ (xφ x hx f (m+1)).φ
   rw [phi_comp_eq x hx f m]
-  -- 所以 (xφ x hx f (m + 1)).2 (m + 1) = (xφ x hx f m).2 ((xφ x hx f (m + 1)).3 (m + 1))
   simp only [Function.comp_apply]
-  -- 现在需要说明 x ((xφ x hx f m).2 ((xφ x hx f (m + 1)).3 (m + 1))) 在像中
-  -- 这正是 (xφ x hx f m).1 = x ∘ (xφ x hx f m).2 的定义
-  use (xφ x hx f (m + 1)).3 (m + 1)
-  simp
-  sorry
+  -- 现在是 x (((xφ x hx f m).phi_comp) ((xφ x hx f (m + 1)).φ j))
+  use ((xφ x hx f (m + 1)).φ) j
+
+
+-- 步骤2：证明对所有 n ≥ m，x ∘ φ_comp_n 的像都包含在 x ∘ φ_comp_m 的像中
+lemma xφ_range_subset (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
+  ∀ n ≥ m, Set.range (fun k => ((xφ x hx f n).xφ) k) ⊆
+  Set.range (fun k => ((xφ x hx f m).xφ) k) := by
+  intro n hn
+  induction n, hn using Nat.le_induction with
+    | base =>
+      rfl
+    | succ n' hn' ih =>
+      have h_subset := xφ_succ_range_subset x hx f n'
+      exact Set.Subset.trans h_subset ih
 
 
 
 
 
-
-
-
+-- 步骤3：证明对角线序列上的点也在范围内
 lemma phi_diag_in_xφ_image (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
-  ∀ n ≥ m, x (phi_diag x hx f n) ∈ Set.range (fun k => (xφ x hx f m).1 k) := by
-  sorry
+  ∀ n ≥ m, x (phi_diag x hx f n) ∈ Set.range (fun k => ((xφ x hx f m).xφ) k) := by
+  intro n hn
+  -- phi_diag x hx f n = (xφ x hx f n).phi_comp n
+  unfold phi_diag
+  -- x ((xφ x hx f n).phi_comp n) 属于 (xφ x hx f n).xφ 的像
+  have h_in_n_range : x ((xφ x hx f n).phi_comp n) ∈
+    Set.range (fun k => ((xφ x hx f n).xφ) k) := by
+    unfold subseq_x.xφ
+    use n
+    simp
+  -- 而 (xφ x hx f n).xφ 的像包含在 (xφ x hx f m).xφ 的像中（由步骤2）
+  have h_subset := xφ_range_subset x hx f m n hn
+  exact h_subset h_in_n_range
+
+lemma xφ_succ_indices_ge (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
+  ∀ k, ∃ j ≥ k, ((xφ x hx f (m + 1)).xφ) k = ((xφ x hx f m).xφ) j := by
+  intro k
+  unfold subseq_x.xφ
+  rw [phi_comp_eq x hx f m]
+  simp only [Function.comp_apply]
+  have h_φ_ge : (xφ x hx f (m + 1)).φ k ≥ k := by
+    have h_strict := phim_mono x hx f (m + 1)
+    exact StrictMono.nat_id_le h_strict k
+  use (xφ x hx f (m + 1)).φ k, h_φ_ge
+
+
+lemma xφ_indices_ge (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
+  ∀ n ≥ m, ∀ k, ∃ j ≥ k, ((xφ x hx f n).xφ) k = ((xφ x hx f m).xφ) j := by
+  intro n hn
+  induction n, hn using Nat.le_induction with
+  | base =>
+    intro k
+    use k, le_refl k
+  | succ n' hn' ih =>
+    intro k
+    obtain ⟨j', hj'_ge, hj'_eq⟩ := ih k
+    obtain ⟨j'', hj''_ge, hj''_eq⟩ := xφ_succ_indices_ge x hx f n' j'
+    have h_succ_k : ∃ j' ≥ k, ((xφ x hx f (n' + 1)).xφ) k = ((xφ x hx f n').xφ) j' :=
+      xφ_succ_indices_ge x hx f n' k
+    obtain ⟨j'_0, hj'_0_ge, hj'_0_eq⟩ := h_succ_k
+    obtain ⟨j''_0, hj''_0_ge, hj''_0_eq⟩ := ih j'_0
+    use j''_0
+    constructor
+    · linarith
+    · calc
+        _ = ((xφ x hx f n').xφ) j'_0 := hj'_0_eq
+        _ = ((xφ x hx f m).xφ) j''_0 := hj''_0_eq
 
 
 
 
--- ∀ m : ℕ, Tendsto (fun n => ⟪f m, (x ∘ φ) n⟫) atTop (nhds (a m))
+
+-- ∀ m ≥ n, Tendsto (fun n => ⟪f m, (x ∘ φ) n⟫) atTop (nhds (a m))
 -- 用极限定义
 lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
   (f : ℕ → H) (m : ℕ) :
-  Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (xφ x hx f m).6) := by
-  sorry
+  Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (xφ x hx f m).lim) := by
+  have h_in_range : ∀ n ≥ m, x (phi_diag x hx f n) ∈ Set.range (fun k => ((xφ x hx f m).xφ) k) :=
+    phi_diag_in_xφ_image x hx f m
+
+  -- 步骤2：因此存在 k_n 使得 x (phi_diag x hx f n) = ((xφ x hx f m).xφ) k_n
+  have h_exists_k : ∀ n ≥ m, ∃ k ≥ n, x (phi_diag x hx f n) = ((xφ x hx f m).xφ) k := by
+    intro n hn
+    unfold phi_diag
+    have := xφ_indices_ge x hx f m n hn n
+    obtain ⟨j, hj_ge, hj_eq⟩ := this
+    have h_xφ_def : ((xφ x hx f n).xφ) n = x ((xφ x hx f n).phi_comp n) := by
+      unfold subseq_x.xφ
+      simp
+    use j, hj_ge
+    rw [← h_xφ_def, hj_eq]
+
+  -- 步骤3：定义一个子列索引函数 ψ
+  let ψ : ℕ → ℕ := fun n => (h_exists_k (m + n) (by linarith)).choose
+
+  have h_ψ_ge : ∀ n, ψ n ≥ n := by
+    intro n
+    have : ψ n ≥ m + n := by
+      simp at h_exists_k
+      exact (h_exists_k (m + n) (by linarith)).choose_spec.1
+    linarith
+
+  -- 步骤4：我们知道 ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫ = ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫
+  have h_eq_xφ : ∀ n, ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫ =
+    ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫ := by
+    intro n
+    have := (h_exists_k (m + n) (by linarith)).choose_spec
+    simp at this
+    exact congrArg (inner ℝ (f m)) this.2
+
+  -- 步骤5：⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫ 是 ⟪f m, ((xφ x hx f m).xφ) k⟫ 的子列
+  -- 而 ⟪f m, ((xφ x hx f m).xφ) k⟫ 收敛到 (xφ x hx f m).lim
+  have h_base_conv : Tendsto (fun k => ⟪f m, ((xφ x hx f m).xφ) k⟫) atTop
+    (𝓝 (xφ x hx f m).lim) := converge_inner_subseq_fm x hx f m
+
+  -- 步骤6：子列也收敛到相同的极限
+  have h_subseq_conv : Tendsto (fun n => ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫) atTop
+    (𝓝 (xφ x hx f m).lim) := by
+    apply Tendsto.comp h_base_conv ?_
+    rw [tendsto_atTop_atTop]
+    intro S
+    use S
+    intro n hn
+    specialize h_ψ_ge n
+    linarith
+
+  -- 步骤7：通过等式转换回原始序列（从 m 开始的平移）
+  have h_shifted : Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫) atTop
+    (𝓝 (xφ x hx f m).lim) := by
+    convert h_subseq_conv using 1
+    ext n
+    exact h_eq_xφ n
+
+  -- 步骤8：原始序列的收敛性等价于平移序列的收敛性
+  have h_equiv : Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop
+    (𝓝 (xφ x hx f m).lim) ↔
+    Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫) atTop
+    (𝓝 (xφ x hx f m).lim) := by
+    constructor
+    · intro h
+      exact h_shifted
+    · intro h
+      rw [Metric.tendsto_atTop]
+      intro ε hε
+      rw [Metric.tendsto_atTop] at h_shifted
+      obtain ⟨N, hN⟩ := h_shifted ε hε
+      use N + m
+      intro n hn
+      specialize hN (n - m)
+      have h_n_ge_m : n ≥ m := by omega
+      have : n - m + m = n := by omega
+      rw [← this] at hN
+      have hN_apply : (n - m) ≥ N := by omega
+      simp at *
+      convert hN hN_apply
+      linarith
+
+
+  exact h_equiv.mpr h_shifted
+
 
 
 -- ∀ y:H, (fun n => ⟪y, (x ∘ φ) n⟫) converges
