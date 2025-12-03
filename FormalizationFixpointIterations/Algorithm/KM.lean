@@ -8,7 +8,7 @@ open Set Filter Topology
 open BigOperators Finset Function
 open Nonexpansive_operator  --命名空间
 
-set_option linter.unusedSectionVars true
+set_option linter.unusedSectionVars false
 set_option linter.unusedVariables false
 set_option linter.style.longLine false
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
@@ -67,20 +67,106 @@ Tendsto u atTop (𝓝 x0) ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, u n ∈ Ioo (x0 - 
 def IsWeaklyClusterPoint (x : H) (F : Filter H) := @ClusterPt (WeakSpace ℝ H) _
  (x : (WeakSpace ℝ H)) (F:Filter (WeakSpace ℝ H))
 
-def IsWeaklySeqClusterPt (p : H) (x : ℕ → H):=
+#check id
+def IsWeaklySeqClusterPt' (p : H) (x : ℕ → H):=
   ∃ (φ : ℕ → ℕ), StrictMono φ ∧
     WeakConverge (fun n => (x (φ n))) p
 
-lemma Lemma_2_47 (C : Set H) (h_C_nonempty : C.Nonempty) (x : ℕ → H)
-(h_converge : ∀ a ∈ C, ∃ lim_A : ℝ, Tendsto (fun n ↦ ‖x n - a‖) atTop (𝓝 lim_A))
-(h_weak_cluster_in : ∀ p : H,  IsWeaklySeqClusterPt p x → p ∈ C) : ∃ p0 ∈ C, WeakConverge x p0 := by
+#check weakConverge_iff_inner_converge
+
+--引理:数列x与p的内积收敛,则子数列与p的内积也收敛
+--Tendsto (fun n =>⟪x n, p⟫) atTop 𝓝 l,则 Tendsto (fun n =>⟪x (φ n), p⟫) atTop 𝓝 l
+lemma weakConverge_subseq {x : ℕ → H} {p : H} {φ : ℕ → ℕ} (hφ : StrictMono φ) (l : ℝ)
+(hconv : Tendsto (fun n => ⟪x n, p⟫) atTop (𝓝 l)) :
+  Tendsto (fun n =>⟪x (φ n), p⟫) atTop (𝓝 l) := by
+  apply Filter.Tendsto.comp hconv
+  exact StrictMono.tendsto_atTop hφ
+
+--引理: 数列x弱收敛至p, 则p为x的弱聚点
+lemma WeakConverge_is_ClusterPt (x : ℕ → H) (p : H) (hconv : WeakConverge x p) :
+  IsWeaklySeqClusterPt' p x := by
+  use id
+  constructor
+  · exact fun(x y hxy) => hxy
+  exact hconv
+
+
+lemma Lemma_2_46_backword (x : ℕ → H) (h_bounded : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M)
+(h_atmost_one_cluster : ∀ p q : H,  IsWeaklySeqClusterPt' p x → IsWeaklySeqClusterPt' q x → p = q) : ∃ p0 : H, WeakConverge x p0 := by
   sorry
 
+--(2.32)等式
+lemma prop_2_32 (x : ℕ → H) (p q : H) :
+∀ n : ℕ ,2*⟪x n,p-q⟫ =‖ x n -q‖ ^2-‖ x n -p‖ ^2+‖p‖^2-‖q‖^2 :=by
+  intro n
+  symm
+  calc
+    ‖ x n -q‖ ^2-‖ x n -p‖ ^2+‖p‖^2-‖q‖^2=
+      ⟪ x n -q, x n -q⟫ - ⟪ x n -p, x n -p⟫ + ⟪p, p⟫ - ⟪q, q⟫ := by
+        rw [real_inner_self_eq_norm_sq (x n - q), real_inner_self_eq_norm_sq (x n - p),
+          real_inner_self_eq_norm_sq p, real_inner_self_eq_norm_sq q]
+    _= 2*⟪x n,p-q⟫ := by
+      simp [inner_sub_left, inner_sub_right, real_inner_comm]
+      ring
+--(2.32)转化为极限形式
+lemma prop_2_32_lim (x : ℕ → H) (p q : H) (lim_p lim_q : ℝ) (norm_p_2 : Tendsto (fun n ↦ ‖x n - p‖ ^ 2) atTop (𝓝 (lim_p ^ 2)))
+(norm_q_2 : Tendsto (fun n ↦ ‖x n - q‖ ^ 2) atTop (𝓝 (lim_q ^ 2))) :
+∃ l: ℝ ,Tendsto (fun n => ⟪x n,p-q⟫) atTop (𝓝 (l)) :=by
+  use 1/2*((lim_q ^ 2)-(lim_p ^ 2)+‖p‖^2-‖q‖^2)
+  have h2 : Tendsto (fun n => ‖x n -q‖ ^2-‖ x n -p‖ ^2+‖p‖^2-‖q‖^2) atTop
+    (𝓝 ( (lim_q ^ 2)-(lim_p ^ 2)+‖p‖^2-‖q‖^2)) := by
+    apply Tendsto.sub
+    · apply Tendsto.add
+      apply Tendsto.sub
+      · exact norm_q_2
+      · exact norm_p_2
+      · exact tendsto_const_nhds
+    · exact tendsto_const_nhds
+  have h1 : Tendsto (fun n => 2*⟪x n,p-q⟫) atTop (𝓝 ((lim_q ^ 2)-(lim_p ^ 2)+‖p‖^2-‖q‖^2)) :=by
+    apply Tendsto.congr (fun n => (prop_2_32 x p q n).symm) h2
+  have :=h1.const_mul (1/2)
+  simpa using this
 
 
--- def WeakClusterPoint (x : ℕ → H) (y : H) : Prop :=
---   ∃ (φ : ℕ → ℕ) (hφ : StrictMono φ),
---     ∀ z : H, Tendsto (fun n => ⟪x (φ n), z⟫) atTop (𝓝 (⟪y, z⟫))
+#check Filter.Tendsto.mul_const
+lemma Lemma_2_47 (C : Set H) (h_C_nonempty : C.Nonempty) (x : ℕ → H)
+(h_converge : ∀ a ∈ C, ∃ lim_A : ℝ, Tendsto (fun n ↦ ‖x n - a‖) atTop (𝓝 lim_A))
+(h_weak_cluster_in : ∀ p : H,  IsWeaklySeqClusterPt' p x → p ∈ C) : ∃ p0 ∈ C, WeakConverge x p0 := by
+  have h_bounded : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M := by
+    rcases h_C_nonempty with ⟨y0 ,hy0⟩
+    rcases h_converge y0 hy0 with ⟨lim_A, h_tendsto⟩
+    rcases Filter.Tendsto.bddAbove_range h_tendsto with ⟨M0, hM0⟩
+    let M := ‖y0‖ + M0
+    use M
+    intro n
+    have h1 : ‖x n - y0‖ ≤ M0 := hM0 (Set.mem_range_self n)
+    have h2 : ‖x n‖ ≤ ‖x n - y0‖ + ‖y0‖ := by
+      apply norm_le_norm_sub_add
+    linarith
+  have h_atmost_one_cluster : ∀ p q : H,  IsWeaklySeqClusterPt' p x → IsWeaklySeqClusterPt' q x → p = q := by
+    intro p q h_cluster_p h_cluster_q
+    have hp_in_C : p ∈ C := h_weak_cluster_in p h_cluster_p
+    have hq_in_C : q ∈ C := h_weak_cluster_in q h_cluster_q
+    rcases h_converge p hp_in_C with ⟨lim_p, norm_tendsto_p⟩
+    have norm_p_2:=norm_tendsto_p.pow 2  --范数平方也收敛
+    rcases h_converge q hq_in_C with ⟨lim_q, norm_tendsto_q⟩
+    have norm_q_2:=norm_tendsto_q.pow 2
+    rcases h_cluster_p with ⟨k, hk, hconv_p⟩ --这里的k和l为子列下标函数
+    rcases h_cluster_q with ⟨l, hl, hconv_q⟩
+    rw [weakConverge_iff_inner_converge (fun n ↦ x (k n)) p] at hconv_p
+    rw [weakConverge_iff_inner_converge (fun n ↦ x (l n)) q] at hconv_q
+    rcases prop_2_32_lim x p q lim_p lim_q norm_p_2 norm_q_2 with ⟨L, tendsto_L⟩ --用上面命题
+    have hL1 :=weakConverge_subseq hk L tendsto_L --两个子列也收敛到L
+    have hL2 :=weakConverge_subseq hl L tendsto_L
+    have h1:=tendsto_nhds_unique (hconv_p (p-q)) hL1 --极限唯一性
+    have h2:=tendsto_nhds_unique (hconv_q (p-q)) hL2
+    have h3 : inner ℝ (p - q) (p - q) = 0 := by
+      rw [inner_sub_left, h1, h2, sub_self]
+    rwa [inner_self_eq_zero,sub_eq_zero] at h3
+  obtain ⟨p0, hp0 ⟩  := Lemma_2_46_backword x h_bounded h_atmost_one_cluster
+  have hp0_in_C : p0 ∈ C := h_weak_cluster_in p0 (WeakConverge_is_ClusterPt x p0 hp0)
+  exact ⟨p0, hp0_in_C, hp0⟩
+
 
 #check isGLB_ciInf
 
@@ -134,7 +220,7 @@ example : p ∈ D :=
 
 --定理5.5的形式化
 theorem theorem_5_05 (C : Set H) (h_C_nonempty : C.Nonempty) (x : ℕ → H)
-(h_fejer : IsFejerMonotone x C) (h_weak_cluster_in : ∀ p : H, IsWeaklySeqClusterPt p x → p ∈ C):
+(h_fejer : IsFejerMonotone x C) (h_weak_cluster_in : ∀ p : H, IsWeaklySeqClusterPt' p x → p ∈ C):
 ∃ p0 ∈ C, WeakConverge x p0 := by
   have h_converge := (Prop_5_04_i_ii C h_C_nonempty x h_fejer).2
   apply Lemma_2_47 C h_C_nonempty x h_converge h_weak_cluster_in
@@ -395,7 +481,7 @@ lemma groetsch_theorem_iii {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : I
     simp [edist_dist] ;rw [dist_eq_norm, dist_eq_norm]
     exact hT_nonexpansive x y
 
-  have h_weak_cluster_in : ∀ p : H, IsWeaklySeqClusterPt p km.x → p ∈ (Fix' T D)  := by
+  have h_weak_cluster_in : ∀ p : H, IsWeaklySeqClusterPt' p km.x → p ∈ (Fix' T D)  := by
     intro p h_cluster
     rcases h_cluster with ⟨ φ, hφ , tend ⟩
     have p_in_D : p ∈ D := by
