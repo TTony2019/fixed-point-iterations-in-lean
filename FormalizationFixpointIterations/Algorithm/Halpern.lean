@@ -20,7 +20,12 @@ import Mathlib.Data.Finset.Lattice.Fold
 import Mathlib.Order.LiminfLimsup
 import Mathlib.Data.PNat.Basic
 
-open Nonexpansive_operator Filter Topology BigOperators Function
+
+
+
+
+
+open Nonexpansive_operator Filter Topology BigOperators Function TopologicalSpace
 
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
@@ -100,8 +105,7 @@ lemma infinite_prod_zero
     use max m N; intro n hn
     have hn_m : n ≥ m := le_of_max_le_left hn; have hn_N : n ≥ N := le_of_max_le_right hn
     rw [h_eq n hn_m]
-    have : ∑ k ∈ Finset.range (n + 1), alg.α k ≥ b + C := by
-      apply hN; omega
+    have : ∑ k ∈ Finset.range (n + 1), alg.α k ≥ b + C := by apply hN; omega
     linarith
   have h_neg_sum : Tendsto (fun n => -∑ k ∈ Finset.Icc m n, alg.α k) atTop atBot := by simpa
   have h_exp_to_zero : Tendsto (fun n => Real.exp
@@ -213,10 +217,8 @@ lemma nonexpansive_leadsto_quasinonexpansive
   {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D) :
     QuasiNonexpansiveOn T D := by
   intro x hx y hy
-  rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp; rw [Fix'] at hy
-  rcases hy with ⟨hyD,hyFix⟩
-  have h_edist := hT_nonexp hx hyD
-  simp only [ENNReal.coe_one, one_mul] at h_edist
+  rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp; rw [Fix'] at hy; rcases hy with ⟨hyD,hyFix⟩
+  have h_edist := hT_nonexp hx hyD; simp only [ENNReal.coe_one, one_mul] at h_edist
   rw [hyFix, edist_dist, edist_dist] at h_edist
   have h_dist : dist (T x) y ≤ dist x y := (ENNReal.ofReal_le_ofReal_iff dist_nonneg).mp h_edist
   rw [dist_eq_norm, dist_eq_norm] at h_dist
@@ -323,8 +325,7 @@ lemma halpern_telescoping_bound
     |α (n + 1) - α n| + (1 - α (n + 1)) * ‖x (n + 1) - x n‖)
   : ∀ n m, m ≤ n → ‖x (n + 2) - x (n + 1)‖ ≤ μ * (∑ k ∈ Finset.Icc m n,
     |α (k + 1) - α k|) + ‖x (m + 1) - x m‖ * (∏ k ∈ Finset.Icc m n, (1 - α (k + 1))) := by
-  intro n m hmn
-  obtain ⟨k, rfl⟩ := exists_add_of_le hmn
+  intro n m hmn; obtain ⟨k, rfl⟩ := exists_add_of_le hmn
   -- Induction on the length k of the segment [m, m+k].
   induction k with
   | zero =>
@@ -366,14 +367,12 @@ lemma halpern_diff_formula
     _ = (alg.α (n + 1) • alg.u - alg.α n • alg.u) + ((1 - alg.α (n + 1)) •
       T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n)) - (1 - alg.α n) • T (alg.x n)) := by abel
     _ = (alg.α (n + 1) - alg.α n) • alg.u + ((1 - alg.α (n + 1)) • T (alg.α n • alg.u +
-      (1 - alg.α n) • T (alg.x n)) - (1 - alg.α n) • T (alg.x n)) := by
-        rw [sub_smul]; simp [sub_smul]
+      (1 - alg.α n) • T (alg.x n)) - (1 - alg.α n) • T (alg.x n)) := by simp [sub_smul]
     _ = (alg.α (n + 1) - alg.α n) • alg.u - (alg.α (n + 1) - alg.α n) • T (alg.x n) +
       (1 - alg.α (n + 1)) • (T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n)) - T (alg.x n)) := by
         simp [sub_smul, add_sub, add_comm, smul_sub]; abel_nf
     _ = (alg.α (n + 1) - alg.α n) • (alg.u - T (alg.x n)) + (1 - alg.α (n + 1)) •
-      (T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n)) - T (alg.x n)) := by
-        rw [smul_sub]; simp [smul_sub]
+      (T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n)) - T (alg.x n)) := by simp [smul_sub]
 
 -- ‖x(n+2)-x(n+1)‖≤μ*|λ(n+1)-λn|+(1-λ(n+1))‖x(n+1)-x(n)‖
 lemma halpern_norm_diff_ineq
@@ -431,7 +430,7 @@ lemma halpern_telescoping_limit
   : ∀ᶠ n in atTop, ∀ᶠ m in atTop, m ≤ n →
     ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|)
       + μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
-  have hμ_nonneg : 0 ≤ μ := le_of_lt hμ_pos
+  have hμ_nonneg := le_of_lt hμ_pos
   apply eventually_atTop.2; use 0; intro n hn; apply eventually_atTop.2; use 0; intro m hm hmn
   exact halpern_telescoping_ineq alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq n m hmn
 
@@ -450,8 +449,7 @@ lemma sum_icc_add_tsum_eq_tsum_add
       · assumption
     have h_finset_eq : ∑ k ∈ Finset.range (n - m + 1), f (k + m) = ∑ k ∈ Finset.Icc m n, f k := by
       trans ∑ i ∈ Finset.Icc m n, f i
-      · -- 转换求和指标：k ∈ range(n-m+1) ↔ k+m ∈ Icc m n
-        rw [Finset.sum_bij (fun k _ => k + m)]
+      · rw [Finset.sum_bij (fun k _ => k + m)]
         · intro k hk; simp only [Finset.mem_range, Finset.mem_Icc] at hk ⊢; omega
         · intro k₁ k₂ _ _ heq; omega
         · intro k hk; use k - m; simp; constructor; repeat simp at hk; omega
@@ -633,19 +631,24 @@ lemma halpern_x_sub_Tx_tendsto_zero
 
 #check norm_eq_iInf_iff_real_inner_le_zero
 #check exists_norm_eq_iInf_of_complete_convex
+#check TopologicalSpace.SeparableSpace
 
 -- Lemma 2.45: 有界序列存在弱收敛子序列
-lemma bounded_seq_weakly_convergent_subsequence [CompleteSpace H]
+lemma bounded_seq_weakly_convergent_subsequence [SeparableSpace H] [CompleteSpace H]
   (x : ℕ → H) (h_bounded : ∃ M, ∀ n, ‖x n‖ ≤ M) :
   ∃ (φ : ℕ → ℕ) (p : H), (∀ m n, m < n → φ m < φ n) ∧ WeakConverge (x ∘ φ) p := by
-  -- 从 ∃ M, ∀ n, ‖x n‖ ≤ M 构造 BddAbove
+  -- 从 ∃ M, ∀ n, ‖x n‖ ≤ M 构造 IsBounded
   obtain ⟨M, hM⟩ := h_bounded
-  have h_bdd_above : BddAbove (Set.range (fun n => ‖x n‖)) := by
-    use M; intro y hy; simp [Set.range] at hy; obtain ⟨n, rfl⟩ := hy; exact hM n
-  -- 应用已证明的定理
+  have h_is_bounded : Bornology.IsBounded (Set.range fun n => ‖x n‖) := by
+    rw [Bornology.IsBounded]; use 2 * M; intro m hm n hn; simp at *
+    rcases hm with ⟨k, rfl⟩; rcases hn with ⟨l, rfl⟩
+    calc
+      _ ≤ ‖x k‖ + ‖x l‖ :=
+        abs_sub_le_of_nonneg_of_le (norm_nonneg _) (by simp) (norm_nonneg _) (by simp)
+      _ ≤ M + M := add_le_add (hM k) (hM l)
+      _ = 2 * M := by ring
   obtain ⟨a, φ, h_strict_mono, h_weak_conv⟩ :=
-    bounded_seq_has_weakly_converge_subseq x h_bdd_above
-  -- 展开 StrictMono φ 为显式形式
+    bounded_seq_has_weakly_converge_subseq_separable x h_is_bounded
   have h_phi_explicit : ∀ m n, m < n → φ m < φ n := fun m n a ↦ h_strict_mono a
   exact ⟨φ, a, h_phi_explicit, h_weak_conv⟩
 
@@ -661,7 +664,7 @@ theorem proj_pt_inner_le_zero
   ∀ w ∈ C, inner ℝ (x - PxC) (w - PxC) ≤ 0 := (norm_eq_iInf_iff_real_inner_le_zero hC2 hPxC).1 hP
 
 -- 引理 30.15：提取子列的弱收敛性和内积序列的收敛性
-lemma halpern_subsequence_weak_convergence [CompleteSpace H]
+lemma halpern_subsequence_weak_convergence [CompleteSpace H] [SeparableSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) {T : H → H} {C : Set H}
   (hT_fixpoint : C.Nonempty) (alg : Halpern T)
   (halg_x_in_D : ∀ n, alg.x n ∈ D) (h_C_closed_convex : IsClosed C ∧ Convex ℝ C)
@@ -766,8 +769,7 @@ lemma halpern_limsup_inner_le_zero [CompleteSpace H]
             intro h_eq; have : ‖alg.u - m‖ = 0 := by simp [h_eq]
             exact hR this)
         obtain ⟨N, hN⟩ := h_subseq_x_Tx_limit (ε / R) (by positivity); use N; intro k hk
-        specialize hN k hk
-        simp [dist_eq_norm] at hN; rw [Real.dist_eq]; simp only [sub_zero]; calc
+        specialize hN k hk; simp [dist_eq_norm] at hN; rw [Real.dist_eq]; simp only [sub_zero]; calc
           _ ≤ ‖T (alg.x (n k)) - alg.x (n k)‖ * ‖alg.u - m‖ := by apply abs_real_inner_le_norm
           _ = ‖alg.x (n k) - T (alg.x (n k))‖ * ‖alg.u - m‖ := by congr 1; rw [norm_sub_rev]
           _ < (ε / R) * R := mul_lt_mul_of_pos_right hN hR_pos
@@ -799,8 +801,7 @@ lemma halpern_limsup_inner_le_zero [CompleteSpace H]
         alg.x (n k), alg.u - m⟫ + ⟪ alg.x (n k) - m, alg.u - m⟫ := by
         intro k; simp [inner_sub_left, inner_sub_left, inner_sub_left]
       convert Tendsto.add h_subseq_inner_limit1 h_subseq_inner_limit3 using 1
-      funext k
-      · exact h_inner_diff k
+      · funext k; exact h_inner_diff k
       · simp
 
   have h_limsup_eq : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop
@@ -819,11 +820,9 @@ lemma halpern_eps_exists_of_limsup_and_alpha
   (h_inner_bounded : ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M)
   : ∀ ε > 0, ∃ k : ℕ, ∀ n ≥ k, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ ε ∧
     alg.α n * ‖alg.u - m‖^2 ≤ ε := by
-  intro ε hε
-  by_cases h_um_zero : ‖alg.u - m‖ = 0
+  intro ε hε; by_cases h_um_zero : ‖alg.u - m‖ = 0
   · have h_u_eq_m : alg.u = m := eq_of_norm_sub_eq_zero h_um_zero
-    rw [h_u_eq_m]; simp; use 0; intro n hn
-    · linarith
+    rw [h_u_eq_m]; simp; use 0; intro n hn; linarith
   · have h_um_pos : 0 < ‖alg.u - m‖ := norm_pos_iff.mpr (fun h => h_um_zero (by
         have : alg.u - m = 0 := h
         simp [this]))
@@ -880,8 +879,7 @@ lemma halpern_xn_sub_PCx_upbd [CompleteSpace H]
           · rw [norm_smul]; calc
               _ = (alg.α n)^2 * ‖alg.u - m‖^2 := by simp; rw [mul_pow, sq_abs]
               _ = alg.α n * (alg.α n * ‖alg.u - m‖^2) := by ring
-              _ ≤ alg.α n * ε := by
-                apply mul_le_mul (by linarith) h_mul_control (mul_nonneg (by linarith)
+              _ ≤ alg.α n * ε :=  mul_le_mul (by linarith) h_mul_control (mul_nonneg (by linarith)
                   (sq_nonneg ‖alg.u - m‖)) (by linarith)
           · -- 第二项：‖(1-α_n) • (Tx_n - m)‖² ≤ (1-α_n) * ‖x_n - m‖²
             rw [norm_smul]; calc
@@ -1017,7 +1015,7 @@ lemma halpern_limsup_bound_from_prod [CompleteSpace H]
     intro k hk; have h_prod_tendsto := infinite_prod_zero alg h_α_range h_α_sum_inf k
     exact Tendsto.limsup_eq h_prod_tendsto
   use N; intro n k hnk hnN hkN
-  have h_xn_sub_m_bdd : ∃ M : ℝ, ∀ n : ℕ, ‖alg.x n - m‖ ^ 2 ≤ M := by
+  have ⟨M, hM⟩ : ∃ M : ℝ, ∀ n : ℕ, ‖alg.x n - m‖ ^ 2 ≤ M := by
     obtain ⟨K, hK⟩ := h_seq_bounded
     have h_K_nonneg : 0 ≤ K := by
       have hK_nonneg : ∀ n, 0 ≤ ‖alg.x n - y‖ := by
@@ -1046,23 +1044,21 @@ lemma halpern_limsup_bound_from_prod [CompleteSpace H]
           · linarith
           · assumption
           · assumption
-        · simp [autoParam, IsCoboundedUnder, IsCobounded]; rcases h_xn_sub_m_bdd with ⟨M, hM⟩
-          use 0; intro a p q; specialize q (p + 1) (by linarith)
+        · simp [autoParam, IsCoboundedUnder, IsCobounded]; use 0; intro a p q
+          specialize q (p + 1) (by linarith)
           have h_norm_sq_nonneg : 0 ≤ ‖alg.x (p + 1 + 1) - m‖ ^ 2 := by apply sq_nonneg
           linarith
-        · simp [autoParam, IsBoundedUnder, IsBounded]; rcases h_xn_sub_m_bdd with ⟨M, hM⟩
+        · simp [autoParam, IsBoundedUnder, IsBounded]
           use (3 * ε + M), 0; intro b; simp; calc
             _ ≤ M * ∏ l ∈ Finset.Icc k b, (1 - alg.α l) := by
               apply mul_le_mul (by convert hM k) (by simp) ?_ ?_
               · apply Finset.prod_nonneg; intro i hi; exact h_nonneg_one_sub_α i
-              · have h_norm_sq_nonneg : 0 ≤ ‖alg.x b - m‖ ^ 2 := by
-                  apply sq_nonneg
+              · have h_norm_sq_nonneg : 0 ≤ ‖alg.x b - m‖ ^ 2 := by apply sq_nonneg
                 linarith [hM b]
             _ ≤ M := by
               nth_rewrite 2 [← mul_one M]; apply mul_le_mul_of_nonneg_left
               · exact Finset.prod_le_one (fun i a ↦ h_nonneg_one_sub_α i) fun i a ↦ h_α_le_one i
-              · have h_norm_sq_nonneg : 0 ≤ ‖alg.x b - m‖ ^ 2 := by
-                  apply sq_nonneg
+              · have h_norm_sq_nonneg : 0 ≤ ‖alg.x b - m‖ ^ 2 := by apply sq_nonneg
                 linarith [hM b]
     _ = limsup (fun n ↦ ‖alg.x k - m‖ ^ 2 * ∏ l ∈ Finset.Icc k n, (1 - alg.α l) + 3 * ε) atTop := by
       apply congr ?_ (by simp); ext n; ring_nf
@@ -1076,7 +1072,6 @@ lemma halpern_limsup_bound_from_prod [CompleteSpace H]
           · intro i hi; exact h_nonneg_one_sub_α i
           · intro i hi; exact h_α_le_one i
       · simp [IsBoundedUnder, IsBounded]
-        obtain ⟨M, hM⟩ := h_xn_sub_m_bdd
         have h_M_nonneg : 0 ≤ M := by
           by_contra h; push_neg at h; have := hM 1
           have h_contradiction : ‖alg.x 1 - m‖ ^ 2 < 0 := by linarith
@@ -1127,8 +1122,7 @@ lemma halpern_convergence_aux [CompleteSpace H]
   : Tendsto alg.x atTop (𝓝 m) := by
   -- limsup上界被ε控制
   have h_limsup_upbd : ∀ ε > 0, limsup (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop ≤ 3 * ε := by
-    intro ε hε
-    have h_seq_bound_z : ∃ M, ∀ n, ‖alg.x n - z‖ ≤ M := by
+    intro ε hε; have h_seq_bound_z : ∃ M, ∀ n, ‖alg.x n - z‖ ≤ M := by
       obtain ⟨M, hM⟩ := h_seq_bounded
       exact ⟨M + ‖z - z‖, fun n => by
         calc ‖alg.x n - z‖ = ‖(alg.x n - z) + (z - z)‖ := by simp
@@ -1187,7 +1181,7 @@ lemma halpern_convergence_aux [CompleteSpace H]
 #check norm_eq_iInf_iff_real_inner_le_zero--投影的形式
 
 -- x 0 = u
-lemma halpern_convergence_point_same [CompleteSpace H]
+lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
   (hT_fixpoint : C.Nonempty) (alg : Halpern T) (halg_x0 : alg.x0 ∈ D)
@@ -1297,7 +1291,7 @@ lemma halpern_convergence_point_same [CompleteSpace H]
   rcases hC_closed_convex with ⟨h1,h2⟩; rw [← hC]; assumption
 
 -- 结合两种情况的主定理
-theorem halpern_convergence [CompleteSpace H]
+theorem halpern_convergence [CompleteSpace H] [SeparableSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
   (hT_fixpoint : C.Nonempty) (hT_invariant : ∀ x ∈ D, T x ∈ D) (alg : Halpern T)

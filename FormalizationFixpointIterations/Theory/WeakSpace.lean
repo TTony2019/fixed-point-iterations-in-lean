@@ -1751,8 +1751,6 @@ lemma xφ_range_subset (x : ℕ → H)
       have h_subset := xφ_succ_range_subset x hx f n'
       exact Set.Subset.trans h_subset ih
 
-
-
 -- 步骤3：证明对角线序列上的点也在范围内
 lemma phi_diag_in_xφ_image (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
@@ -1782,7 +1780,6 @@ lemma xφ_succ_indices_ge (x : ℕ → H)
     exact StrictMono.nat_id_le h_strict k
   use (xφ x hx f (m + 1)).φ k, h_φ_ge
 
-
 lemma xφ_indices_ge (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
   ∀ n ≥ m, ∀ k, ∃ j ≥ k, ((xφ x hx f n).xφ) k = ((xφ x hx f m).xφ) j := by
@@ -1805,10 +1802,6 @@ lemma xφ_indices_ge (x : ℕ → H)
     · calc
         _ = ((xφ x hx f n').xφ) j'_0 := hj'_0_eq
         _ = ((xφ x hx f m).xφ) j''_0 := hj''_0_eq
-
-
-
-
 
 -- ∀ m ≥ n, Tendsto (fun n => ⟪f m, (x ∘ φ) n⟫) atTop (nhds (a m))
 -- 用极限定义
@@ -1895,8 +1888,6 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
       linarith
   exact h_equiv.mpr h_shifted
 
-
-
 -- ∀ y:H, (fun n => ⟪y, (x ∘ φ) n⟫) converges
 -- 用柯西列的定义
 -- 要用dense的定义
@@ -1963,8 +1954,6 @@ lemma dense_f_forall (x : ℕ → H)
         + dist ⟪f k, (x ∘ (phi_diag x hx f)) n⟫ ⟪y, (x ∘ (phi_diag x hx f)) n⟫ := h_tri
     _ < ε / 3 + ε / 3 + ε / 3 := by linarith
     _ = ε := by ring
-
-
 
 #check cauchySeq_tendsto_of_complete
 
@@ -2061,7 +2050,7 @@ Lemma 2.45
 theorem bounded_seq_has_weakly_converge_subseq_separable [SeparableSpace H]
   [CompleteSpace H] (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) :
-  ∃ φ, StrictMono φ ∧ (∃ (a : H), WeakConverge (x ∘ φ) a) := by
+  ∃ (a : H), ∃ φ, StrictMono φ ∧ WeakConverge (x ∘ φ) a := by
   rcases exists_countable_dense H with ⟨s, hs1, hs2⟩
   have hsn : s.Nonempty := Dense.nonempty hs2
   rcases Set.Countable.exists_eq_range hs1 hsn with ⟨f, hf⟩
@@ -2090,7 +2079,7 @@ theorem bounded_seq_has_weakly_converge_subseq_separable [SeparableSpace H]
     rw [hy2]
     simp only [real_inner_comm]
     exact Classical.choose_spec (dense_f_forall_exist_lim x hx f hdense y)
-  exact ⟨φ, sφ, a, xφc⟩
+  exact ⟨a, φ, sφ, xφc⟩
 
 
 lemma IsWeaklySeqCompact_mono {s t : Set H}
