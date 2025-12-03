@@ -1555,15 +1555,6 @@ theorem lim_subsequence_eq_limsup
   rw [dist_eq_norm]; simp [Function.comp_apply]; apply abs_lt.2; constructor; repeat linarith
 
 
-
-
-
-
-
-
-
-
-
 #check MapClusterPt
 #check TopologicalSpace.SeparableSpace
 #check TopologicalSpace.exists_countable_dense
@@ -1626,16 +1617,6 @@ structure subseq_x (x : ℕ → H) where
 
 
 def subseq_x.xφ (x : ℕ → H) (s : subseq_x x) : ℕ → H := x ∘ s.phi_comp
--- noncomputable def xφ (x : ℕ → H)
---   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
---   (f : ℕ → H) : ℕ → subseq_x x
--- | 0       => ⟨x, id, id, by exact fun ⦃a b⦄ a ↦ a, hx⟩
--- | (m + 1) => by
---   -- let ⟨xφm, φm, phi_comp, hφm, hbb⟩ := xφ x hx f m
---   have he := extract_subseq' (xφ x hx f m).1 (xφ x hx f m).5 f (m+1)
---   let h := Classical.choice <| he
---   have bdd := bdd_subseq_bdd (xφ x hx f m).1 (xφ x hx f m).5 h.1 h.2
---   exact ⟨(xφ x hx f m).1 ∘ h.1, (xφ x hx f m).2 ∘ h.1, h.1, h.2, bdd⟩
 
 noncomputable def xφ (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
@@ -1651,12 +1632,6 @@ noncomputable def xφ (x : ℕ → H)
   have bdd := bdd_subseq_bdd ((xφ x hx f m).xφ) (xφ x hx f m).hbb h.1
   exact ⟨(xφ x hx f m).phi_comp ∘ h.1, h.1, h.2, bdd, h.3, f (m+1), h.4⟩
 
--- lemma dense_weakly_converge [CompleteSpace H] (x : ℕ → H) (f : ℕ → H) (a : ℕ → ℝ)
---   (hf : Dense (Set.range f)) (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
---   (hf2 : ∀ m, Tendsto (fun n => ⟪f m, x n⟫) atTop (nhds (a m))) :
---   ∃ p : H, WeakConverge x p := by
---   simp [weakConverge_iff_inner_converge]
---   sorry
 
 -- ∀ m, φ0 ∘ φ1 ∘ φ2 ∘ ⋯ ∘ φ(m+1) = (φ0 ∘ φ1 ∘ φ2 ∘ ⋯ ∘ φm) ∘ φ(m+1)
 lemma phi_comp_eq (x : ℕ → H)
@@ -1666,14 +1641,6 @@ lemma phi_comp_eq (x : ℕ → H)
   match m with
   | 0 => rfl
   | (_ + 1) => rfl
-
--- lemma phi_comp_eq (x : ℕ → H)
---   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
---   (f : ℕ → H) (m : ℕ) :
---   (xφ x hx f (m+1)).2 = ((xφ x hx f m).2) ∘ ((xφ x hx f (m+1)).3) :=
---   match m with
---   | 0 => rfl
---   | (_ + 1) => rfl
 
 -- ∀ m, φm is StrictMono.
 lemma phim_mono (x : ℕ → H)
@@ -1755,8 +1722,6 @@ lemma converge_inner_subseq_fm (x : ℕ → H)
   | k + 1 => exact (xφ x hx f (k + 1)).hlim
 
 
-
-
 lemma xφ_succ_range_subset (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ) :
   Set.range (fun k => ((xφ x hx f (m + 1)).xφ) k) ⊆
@@ -1785,8 +1750,6 @@ lemma xφ_range_subset (x : ℕ → H)
     | succ n' hn' ih =>
       have h_subset := xφ_succ_range_subset x hx f n'
       exact Set.Subset.trans h_subset ih
-
-
 
 
 
@@ -1853,8 +1816,7 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
   (f : ℕ → H) (m : ℕ) :
   Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (xφ x hx f m).lim) := by
-  have h_in_range : ∀ n ≥ m, x (phi_diag x hx f n) ∈ Set.range (fun k => ((xφ x hx f m).xφ) k) :=
-    phi_diag_in_xφ_image x hx f m
+  have h_in_range := phi_diag_in_xφ_image x hx f m
 
   -- 步骤2：因此存在 k_n 使得 x (phi_diag x hx f n) = ((xφ x hx f m).xφ) k_n
   have h_exists_k : ∀ n ≥ m, ∃ k ≥ n, x (phi_diag x hx f n) = ((xφ x hx f m).xφ) k := by
@@ -1870,7 +1832,6 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
 
   -- 步骤3：定义一个子列索引函数 ψ
   let ψ : ℕ → ℕ := fun n => (h_exists_k (m + n) (by linarith)).choose
-
   have h_ψ_ge : ∀ n, ψ n ≥ n := by
     intro n
     have : ψ n ≥ m + n := by
@@ -1932,8 +1893,6 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
       simp at *
       convert hN hN_apply
       linarith
-
-
   exact h_equiv.mpr h_shifted
 
 
@@ -1944,12 +1903,67 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
 lemma dense_f_forall (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
   (f : ℕ → H) (hf : Dense (Set.range f)) :
-  ∀ y:H, CauchySeq (fun n => ⟪y, (x ∘ (phi_diag x hx f)) n⟫) := by
-  intro y
-  simp [Metric.cauchySeq_iff]
-  intro ε hε
-  sorry
-  -- refine _root_.cauchySeq_iff.mpr ?_
+  ∀ y : H, CauchySeq (fun n => ⟪y, (x ∘ (phi_diag x hx f)) n⟫) := by
+  intro y; simp [Metric.cauchySeq_iff]; intro ε hε
+  obtain ⟨M, hM_pos, hM⟩ := bdd_iff_exist_bound (x ∘ phi_diag x hx f)
+    (bdd_subseq_bdd x hx (phi_diag x hx f))
+
+  have h_eps_pos : 0 < ε / (3 * M + 1) := by positivity
+  have ⟨fk, hfk_in_ball, hfk_in_f⟩ := Metric.dense_iff.mp hf y (ε / (3 * M + 1)) h_eps_pos
+  have hfk_eq : ∃ k, fk = f k := by
+    obtain ⟨k, hk⟩ := hfk_in_f; use k; rw [hk]
+  obtain ⟨k, rfl⟩ := hfk_eq
+
+  have h_fk_conv : Tendsto (fun n => ⟪f k, (x ∘ (phi_diag x hx f)) n⟫) atTop
+    (𝓝 (xφ x hx f k).lim) := converge_inner_subseq_fm_phi_diag x hx f k
+  have h_fk_cauchy : CauchySeq (fun n => ⟪f k, (x ∘ (phi_diag x hx f)) n⟫) :=
+    Tendsto.cauchySeq h_fk_conv
+  rw [Metric.cauchySeq_iff] at h_fk_cauchy
+  obtain ⟨N, hN⟩ := h_fk_cauchy (ε / 3) (by linarith); use N; intro m hm n hn
+  have h_tri : dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫ ⟪y, (x ∘ (phi_diag x hx f)) n⟫
+    ≤ dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫ ⟪f k, (x ∘ (phi_diag x hx f)) m⟫
+      + dist ⟪f k, (x ∘ (phi_diag x hx f)) m⟫ ⟪f k, (x ∘ (phi_diag x hx f)) n⟫
+      + dist ⟪f k, (x ∘ (phi_diag x hx f)) n⟫ ⟪y, (x ∘ (phi_diag x hx f)) n⟫ :=
+    by simp only [Function.comp_apply]; exact dist_triangle4 _ _ _ _
+
+  -- 估计第一项：|⟪y - f k, x(φ m)⟫| < ε/3
+  have h_term : ∀ m, dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫
+    ⟪f k, (x ∘ (phi_diag x hx f)) m⟫ < ε / 3 := by
+    intro p; simp only [Function.comp_apply, dist_eq_norm]
+    rw [show ⟪y, x (phi_diag x hx f p)⟫ - ⟪f k, x (phi_diag x hx f p)⟫ =
+      ⟪y - f k, x (phi_diag x hx f p)⟫ by rw [← inner_sub_left]]
+    calc
+      _ ≤ ‖y - f k‖ * ‖x (phi_diag x hx f p)‖ := by
+        apply abs_real_inner_le_norm
+      _ ≤  (ε / (3 * M + 1)) * M := by
+        apply mul_le_mul ?_ (hM p) (norm_nonneg (x (phi_diag x hx f p))) (by linarith)
+        · simp [ball, dist_eq_norm, ← norm_sub_rev] at hfk_in_ball ⊢
+          calc
+            _ = ‖y - f k‖ := by rw [norm_sub_rev]
+            _ ≤ ε / (3 * M + 1) := by linarith [hfk_in_ball]
+      _ < ε / 3 := by
+        rw [div_eq_mul_one_div]; nth_rewrite 2 [div_eq_mul_one_div]; rw [mul_assoc]
+        apply mul_lt_mul_of_pos_left
+        · field_simp
+          calc
+            _ < M / (3 * M) := by apply div_lt_div_of_pos_left; repeat' linarith
+            _ = 1 / 3 := by field_simp [hM_pos]
+        · exact hε
+  have h_term1 := h_term m; have h_term1' := h_term n; rw [dist_comm] at h_term1'
+
+  -- 估计第二项：|⟪f k, x(φ m)⟫ - ⟪f k, x(φ n)⟫| < ε/3
+  have h_term2 : dist ⟪f k, (x ∘ (phi_diag x hx f)) m⟫
+    ⟪f k, (x ∘ (phi_diag x hx f)) n⟫ < ε / 3 := by
+    specialize hN m hm n hn; simp [dist_eq_norm, Function.comp_apply] at hN; exact hN
+
+  -- 综合三项
+  calc dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫ ⟪y, (x ∘ (phi_diag x hx f)) n⟫
+      ≤ dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫ ⟪f k, (x ∘ (phi_diag x hx f)) m⟫
+        + dist ⟪f k, (x ∘ (phi_diag x hx f)) m⟫ ⟪f k, (x ∘ (phi_diag x hx f)) n⟫
+        + dist ⟪f k, (x ∘ (phi_diag x hx f)) n⟫ ⟪y, (x ∘ (phi_diag x hx f)) n⟫ := h_tri
+    _ < ε / 3 + ε / 3 + ε / 3 := by linarith
+    _ = ε := by ring
+
 
 
 #check cauchySeq_tendsto_of_complete
