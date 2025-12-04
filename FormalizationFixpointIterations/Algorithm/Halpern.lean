@@ -41,7 +41,9 @@ structure Halpern (T : H → H) where
 
 #check norm_eq_iInf_iff_real_inner_le_zero--投影的形式
 
--- ln (1 - ξ) ≤ -ξ
+/--
+Lemma: For any `ξ ∈ (0,1)`, it holds that `ln(1 - ξ) ≤ -ξ`.
+-/
 lemma log_ineq
   (ξ : ℝ) (hξ : ξ ∈ Set.Ioo 0 1) :
   Real.log (1 - ξ) ≤ -ξ := by

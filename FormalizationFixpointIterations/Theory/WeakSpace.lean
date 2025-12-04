@@ -20,18 +20,15 @@ open TopologicalSpace
 
 section WeakTopology
 
--- universe u1
 variable {H : Type*}
 variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
+/--
+Definition: Weak convergence in an inner product space.
+-/
 def WeakConverge (x : ℕ → H) (p : H) :=
   Tendsto (x: ℕ → WeakSpace ℝ H) atTop (nhds p : Filter (WeakSpace ℝ H))
-
-#check continuous_id_of_le
-#check tendsto_iff_forall_eval_tendsto
-#check LinearMap.flip_inj
-#check LinearMap.flip_apply
 
 def va (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] (a : H) : H →L[ℝ] ℝ where
   toFun := fun x => ⟪x, a⟫
@@ -42,11 +39,11 @@ def va (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] (a : H) : H 
     intro c x
     simp [inner_smul_left]
 
-theorem continuous_va (a : H) : Continuous (va H a) := by
-  simp [va]
-  apply Continuous.inner
-  · apply continuous_id
-  · apply continuous_const
+-- theorem continuous_va (a : H) : Continuous (va H a) := by
+--   simp [va]
+--   apply Continuous.inner
+--   · apply continuous_id
+--   · apply continuous_const
 
 
 #check inner_self_eq_zero
