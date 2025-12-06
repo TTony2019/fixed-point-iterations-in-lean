@@ -1,22 +1,15 @@
 import Mathlib.Analysis.Normed.Module.WeakDual
-import Mathlib.Topology.Algebra.Module.WeakBilin
 import Mathlib.Analysis.InnerProductSpace.ProdL2
-import Mathlib.Topology.Defs.Filter
 import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
 import Mathlib.Analysis.InnerProductSpace.Dual
-import Mathlib.Analysis.Normed.Module.WeakDual
-import Mathlib.Topology.Compactness.Compact
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
-import Mathlib.Topology.MetricSpace.Sequences
-import Mathlib.Topology.UniformSpace.Ascoli
-import Mathlib.Data.Nat.Init
+
 
 set_option linter.unusedSectionVars false
 
 
-open Filter WeakDual Metric WeakBilin Nonexpansive_operator Topology BigOperators Function
-open TopologicalSpace
+open Filter WeakDual Metric WeakBilin Nonexpansive_operator Topology Function TopologicalSpace
 
 section WeakTopology
 
@@ -1557,11 +1550,9 @@ theorem lim_subsequence_eq_limsup
 #check TopologicalSpace.exists_countable_dense
 #check Set.Countable.exists_eq_range
 #check IsBounded
-#check tendsto_subseq_of_bounded
 #check subseq_tendsto_of_neBot
 
 
-#check ArzelaAscoli.isCompact_closure_of_isClosedEmbedding
 
 -- structure dense_f
 
