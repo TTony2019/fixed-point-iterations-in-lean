@@ -4,21 +4,23 @@ import FormalizationFixpointIterations.Theory.WeakSpace
 import Mathlib.Tactic
 import Mathlib.Util.Delaborators
 
-open Set Filter Topology
+open Set Filter Topology Metric
 open BigOperators Finset Function
 open Nonexpansive_operator  --命名空间
+open TopologicalSpace
 
-set_option linter.unusedSectionVars true
+set_option linter.unusedSectionVars false
 set_option linter.unusedVariables false
 set_option linter.style.longLine false
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
-variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H]
+variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H] [SeparableSpace H] [CompleteSpace H]
 
 -- Fejér 单调性的定义
 def IsFejerMonotone (x : ℕ → H) (C : Set H) : Prop :=
   ∀ y ∈ C, ∀ n, ‖x (n + 1) - y‖ ≤ ‖x n - y‖
 
+#check WeakConverge
 -- Krasnosel'skii-Mann 迭代结构
 structure KM (D : Set H) (T : H → H) where
   x0 : H
@@ -67,20 +69,220 @@ Tendsto u atTop (𝓝 x0) ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, u n ∈ Ioo (x0 - 
 def IsWeaklyClusterPoint (x : H) (F : Filter H) := @ClusterPt (WeakSpace ℝ H) _
  (x : (WeakSpace ℝ H)) (F:Filter (WeakSpace ℝ H))
 
-def IsWeaklySeqClusterPt (p : H) (x : ℕ → H):=
+#check id
+--此定义用于简略记号
+def HasWeaksubseq (p : H) (x : ℕ → H):=
   ∃ (φ : ℕ → ℕ), StrictMono φ ∧
     WeakConverge (fun n => (x (φ n))) p
 
+#check weakConverge_iff_inner_converge
+
+--引理:数列x与p的内积收敛,则子数列与p的内积也收敛
+--Tendsto (fun n =>⟪x n, p⟫) atTop 𝓝 l,则 Tendsto (fun n =>⟪x (φ n), p⟫) atTop 𝓝 l
+lemma weakConverge_subseq {x : ℕ → H} {p : H} {φ : ℕ → ℕ} (hφ : StrictMono φ) (l : ℝ)
+(hconv : Tendsto (fun n => ⟪x n, p⟫) atTop (𝓝 l)) :
+  Tendsto (fun n =>⟪x (φ n), p⟫) atTop (𝓝 l) := by
+  apply Filter.Tendsto.comp hconv
+  exact StrictMono.tendsto_atTop hφ
+
+--引理: 数列x弱收敛至p, 则p为x的弱聚点
+lemma WeakConverge_is_ClusterPt (x : ℕ → H) (p : H) (hconv : WeakConverge x p) :
+  HasWeaksubseq p x := by
+  use id
+  constructor
+  · exact fun(x y hxy) => hxy
+  exact hconv
+
+--将frequently的定义转换为子列的定义，用于反证
+lemma frequently_subseq {x : ℕ → H} {U : Set H}
+ (h_fre : ∃ᶠ (n : ℕ) in atTop, x n ∉ U) :
+  ∃ (l : ℕ → ℕ), StrictMono l ∧ ∀ n, x (l n) ∉ U := by
+  -- 将频繁发生条件转化为更可用的形式
+  have h_freq : ∀ (N : ℕ), ∃ n ≥ N, x n ∉ U :=
+    by rwa [frequently_atTop] at h_fre
+  choose g hg_ge hg_not_mem using h_freq
+  -- 递归构造严格递增序列 l
+  let l : ℕ → ℕ:=
+    fun k =>
+      Nat.recOn k
+        (g 0) -- l 0 : pick n ≥ 0 with x n ∉ U
+        (fun k' lk => g (lk + 1)) -- 给定 lk，挑一个 ≥ lk+1 的下一个索引
+  have hl_mono : StrictMono l := by
+    refine strictMono_nat_of_lt_succ ?_
+    intro n
+    -- 使用 recOn 的定义要 unfold
+    simp [l]   -- 会得到 l (n+1) = g (l n + 1)
+    have h1 : l n < l n + 1 := Nat.lt_succ_self _
+    have h2 : l n + 1 ≤ g (l n + 1) := hg_ge (l n + 1)
+    exact lt_of_lt_of_le h1 h2
+  have hl_not_mem : ∀ n, x (l n) ∉ U := by
+    intro n
+    induction' n with k hk
+    · simpa [l] using hg_not_mem 0
+    · simpa [l, hk] using hg_not_mem (l k + 1)
+  exact ⟨l, hl_mono, hl_not_mem⟩
+
+
+#check IsCompact.tendsto_subseq
+#check IsWeaklySeqCompact_mono
+#check IsWeaklySeqClosed
+
+--方便‖x n‖ ≤ M和Bornology.IsBounded之间的转换引理
+lemma bounded_to_IsBounded (x : ℕ → H) (h_bounded : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M)
+: Bornology.IsBounded <| Set.range (fun n => ‖x n‖) := by
+  rcases h_bounded with ⟨M, hM⟩
+  rw [isBounded_iff_forall_norm_le]
+  use M
+  rintro y ⟨n, rfl⟩
+  simpa using hM n
+
+--有界数列都在一个闭球里
+lemma bounded_to_inBall (x : ℕ → H) (M : ℝ) (h_bounded : ∀ n, ‖x n‖ ≤ M) :
+ Set.range x ⊆ closedBall 0 M := by
+  intro y hy
+  simp [Set.range] at hy
+  obtain ⟨n, rfl⟩ := hy
+  simp [closedBall, dist_zero_right]
+  exact h_bounded n
+
+#check strong_converge_then_weak_converge
+
+--用于证明2.46的一个辅助过程
+lemma bounded_not_mem_subseq (x : ℕ → H) {p0 : H} {V : Set H} (h_bounded : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M)
+(hV_open : @IsOpen (WeakSpace ℝ H) _ V) (h_not_mem : ∀ (n : ℕ), x (n) ∉ V) :
+∃ q0:H ,q0∈ Vᶜ∧ ∃ (φ : ℕ → ℕ), StrictMono φ ∧  WeakConverge (fun n => (x (φ n))) q0 := by
+  have hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖) := bounded_to_IsBounded x h_bounded
+  rcases h_bounded with ⟨M,h_bounded⟩
+  have h_subseq :=bounded_seq_has_weakly_converge_subseq_separable x hx
+  rcases h_subseq with ⟨k, hk, q0, h_k_conv⟩
+  have hq0_notin_V : q0 ∈ Vᶜ := by
+    have h1 : range (x∘k) ⊆ Vᶜ := by
+      intro y hy
+      simp [Set.range] at hy
+      obtain ⟨n, rfl⟩ := hy
+      apply h_not_mem
+    have h2: IsWeaklyClosed Vᶜ := isClosed_compl_iff.mpr hV_open --注意这里是弱闭
+    have h2_2:IsWeaklySeqClosed Vᶜ :=h2.isSeqClosed
+    refine h2_2 ?_ h_k_conv
+    intro n
+    apply h_not_mem
+  exact ⟨q0, hq0_notin_V , k,hk,h_k_conv⟩
+    --以下证明闭球弱列紧发现用不着
+    -- have h3: IsWeaklyCompact (closedBall (0:H) M) :=closed_unit_ball_is_weakly_compact (0:H) M --定理2.34
+    -- have h4: range (x∘k) ⊆ closedBall (0:H) M :=bounded_to_inBall (x∘k) M (fun n=> h_bounded (k n))
+    -- have h5: range (x∘k) ⊆ (closedBall (0:H) M ∩ Vᶜ) := by
+    --   tauto
+    -- have h6: IsWeaklySeqCompact (closedBall (0:H) M) := weakly_compact_iff_weakly_seq_compact (closedBall (0:H) M) h3 --Fact 2.37貌似用不着
+    -- have h7: IsWeaklyClosed (closedBall (0:H) M ) := h3.isClosed
+    -- have h8: IsWeaklyClosed (closedBall (0:H) M ∩ Vᶜ ) :=h7.inter h2
+    -- have h9: IsWeaklySeqClosed (closedBall (0:H) M ∩ Vᶜ ) :=h8.isSeqClosed
+    -- refine h9 ?_ h_k_conv
+
+--引理2.46右推左
+--这里统一用了HasWeaksubseq p x,也可以全部展开为phi strictmono定义
+lemma Lemma_2_46_backword (x : ℕ → H) (h_bounded : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M)
+(h_atmost_one_cluster : ∀ p q : H,  HasWeaksubseq p x → HasWeaksubseq q x  → p = q) : ∃ p0 : H, WeakConverge x p0 := by
+  have hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖) := @bounded_to_IsBounded H _ _ _ _ x h_bounded
+  have h_subseq :=bounded_seq_has_weakly_converge_subseq_separable x hx
+  rcases h_subseq with ⟨k, hk, p0, h_k_conv⟩
+  use p0
+  by_contra h_not_conv
+  simp [WeakConverge] at h_not_conv
+  rw [not_tendsto_iff_exists_frequently_notMem] at h_not_conv
+  rcases h_not_conv with ⟨U, hU_nbds, h_fre⟩
+  obtain ⟨V, hVsub, hVopen, hVmem⟩ := (mem_nhds_iff.mp hU_nbds) --从U邻域再得到V是开集
+  have h_fre_V : ∃ᶠ n in atTop, x n ∉ V :=
+  h_fre.mono (by intro n hnU hV; exact hnU (hVsub hV))
+  rcases frequently_subseq h_fre_V with ⟨l, hl_strict_mono, hl_not_mem⟩
+  have h_bounded_l:∃ M, ∀ (n : ℕ), ‖(x ∘ l) n‖ ≤ M := by
+    rcases h_bounded with ⟨M,h_bounded⟩
+    use M
+    intro n
+    exact h_bounded (l n)
+  --注意这里q0:H的:H必须加上,否则会认为在weakspace里导致类型不一致
+  have h1: ∃ q0:H , q0∈ Vᶜ∧  ∃ (φ : ℕ → ℕ), StrictMono φ ∧  WeakConverge (fun n => ((x∘ l) (φ n))) q0  :=
+  @bounded_not_mem_subseq H _ _ _ _ (x ∘ l) p0 V h_bounded_l hVopen hl_not_mem --这里用了上面的辅助过程，不然太长
+  rcases h1 with ⟨q0,hq0, φ, hφ_strict_mono,h_conv_phi⟩
+  let j:=l ∘ φ
+  have hj_strict_mono :=StrictMono.comp hl_strict_mono hφ_strict_mono
+  have h_sub_p0:HasWeaksubseq p0 x:= ⟨k, hk,h_k_conv⟩
+  have h_sub_q0:HasWeaksubseq q0 x:= ⟨j, hj_strict_mono, h_conv_phi⟩
+  have p0_eq_q0: p0=q0 := h_atmost_one_cluster p0 q0 h_sub_p0 h_sub_q0
+  rw[p0_eq_q0] at hVmem
+  exact hq0 hVmem
+
+
+--(2.32)等式
+lemma prop_2_32 (x : ℕ → H) (p q : H) :
+∀ n : ℕ ,2*⟪x n,p-q⟫ =‖ x n -q‖ ^2-‖ x n -p‖ ^2+‖p‖^2-‖q‖^2 :=by
+  intro n
+  symm
+  calc
+    ‖ x n -q‖ ^2-‖ x n -p‖ ^2+‖p‖^2-‖q‖^2=
+      ⟪ x n -q, x n -q⟫ - ⟪ x n -p, x n -p⟫ + ⟪p, p⟫ - ⟪q, q⟫ := by
+        rw [real_inner_self_eq_norm_sq (x n - q), real_inner_self_eq_norm_sq (x n - p),
+          real_inner_self_eq_norm_sq p, real_inner_self_eq_norm_sq q]
+    _= 2*⟪x n,p-q⟫ := by
+      simp [inner_sub_left, inner_sub_right, real_inner_comm]
+      ring
+--(2.32)转化为极限形式
+lemma prop_2_32_lim (x : ℕ → H) (p q : H) (lim_p lim_q : ℝ) (norm_p_2 : Tendsto (fun n ↦ ‖x n - p‖ ^ 2) atTop (𝓝 (lim_p ^ 2)))
+(norm_q_2 : Tendsto (fun n ↦ ‖x n - q‖ ^ 2) atTop (𝓝 (lim_q ^ 2))) :
+∃ l: ℝ ,Tendsto (fun n => ⟪x n,p-q⟫) atTop (𝓝 (l)) :=by
+  use 1/2*((lim_q ^ 2)-(lim_p ^ 2)+‖p‖^2-‖q‖^2)
+  have h2 : Tendsto (fun n => ‖x n -q‖ ^2-‖ x n -p‖ ^2+‖p‖^2-‖q‖^2) atTop
+    (𝓝 ( (lim_q ^ 2)-(lim_p ^ 2)+‖p‖^2-‖q‖^2)) := by
+    apply Tendsto.sub
+    · apply Tendsto.add
+      apply Tendsto.sub
+      · exact norm_q_2
+      · exact norm_p_2
+      · exact tendsto_const_nhds
+    · exact tendsto_const_nhds
+  have h1 : Tendsto (fun n => 2*⟪x n,p-q⟫) atTop (𝓝 ((lim_q ^ 2)-(lim_p ^ 2)+‖p‖^2-‖q‖^2)) :=by
+    apply Tendsto.congr (fun n => (prop_2_32 x p q n).symm) h2
+  have :=h1.const_mul (1/2)
+  simpa using this
+
+--引理2.47
 lemma Lemma_2_47 (C : Set H) (h_C_nonempty : C.Nonempty) (x : ℕ → H)
 (h_converge : ∀ a ∈ C, ∃ lim_A : ℝ, Tendsto (fun n ↦ ‖x n - a‖) atTop (𝓝 lim_A))
-(h_weak_cluster_in : ∀ p : H,  IsWeaklySeqClusterPt p x → p ∈ C) : ∃ p0 ∈ C, WeakConverge x p0 := by
-  sorry
+(h_weak_cluster_in : ∀ p : H,  HasWeaksubseq p x → p ∈ C) : ∃ p0 ∈ C, WeakConverge x p0 := by
+  have h_bounded : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M := by
+    rcases h_C_nonempty with ⟨y0 ,hy0⟩
+    rcases h_converge y0 hy0 with ⟨lim_A, h_tendsto⟩
+    rcases Filter.Tendsto.bddAbove_range h_tendsto with ⟨M0, hM0⟩
+    let M := ‖y0‖ + M0
+    use M
+    intro n
+    have h1 : ‖x n - y0‖ ≤ M0 := hM0 (Set.mem_range_self n)
+    have h2 : ‖x n‖ ≤ ‖x n - y0‖ + ‖y0‖ := by
+      apply norm_le_norm_sub_add
+    linarith
+  have h_atmost_one_cluster : ∀ p q : H,  HasWeaksubseq p x → HasWeaksubseq q x → p = q := by
+    intro p q h_cluster_p h_cluster_q
+    have hp_in_C : p ∈ C := h_weak_cluster_in p h_cluster_p
+    have hq_in_C : q ∈ C := h_weak_cluster_in q h_cluster_q
+    rcases h_converge p hp_in_C with ⟨lim_p, norm_tendsto_p⟩
+    have norm_p_2:=norm_tendsto_p.pow 2  --范数平方也收敛
+    rcases h_converge q hq_in_C with ⟨lim_q, norm_tendsto_q⟩
+    have norm_q_2:=norm_tendsto_q.pow 2
+    rcases h_cluster_p with ⟨k, hk, hconv_p⟩ --这里的k和l为子列下标函数
+    rcases h_cluster_q with ⟨l, hl, hconv_q⟩
+    rw [weakConverge_iff_inner_converge (fun n ↦ x (k n)) p] at hconv_p
+    rw [weakConverge_iff_inner_converge (fun n ↦ x (l n)) q] at hconv_q
+    rcases prop_2_32_lim x p q lim_p lim_q norm_p_2 norm_q_2 with ⟨L, tendsto_L⟩ --用上面命题
+    have hL1 :=weakConverge_subseq hk L tendsto_L --两个子列也收敛到L
+    have hL2 :=weakConverge_subseq hl L tendsto_L
+    have h1:=tendsto_nhds_unique (hconv_p (p-q)) hL1 --极限唯一性
+    have h2:=tendsto_nhds_unique (hconv_q (p-q)) hL2
+    have h3 : inner ℝ (p - q) (p - q) = 0 := by
+      rw [inner_sub_left, h1, h2, sub_self]
+    rwa [inner_self_eq_zero,sub_eq_zero] at h3
+  obtain ⟨p0, hp0 ⟩  := Lemma_2_46_backword x h_bounded h_atmost_one_cluster
+  have hp0_in_C : p0 ∈ C := h_weak_cluster_in p0 (WeakConverge_is_ClusterPt x p0 hp0)
+  exact ⟨p0, hp0_in_C, hp0⟩
 
-
-
--- def WeakClusterPoint (x : ℕ → H) (y : H) : Prop :=
---   ∃ (φ : ℕ → ℕ) (hφ : StrictMono φ),
---     ∀ z : H, Tendsto (fun n => ⟪x (φ n), z⟫) atTop (𝓝 (⟪y, z⟫))
 
 #check isGLB_ciInf
 
@@ -134,7 +336,7 @@ example : p ∈ D :=
 
 --定理5.5的形式化
 theorem theorem_5_05 (C : Set H) (h_C_nonempty : C.Nonempty) (x : ℕ → H)
-(h_fejer : IsFejerMonotone x C) (h_weak_cluster_in : ∀ p : H, IsWeaklySeqClusterPt p x → p ∈ C):
+(h_fejer : IsFejerMonotone x C) (h_weak_cluster_in : ∀ p : H, HasWeaksubseq p x → p ∈ C):
 ∃ p0 ∈ C, WeakConverge x p0 := by
   have h_converge := (Prop_5_04_i_ii C h_C_nonempty x h_fejer).2
   apply Lemma_2_47 C h_C_nonempty x h_converge h_weak_cluster_in
@@ -395,7 +597,7 @@ lemma groetsch_theorem_iii {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : I
     simp [edist_dist] ;rw [dist_eq_norm, dist_eq_norm]
     exact hT_nonexpansive x y
 
-  have h_weak_cluster_in : ∀ p : H, IsWeaklySeqClusterPt p km.x → p ∈ (Fix' T D)  := by
+  have h_weak_cluster_in : ∀ p : H, HasWeaksubseq p km.x → p ∈ (Fix' T D)  := by
     intro p h_cluster
     rcases h_cluster with ⟨ φ, hφ , tend ⟩
     have p_in_D : p ∈ D := by
