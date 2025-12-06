@@ -613,13 +613,11 @@ lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
 
   have h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - y‖ ≤ M := by
     use ‖alg.x0 - y‖; intro n; apply (h_induction y hy_in_C n).2
-
   have h_xn_bounded : ∃ M, ∀ n, ‖alg.x n‖ ≤ M := by
     obtain ⟨M1, hM1⟩ := h_seq_bounded; let M2 := ‖y‖; use M1 + M2; intro n; calc
       _ = ‖(alg.x n - y) + y‖ := by rw [sub_add_cancel]
       _ ≤ ‖alg.x n - y‖ + ‖y‖ := by apply norm_add_le
       _ ≤ M1 + M2 := by linarith [hM1 n]
-
   have h_Tseq_bounded : ∃ M, ∀ n, ‖T (alg.x n) - y‖ ≤ M := by
     obtain ⟨M, hM⟩ := h_seq_bounded; use M; intro n; calc
       _ ≤ ‖alg.x n - y‖ := (h_induction y hy_in_C n).1
@@ -629,7 +627,6 @@ lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
       _ = ‖(T (alg.x n) - y) + y‖ := by rw [sub_add_cancel]
       _ ≤ ‖T (alg.x n) - y‖ + ‖y‖ := by apply norm_add_le
       _ ≤ M1 + M2 := by linarith [hM1 n]
-
   have h_diff_bounded : ∃ M, ∀ n, ‖alg.x (n + 1) - T (alg.x n)‖ ≤ M := by
     obtain ⟨M1, hM1⟩ := h_seq_bounded; obtain ⟨M2, hM2⟩ := h_Tseq_bounded
     use M1 + M2; intro n; calc
@@ -659,13 +656,6 @@ lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
     h_n_tendsto⟩ := halpern_subsequence_weak_convergence hD_closed hD_convex (by use y)
       alg halg_x_in_D hC_closed_convex h_xn_bounded h_Txn_bounded
 
-  have h_seq_bound_z : ∃ M, ∀ n, ‖alg.x n - z‖ ≤ M := by
-    obtain ⟨M, hM⟩ := h_seq_bounded
-    exact ⟨M + ‖y - z‖, fun n => by
-      calc ‖alg.x n - z‖ = ‖(alg.x n - y) + (y - z)‖ := by simp
-        _ ≤ ‖alg.x n - y‖ + ‖y - z‖ := norm_add_le _ _
-        _ ≤ M + ‖y - z‖ := by linarith [hM n]⟩
-
   have h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (p k) - T (alg.x (p k))) atTop (𝓝 0) :=
     halpern_subseq_x_sub_Tx_tendsto_zero alg p h_n_strict_mono h_x_Tx_limit
   have h_z_fixed : z ∈ Fix T :=
@@ -689,6 +679,146 @@ lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
   rcases hC_closed_convex with ⟨h1,h2⟩; rw [← hC]; assumption
 
 /--
+Lemma 30.20.1: `‖x (n + 1) - y (n + 1)‖ ≤ ‖x 0 - y 0‖ * ∏_0^n (1 - λ k)`
+-/
+lemma halpern_norm_diff_bound
+  {T : H → H} (alg : Halpern T) {D : Set H} (hT_nonexp : NonexpansiveOn T D)
+  (halg_x_in_D : ∀ n, alg.x n ∈ D) (halg_u : alg.u ∈ D)
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
+  (s : ℕ → H) (h_s_init : s 0 = alg.u) (h_s_in_D : ∀ n, s n ∈ D)
+  (h_s_update : ∀ k, s (k + 1) = alg.α k • alg.u + (1 - alg.α k) • T (s k))
+  : ∀ n : ℕ, ‖alg.x (n + 1) - s (n + 1)‖
+    ≤ ‖alg.x 0 - s 0‖ * ∏ k ∈ Finset.Icc 0 n, (1 - alg.α k) := by
+  have h_α_lt_one : ∀ n, alg.α n < 1 := by intro n; exact (h_α_range n).2
+  intro n; induction n with
+  | zero =>
+    simp [h_s_update, alg.update,← smul_sub]; calc
+      _ = (1 - alg.α 0) * ‖T (alg.x 0) - T alg.u‖ := by
+        rw [norm_smul]; simp; congr; apply abs_of_pos; linarith [h_α_lt_one 0]
+      _ ≤ (1 - alg.α 0) * ‖alg.x 0 - alg.u‖ := by
+        apply mul_le_mul_of_nonneg_left
+        · rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp
+          specialize hT_nonexp (halg_x_in_D 0) halg_u; simp at hT_nonexp
+          rw [edist_dist, edist_dist] at hT_nonexp; simp at hT_nonexp
+          rw[dist_eq_norm, dist_eq_norm] at hT_nonexp; exact hT_nonexp
+        · simp; linarith [h_α_lt_one 0]
+      _ = (1 - alg.α 0) * ‖alg.x 0 - s 0‖ := by rw [h_s_init]
+      _ = ‖alg.x 0 - s 0‖ * (1 - alg.α 0) := by ring_nf
+  | succ n ih => calc
+      _ = ‖(alg.α (n + 1) • alg.u + (1 - alg.α (n + 1)) • T (alg.x (n + 1)))
+        - (alg.α (n + 1) • alg.u + (1 - alg.α (n + 1)) • T (s (n + 1)))‖ := by
+        rw [alg.update, h_s_update]
+      _ =  ‖(1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (s (n + 1)))‖ := by
+        simp [← smul_sub (1 - alg.α (n + 1)) (T (alg.x (n + 1))) (T (s (n + 1)))]
+      _ = (1 - alg.α (n + 1)) * ‖T (alg.x (n + 1)) - T (s (n + 1))‖ := by
+        rw [norm_smul]; simp; left; linarith [h_α_lt_one (n + 1)]
+      _ ≤ (1 - alg.α (n + 1)) * (‖alg.x 0 - s 0‖ * ∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) := by
+        apply mul_le_mul_of_nonneg_left
+        · rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp
+          specialize hT_nonexp (halg_x_in_D (n + 1)) (h_s_in_D (n + 1)); simp at hT_nonexp
+          rw [edist_dist, edist_dist] at hT_nonexp; simp at hT_nonexp
+          rw[dist_eq_norm, dist_eq_norm] at hT_nonexp; exact Std.le_trans hT_nonexp ih
+        · simp; linarith [h_α_lt_one (n + 1)]
+      _ = ‖alg.x 0 - s 0‖ * (∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) * (1 - alg.α (n + 1)) := by
+        ring_nf
+      _ = ‖alg.x 0 - s 0‖ * ∏ k ∈ Finset.Icc 0 (n + 1), (1 - alg.α k) := by
+        nth_rewrite 2 [← Nat.succ_eq_add_one]; rw [Finset.prod_Icc_succ_top]
+        · rw [← mul_assoc]
+        · linarith
+
+/--
+Lemma 30.20.2: `lim n → ∞, ∏_0^n (1 - λ k) * ‖x 0 - y 0‖ = 0`
+-/
+lemma halpern_prod_norm_diff_tendsto_zero
+  {T : H → H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
+  (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
+  (s : ℕ → H)
+  : Tendsto (fun n => ((∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) * ‖alg.x 0 - s 0‖)) atTop (𝓝 0) := by
+  have h_prod_tendsto_zero : Tendsto (fun n => (∏ k ∈ Finset.Icc 0 n, (1 - alg.α k))
+    * ‖alg.x 0 - s 0‖) atTop (𝓝 (0 * ‖alg.x 0 - s 0‖)) := by
+    have h_prod := infinite_prod_zero alg h_α_range h_α_sum_inf 0
+    apply Tendsto.mul_const; exact h_prod
+  convert h_prod_tendsto_zero; simp
+
+/--
+Situation under `x 0 ≠ u`
+-/
+lemma halpern_convergence_point_different [CompleteSpace H] [SeparableSpace H]
+  {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
+  {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
+  (hT_fixpoint : C.Nonempty) (hT_invariant : ∀ x ∈ D, T x ∈ D) (alg : Halpern T)
+  (halg_u : alg.u ∈ D) (halg_x_in_D : ∀ n, alg.x n ∈ D)
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (h_α_limit : Tendsto alg.α atTop (𝓝 0))
+  (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
+  (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|))
+  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (𝓝 p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
+  have h_α_pos : ∀ n, 0 < alg.α n := by intro n; exact (h_α_range n).1
+  have h_α_lt_one : ∀ n, alg.α n < 1 := by intro n; exact (h_α_range n).2
+  let s0 := alg.u
+  let s : ℕ → H := fun n => Nat.recOn n alg.u fun k sk => alg.α k • alg.u + (1 - alg.α k) • T sk
+  have h_s_init : s 0 = alg.u := by simp [s]
+  have h_s_update : ∀ k, s (k + 1) = alg.α k • alg.u + (1 - alg.α k) • T (s k) := by
+    intro k; simp only [s]
+
+  have h_s_in_D : ∀ n, s n ∈ D := by
+    intro n; induction n with
+    | zero => rw [h_s_init]; exact halg_u
+    | succ k ih =>
+      rw [h_s_update]
+      exact hD_convex halg_u (hT_invariant (s k) ih) (by linarith [h_α_pos k, h_α_lt_one k])
+        (by linarith [h_α_pos k, h_α_lt_one k]) (by simp)
+
+  have ⟨p, hp_in_C, hp_s_conv, hp_inner⟩ : ∃ (p : H), p ∈ C ∧ Tendsto s atTop (𝓝 p) ∧
+    (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
+    apply halpern_convergence_point_same
+      hD_closed hD_convex hD_nonempty hT_nonexp hC hT_fixpoint
+      { x0 := alg.u
+        u := alg.u
+        x := s
+        α := alg.α
+        update := h_s_update
+        initial_value := h_s_init }
+      halg_u h_s_in_D h_α_range h_α_limit h_α_sum_inf h_α_diff_finite
+      rfl
+
+  have h_norm_bounded := halpern_norm_diff_bound alg hT_nonexp halg_x_in_D halg_u
+    h_α_range s h_s_init h_s_in_D h_s_update
+
+  have h_prod_tendsto_zero' :=
+    halpern_prod_norm_diff_tendsto_zero alg h_α_range h_α_sum_inf s
+
+  have h_diff_tendsto_zero : Tendsto (fun n => ‖alg.x (n + 1) - s (n + 1)‖) atTop (𝓝 0) := by
+    rw [Metric.tendsto_atTop] at h_prod_tendsto_zero' ⊢
+    intro ε ε_pos; obtain ⟨N, hN⟩ := h_prod_tendsto_zero' ε ε_pos; use N; intro n hn
+    specialize hN n hn; rw [Real.dist_eq] at hN ⊢; simp only [sub_zero] at hN ⊢; simp; calc
+      _ ≤ ‖alg.x 0 - s 0‖ * (∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) := h_norm_bounded n
+      _ = |(∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) * ‖alg.x 0 - s 0‖| := by
+        rw [abs_of_nonneg]
+        · ring_nf
+        · apply mul_nonneg ?_ (norm_nonneg _); apply Finset.prod_nonneg; intro k hk; simp
+          linarith [h_α_lt_one k]
+      _ < ε := hN
+
+  have h_x_tendsto_p : Tendsto alg.x atTop (𝓝 p) := by
+    rw [Metric.tendsto_atTop] at hp_s_conv ⊢; intro ε ε_pos
+    have h_diff_tendsto : Tendsto (fun n => alg.x n - s n) atTop (𝓝 0) :=
+      ((tendsto_add_atTop_iff_nat 1).mp (Metric.tendsto_atTop.mpr fun ε hε => by
+          rw [Metric.tendsto_atTop] at h_diff_tendsto_zero
+          obtain ⟨N, hN⟩ := h_diff_tendsto_zero ε hε; use N; intro n hn; specialize hN n hn
+          rw [dist_eq_norm] at hN ⊢; simp at hN ⊢; exact hN))
+    rw [Metric.tendsto_atTop] at h_diff_tendsto
+    obtain ⟨N1, hN1⟩ := hp_s_conv (ε / 2) (by linarith)
+    obtain ⟨N2, hN2⟩ := h_diff_tendsto (ε / 2) (by linarith)
+    use max N1 N2; intro n hn
+    have h1 := hN1 n (le_of_max_le_left hn); have h2 := hN2 n (le_of_max_le_right hn)
+    rw [dist_eq_norm] at h1 h2 ⊢; simp at h2; calc
+      _ = ‖(alg.x n - s n) + (s n - p)‖ := by simp
+      _ ≤ ‖alg.x n - s n‖ + ‖s n - p‖ := norm_add_le _ _
+      _ < ε / 2 + ε / 2 := add_lt_add h2 h1
+      _ = ε := by ring
+  exact ⟨p, hp_in_C, h_x_tendsto_p, hp_inner⟩
+
+/--
 Theorem 30.1 Halpern's Algorithm
 -/
 theorem halpern_convergence [CompleteSpace H] [SeparableSpace H]
@@ -701,117 +831,10 @@ theorem halpern_convergence [CompleteSpace H] [SeparableSpace H]
   (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|))
   : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (𝓝 p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
   by_cases h_coincidence : alg.u = alg.x0
-  · exact halpern_convergence_point_same hD_closed hD_convex hD_nonempty hT_nonexp hC hT_fixpoint
+  · -- Case: u = x0
+    exact halpern_convergence_point_same hD_closed hD_convex hD_nonempty hT_nonexp hC hT_fixpoint
       alg halg_x0 halg_x_in_D h_α_range h_α_limit h_α_sum_inf h_α_diff_finite h_coincidence
-  · --situation under `x 0 ≠ x`
-    have h_α_pos : ∀ n, 0 < alg.α n := by intro n; exact (h_α_range n).1
-    have h_α_lt_one : ∀ n, alg.α n < 1 := by intro n; exact (h_α_range n).2
-    let s0 := alg.u
-    let s : ℕ → H := fun n => Nat.recOn n alg.u fun k sk => alg.α k • alg.u + (1 - alg.α k) • T sk
-    have h_s_init : s 0 = alg.u := by simp [s]
-    have h_s_update : ∀ k, s (k + 1) = alg.α k • alg.u + (1 - alg.α k) • T (s k) := by
-      intro k; simp only [s]
-
-    have h_s_in_D : ∀ n, s n ∈ D := by
-      intro n; induction n with
-      | zero => rw [h_s_init]; exact halg_u
-      | succ k ih =>
-        rw [h_s_update]
-        exact hD_convex halg_u (hT_invariant (s k) ih) (by linarith [h_α_pos k, h_α_lt_one k])
-          (by linarith [h_α_pos k, h_α_lt_one k]) (by simp)
-
-    have ⟨p, hp_in_C, hp_s_conv, hp_inner⟩ : ∃ (p : H), p ∈ C ∧ Tendsto s atTop (𝓝 p) ∧
-      (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
-      apply halpern_convergence_point_same
-        hD_closed hD_convex hD_nonempty hT_nonexp hC hT_fixpoint
-        { x0 := alg.u
-          u := alg.u
-          x := s
-          α := alg.α
-          update := h_s_update
-          initial_value := h_s_init }
-        halg_u h_s_in_D h_α_range h_α_limit h_α_sum_inf h_α_diff_finite
-        rfl
-
-    -- Lemma 30.20.1 `‖x (n + 1) - y (n + 1)‖ ≤ ‖x 0 - y 0‖ * ∏_0^n (1 - λ k)`
-    have h_norm_bounded : ∀ n : ℕ, ‖alg.x (n + 1) - s (n + 1)‖
-      ≤ ‖alg.x 0 - s 0‖ * ∏ k ∈ Finset.Icc 0 n, (1 - alg.α k) := by
-      intro n; induction n with
-      | zero =>
-        simp [s, alg.update,← smul_sub]; calc
-          _ = (1 - alg.α 0) * ‖T (alg.x 0) - T alg.u‖ := by
-            rw [norm_smul]; simp; left; linarith [h_α_lt_one 0]
-          _ ≤ (1 - alg.α 0) * ‖alg.x 0 - alg.u‖ := by
-            apply mul_le_mul_of_nonneg_left
-            · rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp
-              specialize hT_nonexp (halg_x_in_D 0) halg_u; simp at hT_nonexp
-              rw [edist_dist, edist_dist] at hT_nonexp; simp at hT_nonexp
-              rw[dist_eq_norm, dist_eq_norm] at hT_nonexp; exact hT_nonexp
-            · simp; linarith [h_α_lt_one 0]
-          _ = (1 - alg.α 0) * ‖alg.x 0 - s 0‖ := by rw [h_s_init]
-          _ = ‖alg.x 0 - s 0‖ * (1 - alg.α 0) := by ring_nf
-      | succ n ih =>
-        calc
-          _ = ‖(alg.α (n + 1) • alg.u + (1 - alg.α (n + 1)) • T (alg.x (n + 1)))
-            - (alg.α (n + 1) • alg.u + (1 - alg.α (n + 1)) • T (s (n + 1)))‖ := by
-            rw [alg.update, h_s_update]
-          _ = ‖(1 - alg.α (n + 1)) • T (alg.x (n + 1))- (1 - alg.α (n + 1)) • T (s (n + 1))‖ := by
-            simp
-          _ =  ‖(1 - alg.α (n + 1)) • (T (alg.x (n + 1)) - T (s (n + 1)))‖ := by
-            rw [← smul_sub (1 - alg.α (n + 1)) (T (alg.x (n + 1))) (T (s (n + 1)))]
-          _ = (1 - alg.α (n + 1)) * ‖T (alg.x (n + 1)) - T (s (n + 1))‖ := by
-            rw [norm_smul]; simp; left; linarith [h_α_lt_one (n + 1)]
-          _ ≤ (1 - alg.α (n + 1)) * (‖alg.x 0 - s 0‖ * ∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) := by
-            apply mul_le_mul_of_nonneg_left
-            · rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp
-              specialize hT_nonexp (halg_x_in_D (n + 1)) (h_s_in_D (n + 1)); simp at hT_nonexp
-              rw [edist_dist, edist_dist] at hT_nonexp; simp at hT_nonexp
-              rw[dist_eq_norm, dist_eq_norm] at hT_nonexp; exact Std.le_trans hT_nonexp ih
-            · simp; linarith [h_α_lt_one (n + 1)]
-          _ = ‖alg.x 0 - s 0‖ * (∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) * (1 - alg.α (n + 1)) := by
-            ring_nf
-          _ = ‖alg.x 0 - s 0‖ * ∏ k ∈ Finset.Icc 0 (n + 1), (1 - alg.α k) := by
-            nth_rewrite 2 [← Nat.succ_eq_add_one]; rw [Finset.prod_Icc_succ_top]
-            · rw [← mul_assoc]
-            · linarith
-
-    -- Lemma 30.20.2 `lim n → ∞, ‖x 0 - y 0‖ * ∏_0^n (1 - λ k) = 0`
-    have h_prod_tendsto_zero : Tendsto (fun n => (∏ k ∈ Finset.Icc 0 n, (1 - alg.α k))
-      * ‖alg.x 0 - s 0‖) atTop (𝓝 (0 * ‖alg.x 0 - s 0‖)) := by
-        have h_prod := infinite_prod_zero alg h_α_range h_α_sum_inf 0
-        apply Tendsto.mul_const; exact h_prod
-
-    have h_prod_tendsto_zero' : Tendsto (fun n => ((∏ k ∈ Finset.Icc 0 n, (1 - alg.α k))
-      * ‖alg.x 0 - s 0‖)) atTop (𝓝 0) := by convert h_prod_tendsto_zero; simp
-
-    have h_diff_tendsto_zero : Tendsto (fun n => ‖alg.x (n + 1) - s (n + 1)‖) atTop (𝓝 0) := by
-      rw [Metric.tendsto_atTop] at h_prod_tendsto_zero' ⊢
-      intro ε ε_pos; obtain ⟨N, hN⟩ := h_prod_tendsto_zero' ε ε_pos; use N; intro n hn
-      specialize hN n hn; rw [Real.dist_eq] at hN ⊢; simp only [sub_zero] at hN ⊢; simp; calc
-        _ ≤ ‖alg.x 0 - s 0‖ * (∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) := h_norm_bounded n
-        _ = |(∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) * ‖alg.x 0 - s 0‖| := by
-          rw [abs_of_nonneg]
-          · ring_nf
-          · apply mul_nonneg ?_ (norm_nonneg _); apply Finset.prod_nonneg; intro k hk; simp
-            linarith [h_α_lt_one k]
-        _ < ε := hN
-
-    have h_x_tendsto_p : Tendsto alg.x atTop (𝓝 p) := by
-      rw [Metric.tendsto_atTop] at hp_s_conv ⊢
-      intro ε ε_pos
-      have h_diff_tendsto : Tendsto (fun n => alg.x n - s n) atTop (𝓝 0) :=
-        ((tendsto_add_atTop_iff_nat 1).mp (Metric.tendsto_atTop.mpr fun ε hε => by
-            rw [Metric.tendsto_atTop] at h_diff_tendsto_zero
-            obtain ⟨N, hN⟩ := h_diff_tendsto_zero ε hε; use N; intro n hn; specialize hN n hn
-            rw [dist_eq_norm] at hN ⊢; simp at hN ⊢; exact hN))
-      rw [Metric.tendsto_atTop] at h_diff_tendsto
-      obtain ⟨N1, hN1⟩ := hp_s_conv (ε / 2) (by linarith)
-      obtain ⟨N2, hN2⟩ := h_diff_tendsto (ε / 2) (by linarith)
-      use max N1 N2; intro n hn
-      have h1 := hN1 n (le_of_max_le_left hn); have h2 := hN2 n (le_of_max_le_right hn)
-      rw [dist_eq_norm] at h1 h2 ⊢; simp at h2; calc
-        _ = ‖(alg.x n - s n) + (s n - p)‖ := by simp
-        _ ≤ ‖alg.x n - s n‖ + ‖s n - p‖ := norm_add_le _ _
-        _ < ε / 2 + ε / 2 := add_lt_add h2 h1
-        _ = ε := by ring
-    use p
+  · -- Case: u ≠ x0
+    exact halpern_convergence_point_different hD_closed hD_convex hD_nonempty hT_nonexp hC
+      hT_fixpoint hT_invariant alg halg_u halg_x_in_D h_α_range h_α_limit h_α_sum_inf
+      h_α_diff_finite

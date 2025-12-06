@@ -9,8 +9,6 @@ local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 
-
-
 structure Halpern (T : H → H) where
   x0 : H
   u : H  -- x in 30.1
@@ -18,7 +16,6 @@ structure Halpern (T : H → H) where
   α : ℕ → ℝ
   update : ∀ k : ℕ, x (k + 1) = (α k) • u + (1 - α k) • (T (x k))
   initial_value : x 0 = x0
-
 
 /--
 Lemma 30.2: `∀ ξ ∈ (0,1)`, `ln (1 - ξ) ≤ -ξ`
@@ -146,11 +143,6 @@ lemma halpern_distance_monotone
               · linarith [one_sub_pos_of_mem_Ioo (h_α_range k)]
               · exact ih.2
         _ = ‖alg.x0 - z‖ := by ring
-
-
-
-
-
 
 /--
 Lemma : `∑_m^n f k + ∑_(n + 1)^∞ f k = ∑_m^∞ f k`
