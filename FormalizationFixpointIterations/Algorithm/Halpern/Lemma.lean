@@ -465,7 +465,7 @@ lemma halpern_limsup_inner_le_zero [CompleteSpace H]
           _ = ε := by field_simp [ne_of_gt hR_pos]
 
   have h_subseq_inner_limit2 : Tendsto (fun k => ⟪alg.x (n k), alg.u - m⟫) atTop (𝓝 ⟪z , alg.u - m⟫)
-    := by rw [tendsto_iff_weakConverge] at h_weak_xn_to_z; apply h_weak_xn_to_z (alg.u - m)
+    := by rw [weakConverge_iff_inner_converge] at h_weak_xn_to_z; apply h_weak_xn_to_z (alg.u - m)
 
   have h_subseq_inner_limit3 : Tendsto (fun k => ⟪alg.x (n k) - m, alg.u - m⟫) atTop
     (𝓝 ⟪z - m, alg.u - m⟫) := by

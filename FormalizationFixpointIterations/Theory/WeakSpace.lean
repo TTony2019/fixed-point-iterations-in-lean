@@ -23,7 +23,8 @@ Definition: Weak convergence in an inner product space.
 def WeakConverge (x : ℕ → H) (p : H) :=
   Tendsto (x: ℕ → WeakSpace ℝ H) atTop (nhds p : Filter (WeakSpace ℝ H))
 
-def va (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] (a : H) : H →L[ℝ] ℝ where
+def cont_inner_left (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H]
+  (a : H) : H →L[ℝ] ℝ where
   toFun := fun x => ⟪x, a⟫
   map_add' := by
     intro x y
@@ -32,35 +33,26 @@ def va (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] (a : H) : H 
     intro c x
     simp [inner_smul_left]
 
--- theorem continuous_va (a : H) : Continuous (va H a) := by
---   simp [va]
---   apply Continuous.inner
---   · apply continuous_id
---   · apply continuous_const
-
-
-#check inner_self_eq_zero
-
 lemma topDualPairing_is_injective : Function.Injective ⇑(topDualPairing ℝ H).flip := by
   simp [Function.Injective]
   intro a b hab
-  have h1: (topDualPairing ℝ H).flip a (va H a)= (topDualPairing ℝ H).flip b (va H a) := by
-    rw [hab]
-  simp [LinearMap.flip_apply, topDualPairing_apply, va] at h1
-  have h2: (topDualPairing ℝ H).flip a (va H b)= (topDualPairing ℝ H).flip b (va H b) := by
-    rw [hab]
-  simp [LinearMap.flip_apply, topDualPairing_apply, va] at h2
+  have h1 : ⟪a, a⟫ = ⟪b, a⟫ := by
+    change cont_inner_left H a a = cont_inner_left H a b
+    rw [← topDualPairing_apply, ← topDualPairing_apply, ← LinearMap.flip_apply]
+    nth_rw 2 [← LinearMap.flip_apply]; rw [← hab]
+  have h2 : ⟪a, b⟫ = ⟪b, b⟫ := by
+    change cont_inner_left H b a = cont_inner_left H b b
+    rw [← topDualPairing_apply, ← topDualPairing_apply, ← LinearMap.flip_apply]
+    nth_rw 2 [← LinearMap.flip_apply]; rw [← hab]
   have : a - b = 0 := by
-    have h1': ⟪a - b, a⟫ = 0 := by
-      calc
-        _ = ⟪a ,a⟫ - ⟪b, a⟫ := by apply inner_sub_left a b a
-        _ = ⟪a, a⟫ - ⟪a, a⟫ := by rw [h1]
-        _ = 0 := by simp
-    have h2': ⟪a - b, b⟫ = 0 := by
-      calc
-        _ = ⟪a, b⟫ - ⟪b, b⟫ := by apply inner_sub_left a b b
-        _ = ⟪a, b⟫ - ⟪a, b⟫ := by rw [h2]
-        _ = 0 := by simp
+    have h1': ⟪a - b, a⟫ = 0 := calc
+      _ = ⟪a ,a⟫ - ⟪b, a⟫ := by apply inner_sub_left a b a
+      _ = ⟪a, a⟫ - ⟪a, a⟫ := by rw [h1]
+      _ = 0 := by simp
+    have h2': ⟪a - b, b⟫ = 0 := calc
+      _ = ⟪a, b⟫ - ⟪b, b⟫ := by apply inner_sub_left a b b
+      _ = ⟪a, b⟫ - ⟪a, b⟫ := by rw [h2]
+      _ = 0 := by simp
     apply (@inner_self_eq_zero ℝ H _ _ _ (a - b)).1
     calc
       _ = ⟪a - b, a⟫ - ⟪a - b, b⟫ := inner_sub_right (a - b) a b
@@ -80,9 +72,9 @@ theorem topDualPairing_strong_dual [CompleteSpace H] (p : H) : ∀ y : H →L[�
   simp [LinearMap.flip_apply, topDualPairing_apply]
 
 theorem topDualPairing_eq_inner [CompleteSpace H] (x y : H) :
-  (topDualPairing ℝ H).flip x ((va H y)) = ⟪x, y⟫  := by
+  (topDualPairing ℝ H).flip x ((cont_inner_left H y)) = ⟪x, y⟫  := by
   rw [topDualPairing_eq]
-  simp [va]
+  simp [cont_inner_left]
 
 theorem topDualPairing_strong_dual_seq [CompleteSpace H] (x : ℕ → H) : ∀ y : H →L[ℝ] ℝ,
   (fun n ↦ ((topDualPairing ℝ H).flip (x n)) y) =
@@ -90,11 +82,11 @@ theorem topDualPairing_strong_dual_seq [CompleteSpace H] (x : ℕ → H) : ∀ y
   intro y; ext n
   exact topDualPairing_strong_dual (x n) y
 
-theorem topDualPairing_strong_dual_seq' [CompleteSpace H] (x : ℕ → H) : ∀ y : H →L[ℝ] ℝ,
-  (fun n ↦ ((topDualPairing ℝ H).flip (x n)) y) =
-  fun n => ⟪(InnerProductSpace.toDual ℝ H).symm y, x n⟫ := by
-  intro y; ext n
-  exact topDualPairing_strong_dual (x n) y
+-- theorem topDualPairing_strong_dual_seq' [CompleteSpace H] (x : ℕ → H) : ∀ y : H →L[ℝ] ℝ,
+--   (fun n ↦ ((topDualPairing ℝ H).flip (x n)) y) =
+--   fun n => ⟪(InnerProductSpace.toDual ℝ H).symm y, x n⟫ := by
+--   intro y; ext n
+--   exact topDualPairing_strong_dual (x n) y
 
 theorem weakConverge_iff_inner_converge_pre (x : ℕ → H) (p : H) : WeakConverge x p ↔
   ∀ y : H →L[ℝ] ℝ, Tendsto (fun n ↦ (topDualPairing ℝ H).flip (x n) y)
@@ -108,12 +100,12 @@ theorem weakConverge_iff_inner_converge [CompleteSpace H] (x : ℕ → H) (p : H
   constructor
   · intro h y
     rw [weakConverge_iff_inner_converge_pre] at h
-    specialize h (va H y)
-    have : (fun n ↦ ((topDualPairing ℝ H).flip (x n)) (va H y)) = fun n => ⟪x n, y⟫ := by
+    specialize h (cont_inner_left H y)
+    have : (fun n ↦ ((topDualPairing ℝ H).flip (x n)) (cont_inner_left H y)) = fun n => ⟪x n, y⟫ := by
       ext n
-      simp [topDualPairing_apply, va]
+      simp [topDualPairing_apply, cont_inner_left]
     rw [this] at h
-    simp [topDualPairing_apply, va] at h
+    simp [topDualPairing_apply, cont_inner_left] at h
     exact h
   intro h
   rw [weakConverge_iff_inner_converge_pre]
@@ -160,10 +152,10 @@ theorem weakConverge_iff_inner_converge' [CompleteSpace H] (x : ℕ → H) (p : 
   specialize h y
   exact (tendsto_iff_sub_tendsto_zero_inner x p y).mpr h
 
-theorem tendsto_iff_weakConverge [CompleteSpace H]
-  (x : ℕ → H) (p : H) : WeakConverge x p ↔
-  ∀ y : H, Tendsto (fun i ↦ inner ℝ (x i) y) atTop (nhds (inner ℝ p y)) :=
-    weakConverge_iff_inner_converge x p
+-- theorem tendsto_iff_weakConverge [CompleteSpace H]
+--   (x : ℕ → H) (p : H) : WeakConverge x p ↔
+--   ∀ y : H, Tendsto (fun i ↦ inner ℝ (x i) y) atTop (nhds (inner ℝ p y)) :=
+--     weakConverge_iff_inner_converge x p
 
 omit [InnerProductSpace ℝ H] in
 theorem seq_converge_iff_norm_converge (x : ℕ → H) (p : H) :
@@ -293,7 +285,6 @@ lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (
     specialize h2 ε hε
     rwa [← EReal.coe_sub, EReal.coe_le_coe_iff] at h2
   exact le_of_forall_sub_le h2'
-
 
 lemma EReal.liminf_mul_const (x : ℕ → H) (p : H) :
   liminf (fun n ↦ Real.toEReal (‖x n‖ * ‖p‖)) atTop
@@ -1173,10 +1164,10 @@ instance inst_WeakSpace_T2 : T2Space (WeakSpace ℝ H) where
     simp [Pairwise]
     intro x y hxy
     let u := x - y
-    let f1 := WeakSpace.map (va H u)
+    let f1 := WeakSpace.map (cont_inner_left H u)
     let f2 := (toWeakSpace ℝ ℝ).symm
     let f := f2 ∘ f1
-    have feq (t : H): f t = (va H u) t := rfl
+    have feq (t : H): f t = (cont_inner_left H u) t := rfl
     let c := (f x + f y)/2
     let U := {z : H | f z > c}
     let V := {z : H | f z < c}
@@ -1199,11 +1190,11 @@ instance inst_WeakSpace_T2 : T2Space (WeakSpace ℝ H) where
       constructor
       simp [U]
       change f x > c
-      simp [feq, va]
+      simp [feq, cont_inner_left]
       · refine (Real.add_lt_add_iff_left ?_).mp ?_
         · exact c
         · refine (Real.add_lt_add_iff_left c).mpr ?_
-          simp [c, f, f1, va, f2, toWeakSpace]
+          simp [c, f, f1, cont_inner_left, f2, toWeakSpace]
           rw [LinearEquiv.refl]
           simp [LinearMap.id, u]
           simp [inner_sub_right]
@@ -1231,11 +1222,11 @@ instance inst_WeakSpace_T2 : T2Space (WeakSpace ℝ H) where
           convert h_calc using 3
       simp [V]
       change f y < c
-      simp [feq, va]
+      simp [feq, cont_inner_left]
       · refine (Real.add_lt_add_iff_left ?_).mp ?_
         · exact c
         · refine (Real.add_lt_add_iff_left c).mpr ?_
-          simp [c, f, f1, va, f2, toWeakSpace]
+          simp [c, f, f1, cont_inner_left, f2, toWeakSpace]
           rw [LinearEquiv.refl]
           simp [LinearMap.id, u]
           simp [inner_sub_right]
@@ -1318,8 +1309,8 @@ noncomputable def weakHomeomorph [CompleteSpace H] : WeakSpace ℝ H ≃ₜ Weak
         exact real_inner_comm x v
     simp [this]
     simp only [← topDualPairing_eq_inner]
-    have : (fun v ↦ ((topDualPairing ℝ H).flip x) (va H v)) =
-      (fun v ↦ ((topDualPairing ℝ H).flip v) (va H x)) := by
+    have : (fun v ↦ ((topDualPairing ℝ H).flip x) (cont_inner_left H v)) =
+      (fun v ↦ ((topDualPairing ℝ H).flip v) (cont_inner_left H x)) := by
       ext v
       rw [topDualPairing_eq_inner, topDualPairing_eq_inner]
       exact congrFun (id (Eq.symm this)) v
