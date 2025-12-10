@@ -4,9 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yantao Li, Yifan Bai
 -/
 import FormalizationFixpointIterations.Nonexpansive.Definitions
-import FormalizationFixpointIterations.Theory.WeakSpace
-import Mathlib.Topology.Algebra.Order.LiminfLimsup
 import FormalizationFixpointIterations.Nonexpansive.Properties
+import FormalizationFixpointIterations.Theory.InnerProductSpace.WeakConverge
+import FormalizationFixpointIterations.Theory.InnerProductSpace.Closedness
+import FormalizationFixpointIterations.Theory.InnerProductSpace.Compact
 
 open Nonexpansive_operator Filter Topology TopologicalSpace
 

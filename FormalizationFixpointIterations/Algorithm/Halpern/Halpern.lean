@@ -3,10 +3,7 @@ Copyright (c) 2025 Yantao Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yantao Li
 -/
-import FormalizationFixpointIterations.Nonexpansive.Definitions
-import FormalizationFixpointIterations.Theory.WeakSpace
 import Mathlib.Topology.Algebra.Order.LiminfLimsup
-import FormalizationFixpointIterations.Nonexpansive.Properties
 import FormalizationFixpointIterations.Algorithm.Halpern.Lemma
 
 open Nonexpansive_operator Filter Topology TopologicalSpace
