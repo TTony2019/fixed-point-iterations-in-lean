@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Jian Yu. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Jian Yu
+-/
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import FormalizationFixpointIterations.Theory.WeakSpace
@@ -239,7 +244,7 @@ lemma WeakConv_of_sub_norm_of_clusterpt_in [SeparableSpace H] [CompleteSpace H] 
 alias Lemma_2_47 := WeakConv_of_sub_norm_of_clusterpt_in
 
 /--
-If the sequence `x` is Fejér monotone with respect to a nonempty set `C`, then\
+If the sequence `x` is Fejér monotone with respect to a nonempty set `C`, then
 (i) `x` is bounded.
 (ii) For every point `a` in `C`, the sequence `‖x n - a‖` converges.
 -/
@@ -279,7 +284,7 @@ lemma bounded_converge_of_Fejermonotone (C : Set H) (h_C_nonempty : C.Nonempty) 
 alias Prop_5_04_i_ii := bounded_converge_of_Fejermonotone
 
 /--
-Theorem 5.5\
+Theorem 5.5
 If the sequence `x` is Fejér monotone with respect to a nonempty set `C`, and if every weak sequential cluster point of `x` belongs to `C`, then
 `x` weakly converges to some point `p0` in `C`.
 -/

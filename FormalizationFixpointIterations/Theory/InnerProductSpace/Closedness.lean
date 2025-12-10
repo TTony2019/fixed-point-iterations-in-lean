@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Yifan Bai, Yantao Li. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yifan Bai, Yantao Li
+-/
 import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Analysis.NormedSpace.HahnBanach.Separation

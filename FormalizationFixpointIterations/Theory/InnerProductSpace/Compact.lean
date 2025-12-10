@@ -1,10 +1,13 @@
+/-
+Copyright (c) 2025 Yifan Bai, Yantao Li. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yifan Bai, Yantao Li
+-/
 import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Analysis.InnerProductSpace.Dual
--- import Mathlib.Topology.MetricSpace.Pseudo.Defs
 import FormalizationFixpointIterations.Theory.InnerProductSpace.Closedness
 import FormalizationFixpointIterations.Theory.InnerProductSpace.T2Space
-
 
 open Metric WeakDual Filter Topology TopologicalSpace
 section WeaklyCompact
@@ -18,7 +21,7 @@ def IsWeaklyCompact (s : Set H) : Prop := @IsCompact (WeakSpace ℝ H) _ (s: Set
 Lemma 1.12
 -/
 example (s : Set H) (h : IsWeaklyCompact s) : IsWeaklyClosed s := IsCompact.isClosed h
-#check IsCompact.of_isClosed_subset
+
 
 lemma WeakSpace.continuous_of_continuous_eval
     {X : Type*} [TopologicalSpace X]
@@ -30,9 +33,6 @@ lemma WeakSpace.continuous_of_continuous_eval
 noncomputable def weakToWeakDual [CompleteSpace H] : WeakSpace ℝ H ≃ₗ[ℝ] WeakDual ℝ H :=
   (InnerProductSpace.toDual ℝ H).toLinearEquiv
 
-#check WeakSpace
-#check WeakBilin.eval_continuous
-#check InnerProductSpace.toDual_symm_apply
 noncomputable def weakHomeomorph [CompleteSpace H] : WeakSpace ℝ H ≃ₜ WeakDual ℝ H where
   toFun := weakToWeakDual
   invFun := weakToWeakDual.symm
@@ -71,8 +71,6 @@ noncomputable def weakHomeomorph [CompleteSpace H] : WeakSpace ℝ H ≃ₜ Weak
     rw [this]
     exact WeakDual.eval_continuous x
 
-#check weakHomeomorph.isCompact_image
-
 lemma weakHom_image_eq [CompleteSpace H] {x : H} {r : ℝ} :
   weakHomeomorph '' ((closedBall x r) : Set H) =
   toStrongDual ⁻¹' closedBall ((InnerProductSpace.toDual ℝ H) x) r := by
@@ -104,22 +102,8 @@ theorem closed_unit_ball_is_weakly_compact [CompleteSpace H] (x : H) (r : ℝ) :
   rwa [← weakHomeomorph.isCompact_image, weakHom_image_eq]
 
 
-#check WeakDual.isCompact_closedBall
-
-#check IsSeqCompact
-
 def IsWeaklySeqCompact (s : Set H) := @IsSeqCompact (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
-
-#check TopologicalSpace.MetrizableSpace
-#check SequentialSpace
-#check FirstCountableTopology
-#check FrechetUrysohnSpace
--- #check SeqClusterPt
-#check MapClusterPt
--- #check IsSeqClusterPt
 def IsWeaklySeqClusterPt (p : H) (x : ℕ → H):= @MapClusterPt (WeakSpace ℝ H) _ ℕ p atTop x
-
--- instance : MetrizableSpace (WeakSpace ℝ H) := sorry
 
 -- ∀ k, φ k ≥ k
 lemma StrictMono.nat_id_le
@@ -254,18 +238,6 @@ theorem lim_subsequence_eq_limsup
   have h_lower := h_φ_lower k; have h_one_div_small := hk₀ k hk_k₀
   rw [dist_eq_norm]; simp [Function.comp_apply]; apply abs_lt.2; constructor; repeat linarith
 
-
-#check MapClusterPt
-#check TopologicalSpace.SeparableSpace
-#check TopologicalSpace.exists_countable_dense
-#check Set.Countable.exists_eq_range
-#check IsBounded
-#check subseq_tendsto_of_neBot
-
-
-
--- structure dense_f
-
 structure convergent_Subseq (x : ℕ → H) (f : ℕ → H) (m : ℕ) where
   φ : ℕ → ℕ
   monotone' : StrictMono φ
@@ -295,6 +267,7 @@ lemma extract_subseq' (x : ℕ → H) (hx : Bornology.IsBounded <| Set.range fun
   exact ⟨φ, hφ_mono, L, h_tendsto⟩
 
 -- 有界序列的子列也是有界序列
+omit [InnerProductSpace ℝ H] in
 lemma bdd_subseq_bdd (x : ℕ → H) (hx : Bornology.IsBounded <| Set.range fun n => ‖x n‖)
   (φ : ℕ → ℕ) :
   Bornology.IsBounded <| Set.range fun n => ‖(x ∘ φ) n‖ := by
@@ -312,7 +285,6 @@ structure subseq_x (x : ℕ → H) where
   lim : ℝ
   fm : H
   hlim : Tendsto (fun n => ⟪fm, (x ∘ phi_comp) n⟫) atTop (𝓝 lim)
-
 
 def subseq_x.xφ (x : ℕ → H) (s : subseq_x x) : ℕ → H := x ∘ s.phi_comp
 
@@ -351,8 +323,6 @@ noncomputable def phi_diag (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H)
   : ℕ → ℕ := fun (n:ℕ) => (xφ x hx f n).phi_comp n
 
-#check StrictMono.comp
-
 -- ∀ m, φ0 ∘ φ1 ∘ φ2 ∘ ⋯ ∘ φm is StrictMono.
 lemma StrictMono_phi_comp (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ)
@@ -389,6 +359,7 @@ lemma StrictMono_phi_diag (x : ℕ → H)
   exact StrictMono_phi_comp x hx f n h
 
 -- 序列存在有界上界
+omit [InnerProductSpace ℝ H] in
 lemma bdd_iff_exist_bound (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) :
   ∃ M > 0, ∀ n, ‖x n‖ ≤ M := by
@@ -653,7 +624,6 @@ lemma dense_f_forall (x : ℕ → H)
     _ < ε / 3 + ε / 3 + ε / 3 := by linarith
     _ = ε := by ring
 
-#check cauchySeq_tendsto_of_complete
 
 lemma dense_f_forall_exist_lim (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))

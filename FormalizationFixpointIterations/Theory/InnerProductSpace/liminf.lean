@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Yifan Bai, Yantao Li. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yifan Bai, Yantao Li
+-/
 import Mathlib.Topology.Defs.Filter
 import Mathlib.Topology.Instances.EReal.Lemmas
 import Mathlib.Analysis.Normed.Group.Basic

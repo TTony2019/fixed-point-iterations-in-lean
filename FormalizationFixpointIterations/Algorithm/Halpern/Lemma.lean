@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Yantao Li, Yifan Bai. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yantao Li, Yifan Bai
+-/
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import FormalizationFixpointIterations.Theory.WeakSpace
 import Mathlib.Topology.Algebra.Order.LiminfLimsup

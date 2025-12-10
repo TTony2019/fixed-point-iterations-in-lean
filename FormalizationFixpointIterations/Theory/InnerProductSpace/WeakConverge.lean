@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Yifan Bai, Yantao Li. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Yifan Bai, Yantao Li
+-/
 import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Analysis.InnerProductSpace.Dual
@@ -78,7 +83,6 @@ Definition: Weak convergence in an inner product space.
 def WeakConverge (x : ℕ → H) (p : H) :=
   Tendsto (x: ℕ → WeakSpace ℝ H) atTop (nhds p : Filter (WeakSpace ℝ H))
 
-#check toWeakSpace
 theorem h (x : ℕ → H) (p : H) : WeakConverge x p ↔
   Tendsto (toWeakSpace ℝ H ∘ x) atTop (nhds (toWeakSpace ℝ H p)) := by
   rfl
@@ -240,7 +244,6 @@ section WeakConvergeBounded
 --   map_add' := fun u v => inner_add_right p u v
 --   map_smul' := fun c u => inner_smul_right p u c
 
-#check cont_inner_left
 -- 引理：弱收敛序列的范数有界
 theorem weakly_converge_norm_bounded [CompleteSpace H]
   (x : ℕ → H) (p : H) (h_wkconv_x : WeakConverge x p) :
