@@ -24,7 +24,7 @@ structure Halpern (T : H → H) where
   initial_value : x 0 = x0
 
 /--
-Lemma 30.2: `∀ ξ ∈ (0,1)`, `ln (1 - ξ) ≤ -ξ`
+Lemma 30.2: Properties of `ξ` : `∀ ξ ∈ (0,1)`, `ln (1 - ξ) ≤ -ξ`
 -/
 lemma log_ineq
   (ξ : ℝ) (hξ : ξ ∈ Set.Ioo 0 1) :
@@ -35,19 +35,20 @@ lemma log_ineq
   linarith
 
 /--
-Lemma : `∀ α ∈ (0,1), 1 - α > 0`
+Lemma : Properties of `α` : `∀ α ∈ (0,1), 1 - α > 0`
 -/
 lemma one_sub_pos_of_mem_Ioo
   {a : ℝ} (ha : a ∈ Set.Ioo 0 1) : 0 < 1 - a := sub_pos.mpr ha.2
 
 /--
-Lemma : `∀ α ∈ (0,1), 1 - α < 1`
+Lemma : Properties of `α` : `∀ α ∈ (0,1), 1 - α < 1`
 -/
 lemma one_sub_lt_one_of_mem_Ioo
   {a : ℝ} (ha : a ∈ Set.Ioo 0 1) : 1 - a < 1 := by simp [Set.mem_Ioo] at ha; linarith
 
 /--
-Lemma 30.3: `∀ n, α n ∈ (0,1) → ∏ (1 - α n) = exp Σ log(1 - α n)) ≤ exp (Σ -α n)`
+Lemma 30.3 : Properties of `α` :
+  `∀ n, α n ∈ (0,1) → ∏ (1 - α n) = exp Σ log(1 - α n)) ≤ exp (Σ -α n)`
 -/
 lemma prod_exp_sum
   {T : H → H} (alg : Halpern T)
@@ -68,7 +69,8 @@ lemma prod_exp_sum
   exact log_ineq (alg.α x) (h_α_range x)
 
 /--
-Lemma 30.4 : if `lim n→∞, Σ α n = ∞`, `lim n→∞ ∏_{k=m}^n (1 - α k) = 0`
+Lemma 30.4 : Limit of the infinite product of `(1 - α k)` :
+  if `lim n→∞, Σ α n = ∞`, `lim n→∞ ∏_{k=m}^n (1 - α k) = 0`
 -/
 lemma infinite_prod_zero
   {T : H → H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
@@ -111,7 +113,8 @@ lemma infinite_prod_zero
     · simp [Finset.Icc_eq_empty_of_lt (Nat.not_le.mp hn)]
 
 /--
-Lemma : `∀ z ∈ C`, `‖T(x n) - z‖ ≤ ‖x n - z‖ ∧ ‖x n - z‖ ≤ ‖x0 - z‖`
+Lemma : Inequalities by non-expansive :
+  `∀ z ∈ C`, `‖T(x n) - z‖ ≤ ‖x n - z‖ ∧ ‖x n - z‖ ≤ ‖x0 - z‖`
 -/
 lemma halpern_distance_monotone
   {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
@@ -151,7 +154,7 @@ lemma halpern_distance_monotone
         _ = ‖alg.x0 - z‖ := by ring
 
 /--
-Lemma : `∑_m^n f k + ∑_(n + 1)^∞ f k = ∑_m^∞ f k`
+Lemma : Properties of sum : `∑_m^n f k + ∑_(n + 1)^∞ f k = ∑_m^∞ f k`
 -/
 lemma sum_icc_add_tsum_eq_tsum_add
   {f : ℕ → ℝ} (hf : Summable f) (m n : ℕ) (hmn : m ≤ n) :
@@ -177,7 +180,7 @@ lemma sum_icc_add_tsum_eq_tsum_add
   rw [h_decomp]
 
 /--
-Lemma : `lim m n → ∞`, `μ * Σ_m^n |λ (k + 1) - λ k| = 0`
+Lemma : Limit of the sum of difference ；`lim m n → ∞`, `μ * Σ_m^n |λ (k + 1) - λ k| = 0`
 -/
 lemma halpern_sum_tail_tendsto_zero
   {T : H → H} (alg : Halpern T) (μ : ℝ) (hμ_pos : μ > 0)
@@ -204,7 +207,7 @@ lemma halpern_sum_tail_tendsto_zero
   exact this
 
 /--
-Lemma : `∏_m^n (1 - α (k + 1)) = ∏_(m + 1)^(n + 1) (1 - α k)`
+Lemma : Properties of the product : `∏_m^n (1 - α (k + 1)) = ∏_(m + 1)^(n + 1) (1 - α k)`
 -/
 lemma h_reindex
   {T : H → H} (alg : Halpern T) :∀ m : ℕ, (fun n ↦ ∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1)))
@@ -230,10 +233,8 @@ lemma h_reindex
         ext x; simp [Finset.mem_Icc]; simp at *; intro hx; linarith
       simp [h_empty1, h_empty2, Finset.prod_empty]
 
-
-
 /--
-Lemma : `lim n → ∞, μ * ∏_m^n (1 - λ (k + 1)) = 0`
+Lemma : Limit of the product : `lim n → ∞, μ * ∏_m^n (1 - λ (k + 1)) = 0`
 -/
 lemma halpern_prod_tail_tendsto_zero
   {T : H → H} (alg : Halpern T) (μ : ℝ) (hμ_pos : μ > 0) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
@@ -259,9 +260,8 @@ lemma halpern_prod_tail_tendsto_zero
     _ < μ * (ε / μ) := mul_lt_mul_of_pos_left (hN n hn_N) hμ_pos
     _ = ε := by field_simp [ne_of_gt hμ_pos]
 
-
 /--
-Lemma : `lim n → ∞`, `x (n k) - T (x (n k)) = 0`
+Lemma : Limit of the difference : `lim n → ∞`, `x (n k) - T (x (n k)) = 0`
 -/
 lemma halpern_subseq_x_sub_Tx_tendsto_zero
   {T : H → H} (alg : Halpern T) (n : ℕ → ℕ) (h_n_strict_mono : ∀ i j, i < j → n i < n j)
@@ -273,7 +273,8 @@ lemma halpern_subseq_x_sub_Tx_tendsto_zero
   rw [dist_eq_norm] at hN ⊢; exact hN
 
 /--
-Lemma : `x n k ⇀ z` ∧ `lim n → ∞, x (n k) - T (x (n k)) = 0` → `z ∈ Fix T`
+Lemma : The subsequence weakly converges to a point in the fixed point set :
+  `x n k ⇀ z` ∧ `lim n → ∞, x (n k) - T (x (n k)) = 0` → `z ∈ Fix T`
 -/
 lemma halpern_subseq_fixed_point [CompleteSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
@@ -283,11 +284,9 @@ lemma halpern_subseq_fixed_point [CompleteSpace H]
   : z ∈ Fix T := corollary_4_28 hD_closed hD_convex hD_nonempty hT_nonexp (alg.x ∘ n)
     (fun k => halg_x_in_D (n k)) z h_z_in_D h_z_weak_limit h_subseq_x_Tx_limit
 
-
-
 /--
-Lemma 2.45 : `∀ n, ‖x n‖ ≤ M` → `∃ (φ : ℕ → ℕ) (p : H),
-  (∀ m n, m < n → φ m < φ n) ∧ WeakConverge (x ∘ φ) p`
+Lemma 2.45 : Bounded sequence has a weakconvergent subsequence :
+  `∀ n, ‖x n‖ ≤ M` → `∃ (φ : ℕ → ℕ) (p : H), (∀ m n, m < n → φ m < φ n) ∧ WeakConverge (x ∘ φ) p`
 -/
 lemma bounded_seq_weakly_convergent_subsequence [SeparableSpace H] [CompleteSpace H]
   (x : ℕ → H) (h_bounded : ∃ M, ∀ n, ‖x n‖ ≤ M) :
@@ -307,7 +306,7 @@ lemma bounded_seq_weakly_convergent_subsequence [SeparableSpace H] [CompleteSpac
   exact ⟨φ, a, h_phi_explicit, h_weak_conv⟩
 
 /--
-Definition : `∃ u ∈ C, ‖x - u‖ = inf_{w ∈ C} ‖x - w‖`
+Definition of projection point : `∃ u ∈ C, ‖x - u‖ = inf_{w ∈ C} ‖x - w‖`
 -/
 theorem existence_of_projection_point [CompleteSpace H]
   (C : Set H) (hC1 : C.Nonempty) (hC2 : Convex ℝ C) (hC3 : IsClosed C) (x : H) :
@@ -315,14 +314,15 @@ theorem existence_of_projection_point [CompleteSpace H]
   exists_norm_eq_iInf_of_complete_convex hC1 (IsClosed.isComplete hC3) hC2 x
 
 /--
-Proposition : `‖x - PCx‖ = inf_{w ∈ C} ‖x - w‖` → `∀ w ∈ C, ⟪x - PCx, w - PCx⟫ ≤ 0`
+Proposition of projection point :
+  `‖x - PCx‖ = inf_{w ∈ C} ‖x - w‖` → `∀ w ∈ C, ⟪x - PCx, w - PCx⟫ ≤ 0`
 -/
 theorem proj_pt_inner_le_zero
   (x PCx : H) (C : Set H) (hC2 : Convex ℝ C) (hPCx : PCx ∈ C) (hP : ‖x - PCx‖ = ⨅ w : C, ‖x - w‖) :
   ∀ w ∈ C, inner ℝ (x - PCx) (w - PCx) ≤ 0 := (norm_eq_iInf_iff_real_inner_le_zero hC2 hPCx).1 hP
 
 /--
-Lemma : `∃ M > 0, lim n → ∞, ⟪T (x n) - PCx, x - PCx⟫ ≤ M`
+Lemma : Limit of the inner product is upbounded : `∃ M > 0, lim n → ∞, ⟪T (x n) - PCx, x - PCx⟫ ≤ M`
 -/
 lemma halpern_inner_bounded_of_limsup
   {T : H → H} (alg : Halpern T) (m : H) (μ : ℝ) (hμ_Tx_bound : ∀ n, ‖alg.u - T (alg.x n)‖ ≤ μ)
@@ -349,7 +349,7 @@ lemma halpern_inner_bounded_of_limsup
   rcases this with ⟨N, hN⟩; use N; filter_upwards [hN] with n hn; linarith
 
 /--
-Lemma : `‖x n - z‖ ≤ M1` → `‖x (n + 1) - PCx‖ ^ 2 ≤ M2`
+Lemma : Upbounded leads to upbounded : `‖x n - z‖ ≤ M1` → `‖x (n + 1) - PCx‖ ^ 2 ≤ M2`
 -/
 lemma halpern_norm_sq_bounded
   {T : H → H} (alg : Halpern T) (z m : H) (h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - z‖ ≤ M)
@@ -370,7 +370,8 @@ lemma halpern_norm_sq_bounded
         have : ‖alg.x (0 + 1) - z‖ ≥ 0 := norm_nonneg _; linarith
 
 /--
-Lemma 30.15 : `∃ (n : ℕ → ℕ) (z PCx : H) (q : ℕ → ℝ),
+Lemma 30.15 : The sequence of the inner product has a subsequence which tends to limsup :
+  `∃ (n : ℕ → ℕ) (z PCx : H) (q : ℕ → ℝ),
   (∀ i j, i < j → n i < n j) ∧ (z ∈ D ∧ WeakConverge (x ∘ n) z) ∧
   (PCx ∈ C ∧ ‖x - PCx‖ = inf_{w ∈ C} ‖x - w‖) ∧
   (q = fun n => ⟪T (x n) - PCx, x - PCx⟫) ∧
@@ -440,7 +441,7 @@ lemma halpern_subsequence_weak_convergence [CompleteSpace H] [SeparableSpace H]
     ⟨hm_in_C, hm_proj⟩, rfl, h_n_tendsto⟩
 
 /--
-Lemma 30.16 : `limsup n → ∞, ⟪T (x n) - PCx, x - PCx⟫ ≤ 0`
+Lemma 30.16 : Limsup of the inner product nonpositive : `limsup n → ∞, ⟪T (x n) - PCx, x - PCx⟫ ≤ 0`
 -/
 lemma halpern_limsup_inner_le_zero [CompleteSpace H]
   {D : Set H} {T : H → H} {C : Set H} (hC : C = Fix T ∩ D)

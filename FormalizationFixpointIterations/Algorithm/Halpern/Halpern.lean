@@ -13,7 +13,8 @@ local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 
 /--
-Lemma 30.9 : `∃ μ > 0`, `‖x (n + 1) - x n‖ ≤ μ ∧ ‖x - T (x n)‖ ≤ μ`
+Lemma 30.9 : The boundedness of the
+  sequence : `∃ μ > 0`, `‖x (n + 1) - x n‖ ≤ μ ∧ ‖x - T (x n)‖ ≤ μ`
 -/
 lemma halpern_mu_bound
   {T : H → H} (alg : Halpern T) {y : H}
@@ -51,7 +52,7 @@ lemma halpern_mu_bound
 
 omit [InnerProductSpace ℝ H] in
 /--
-Lemma 30.12.1 : `‖x (n + 2) - x (n + 1)‖ ≤
+Lemma 30.12.1 :The upbd of the norm of the difference : `‖x (n + 2) - x (n + 1)‖ ≤
   μ * Σ_m^n |λ (k + 1) - λ k| + ‖x (m + 1) - x m‖ * ∏_m^n (1 - λ (k + 1))`
 -/
 lemma halpern_telescoping_bound
@@ -92,7 +93,7 @@ lemma halpern_telescoping_bound
           repeat linarith
 
 /--
-Lemma 30.10: `x (n + 2) - x (n + 1) = λ (n + 1) - λ n) •
+Lemma 30.10: Equation of the difference : `x (n + 2) - x (n + 1) = λ (n + 1) - λ n) •
   (x - T (x n)) + (1 - λ (n + 1)) • (T (x (n + 1)) - T (x n))`
 -/
 lemma halpern_diff_formula
@@ -111,7 +112,7 @@ lemma halpern_diff_formula
       (T (alg.α n • alg.u + (1 - alg.α n) • T (alg.x n)) - T (alg.x n)) := by simp [smul_sub]
 
 /--
-Lemma 30.11 : `‖x (n + 2) - x (n + 1)‖ ≤
+Lemma 30.11 : Boundedness of the norm of the difference : `‖x (n + 2) - x (n + 1)‖ ≤
   μ * |λ (n + 1) - λ n| + (1 - λ (n + 1)) * ‖x (n + 1) - x n‖`
 -/
 lemma halpern_norm_diff_ineq
@@ -142,7 +143,8 @@ lemma halpern_norm_diff_ineq
       rw [mul_comm]
 
 /--
-Lemma 30.12.2: `‖x (n + 2) - x (n + 1)‖ ≤ μ * Σ_m^n |λ (k + 1) - λ k| + μ * ∏_m^n (1 - λ (k + 1))`
+Lemma 30.12.2: Boundedness of the norm of the difference : `‖x (n + 2) - x (n + 1)‖
+  ≤ μ * Σ_m^n |λ (k + 1) - λ k| + μ * ∏_m^n (1 - λ (k + 1))`
 -/
 lemma halpern_telescoping_ineq
   {T : H → H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
@@ -163,8 +165,8 @@ lemma halpern_telescoping_ineq
             linarith [one_sub_pos_of_mem_Ioo (h_α_range (k+1))]
 
 /--
-Lemma : `lim m n → ∞, m ≤ n, ‖x (n + 2) - x (n + 1)‖ ≤
-  μ * Σ_m^n |λ (k + 1) - λ k| + μ * ∏_m^n (1 - λ (k + 1))`
+Lemma : The limit of the inequality in Lemma 30.12.2 : `lim m n → ∞, m ≤ n, ‖x (n + 2) - x (n + 1)‖
+  ≤ μ * Σ_m^n |λ (k + 1) - λ k| + μ * ∏_m^n (1 - λ (k + 1))`
 -/
 lemma halpern_telescoping_limit
   {T : H → H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (μ : ℝ)
@@ -180,7 +182,8 @@ lemma halpern_telescoping_limit
 
 omit [InnerProductSpace ℝ H] in
 /--
-Lemma : `lim n → ∞`, `(f (n + 2) - f (n + 1)) = 0` → `lim n → ∞`, `f (n + 1) - f n = 0`
+Lemma : Index transform :
+  `lim n → ∞`, `(f (n + 2) - f (n + 1)) = 0` → `lim n → ∞`, `f (n + 1) - f n = 0`
 -/
 lemma adjacent_diff_from_shifted
   {f : ℕ → H} : Tendsto (fun n => (f (n + 2) - f (n + 1))) atTop (𝓝 0) →
@@ -191,7 +194,7 @@ lemma adjacent_diff_from_shifted
   rw [← this] at h; exact (tendsto_add_atTop_iff_nat 1).mp h
 
 /--
-Lemma : `lim n → ∞`, `x (n + 1) - x n = 0`
+Lemma : The limit of the difference : `lim n → ∞`, `x (n + 1) - x n = 0`
 -/
 lemma halpern_diff_limit
   {T : H → H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (μ : ℝ)
@@ -238,7 +241,7 @@ lemma halpern_diff_limit
   exact adjacent_diff_from_shifted sq_lim7
 
 /--
-Lemma 30.14 : `lim n → ∞`, `x n - T (x n) = 0`
+Lemma 30.14 : The limit of `x n - T (x n)` : `lim n → ∞`, `x n - T (x n) = 0`
 -/
 lemma halpern_x_sub_Tx_tendsto_zero
   {T : H → H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
@@ -277,7 +280,7 @@ lemma halpern_x_sub_Tx_tendsto_zero
   · simp
 
 /--
-Lemma 30.17 : `∀ ε > 0, ∃ k, ∀ n ≥ k,
+Lemma 30.17 : Upbd of the inner product and the norm : `∀ ε > 0, ∃ k, ∀ n ≥ k,
   ⟪T (x n) - PCx, x - PCx⟫ ≤ ε ∧ λ n * ‖x - PCx‖ ^ 2 ≤ ε`
 -/
 lemma halpern_eps_exists_of_limsup_and_alpha
@@ -320,7 +323,7 @@ lemma halpern_eps_exists_of_limsup_and_alpha
           _ = ε := by field_simp [ne_of_gt h_um_sq_pos]
 
 /--
-Lemma 30.18 : `∀ ε > 0, ∃ k, ∀ n ≥ k,
+Lemma 30.18 : The distance is upbounded by `ε` : `∀ ε > 0, ∃ k, ∀ n ≥ k,
   ‖x (n + 1) - PCx‖ ^ 2 ≤ λ n * ε + (1 - λ n) * ‖x n - PCx‖ ^ 2 + 2 * λ n * ε`
 -/
 lemma halpern_xn_sub_PCx_upbd [CompleteSpace H]
@@ -378,7 +381,7 @@ lemma halpern_xn_sub_PCx_upbd [CompleteSpace H]
                 _ = 2 * alg.α n * ε := by ring
 
 /--
-Lemma 30.19 : `∀ ε > 0, ∃ N, ∀ n k ≥ N, n ≥ k →
+Lemma 30.19 : The distance is upbounded by `ε` : `∀ ε > 0, ∃ N, ∀ n k ≥ N, n ≥ k →
   ‖x (n + 1) - PCx‖ ^ 2 ≤ 3 * ε + ‖x k - PCx‖ ^ 2 * ∏_k^n (1 - λ l)`
 -/
 lemma halpern_xn_sub_PCx_prod [CompleteSpace H]
@@ -431,7 +434,7 @@ lemma halpern_xn_sub_PCx_prod [CompleteSpace H]
         · linarith
 
 /--
-Lemma : `∀ ε > 0, ∃ N, ∀ n k ≥ N, n ≥ k →
+Lemma : The distance is upbounded by `ε` : `∀ ε > 0, ∃ N, ∀ n k ≥ N, n ≥ k →
   limsup n → ∞, ‖x (n + 1) - PCx‖ ^ 2 ≤ 3 * ε`
 -/
 lemma halpern_limsup_bound_from_prod [CompleteSpace H]
@@ -535,7 +538,7 @@ lemma halpern_limsup_bound_from_prod [CompleteSpace H]
     _ = 3 * ε := by rw [mul_zero]; simp
 
 /--
-Lemma : `lim n → ∞, x n = PCx
+Lemma : The convergence of `x n` : `lim n → ∞, x n = PCx`
 -/
 lemma halpern_convergence_aux [CompleteSpace H]
   {T : H → H} {C : Set H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
@@ -681,7 +684,8 @@ lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
   rcases hC_closed_convex with ⟨h1,h2⟩; rw [← hC]; assumption
 
 /--
-Lemma 30.20.1: `‖x (n + 1) - y (n + 1)‖ ≤ ‖x 0 - y 0‖ * ∏_0^n (1 - λ k)`
+Lemma 30.20.1: The distance of the two sequences is upbounded :
+  `‖x (n + 1) - y (n + 1)‖ ≤ ‖x 0 - y 0‖ * ∏_0^n (1 - λ k)`
 -/
 lemma halpern_norm_diff_bound
   {T : H → H} (alg : Halpern T) {D : Set H} (hT_nonexp : NonexpansiveOn T D)
@@ -729,7 +733,7 @@ lemma halpern_norm_diff_bound
         · linarith
 
 /--
-Lemma 30.20.2: `lim n → ∞, ∏_0^n (1 - λ k) * ‖x 0 - y 0‖ = 0`
+Lemma 30.20.2: The limit of the product : `lim n → ∞, ∏_0^n (1 - λ k) * ‖x 0 - y 0‖ = 0`
 -/
 lemma halpern_prod_norm_diff_tendsto_zero
   {T : H → H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
