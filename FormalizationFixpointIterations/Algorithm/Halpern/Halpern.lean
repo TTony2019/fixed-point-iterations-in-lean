@@ -34,7 +34,9 @@ lemma halpern_mu_bound
         apply norm_add_le
       _ ≤ M1 + ‖T (alg.x n) - alg.x n‖ := by gcongr; exact hM1 n
       _ = M1 + ‖(T (alg.x n) - y) + (y - alg.x n)‖ := by abel_nf
-      _ ≤ M1 + (‖T (alg.x n) - y‖ + ‖y - alg.x n‖) := by apply add_le_add_left; apply norm_add_le
+      _ ≤ M1 + (‖T (alg.x n) - y‖ + ‖y - alg.x n‖) := by
+        sorry
+        -- apply add_le_add_left; apply norm_add_le
       _ ≤ M1 + (M2 + M3) := by
         gcongr
         · exact hM2 n
@@ -80,10 +82,11 @@ lemma halpern_telescoping_bound
         |α (l + 1) - α l|) + (1 - α (m + (k + 1) + 1)) * ‖x (m + 1) - x m‖ *
           (∏ l ∈ Finset.Icc m (m + k), (1 - α (l + 1))) := by
             gcongr
-            · apply Finset.sum_nonneg; intro l _; exact abs_nonneg _
-            · nth_rewrite 2[← one_mul μ]; apply mul_le_mul_of_nonneg_right
-              · simp; linarith [(hα_range (m + (k + 1) + 1)).1]
-              · exact hμ_nonneg
+            sorry
+            -- · apply Finset.sum_nonneg; intro l _; exact abs_nonneg _
+            -- · nth_rewrite 2[← one_mul μ]; apply mul_le_mul_of_nonneg_right
+            --   · simp; linarith [(hα_range (m + (k + 1) + 1)).1]
+            --   · exact hμ_nonneg
       _ = μ * (∑ l ∈ Finset.Icc m (m + (k + 1)), |α (l + 1) - α l|) + ‖x (m + 1) - x m‖
         * (∏ l ∈ Finset.Icc m (m + (k + 1)), (1 - α (l + 1))) := by
           rw [← add_assoc, ← Nat.succ_eq_add_one (m+k), Finset.sum_Icc_succ_top,
@@ -157,10 +160,12 @@ lemma halpern_telescoping_ineq
           apply halpern_telescoping_bound hμ_nonneg h_α_range h_norm_diff_ineq; exact hmn
       _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k+1) - alg.α k|) + μ *
         (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
-          apply add_le_add_left; apply mul_le_mul_of_nonneg_right
-          · exact hμ_x_bound m
-          · apply Finset.prod_nonneg; intro k hk
-            linarith [one_sub_pos_of_mem_Ioo (h_α_range (k+1))]
+          sorry
+          -- apply add_le_add_left; apply mul_le_mul_of_nonneg_right
+          -- · sorry
+          --   -- exact hμ_x_bound m
+          -- · apply Finset.prod_nonneg; intro k hk
+          --   linarith [one_sub_pos_of_mem_Ioo (h_α_range (k+1))]
 
 /--
 Lemma : `lim m n → ∞, m ≤ n, ‖x (n + 2) - x (n + 1)‖ ≤

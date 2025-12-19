@@ -365,7 +365,7 @@ lemma halpern_norm_sq_bounded
     _ ≤ (M + ‖z - m‖) ^ 2 := by
       apply sq_le_sq.mpr; simp [abs_of_nonneg (add_nonneg (norm_nonneg _) (norm_nonneg _))]
       rw [abs_of_nonneg]
-      · exact add_le_add_right (hM n) ‖z - m‖
+      · exact add_le_add_left (hM n) ‖z - m‖
       · apply add_nonneg ?_ (norm_nonneg _); specialize hM 0
         have : ‖alg.x (0 + 1) - z‖ ≥ 0 := norm_nonneg _; linarith
 
@@ -425,14 +425,18 @@ lemma halpern_subsequence_weak_convergence [CompleteSpace H] [SeparableSpace H]
       · exact hD_closed
     have h_D_weakly_seq_closed : IsWeaklySeqClosed D := by
       apply weakly_closed_seq_closed; exact h_D_weakly_closed
-    simp only [IsWeaklySeqClosed] at h_D_weakly_seq_closed
-    apply h_D_weakly_seq_closed h_x_in_D h_weak_xkl_to_z
-
+    simp only [IsWeaklySeqClosed, IsSeqClosed] at h_D_weakly_seq_closed
+    have h : (∀ (n : ℕ), (alg.x ∘ k ∘ l) n ∈ ⇑(toWeakSpace ℝ H) '' D) := by
+      intro n
+      exact Set.mem_image_of_mem (⇑(toWeakSpace ℝ H)) (halg_x_in_D ((k ∘ l) n))
+      -- exact Set.mem_image_of_mem (⇑(toWeakSpace ℝ H))
+    specialize @h_D_weakly_seq_closed (toWeakSpace ℝ H ∘ alg.x ∘ k ∘ l)
+      (toWeakSpace ℝ H z) h h_weak_xkl_to_z
+    exact Set.inter_singleton_nonempty.mp h_D_weakly_seq_closed
   let n : ℕ → ℕ := k ∘ l
   have h_n_strict_mono : ∀ i j, i < j → n i < n j := by
     intro i j hij; unfold n; simp only [Function.comp_apply]
     exact h_k_strict_mono (h_l_strict_mono i j hij)
-
   have h_n_tendsto : Tendsto (q ∘ n) atTop (𝓝 (limsup q atTop)) := by
     have h_comp : (q ∘ n) = (q ∘ k) ∘ l := by funext j; simp only [Function.comp_apply, n]
     rw [h_comp]; apply h_k_tendsto.comp; exact StrictMono.tendsto_atTop h_l_strict_mono

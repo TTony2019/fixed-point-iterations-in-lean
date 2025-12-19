@@ -61,11 +61,11 @@ lemma key_inequality {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x �
             rw[eq_sub_iff_add_eq , h]
             ring
       _ ≤ (1 - km.stepsize n) * ‖km.x n - y‖^2 + km.stepsize n * ‖km.x n - y‖^2 -km.stepsize n * (1 - km.stepsize n) *‖(T (km.x n) - km.x n )‖^2  := by
-
           have hT_le : ‖T (km.x n) - y‖ ≤ ‖km.x n - y‖ := by
             nth_rw 1 [← hyfix]
             exact hT_nonexpansive (km.x n) y
-          simp
+          simp only [sub_sub_sub_cancel_right, tsub_le_iff_right, sub_add_cancel,
+            add_le_add_iff_left, ge_iff_le]
           apply mul_le_mul_of_nonneg_left _ hs_nonneg
           refine pow_le_pow_left₀ ?_ hT_le 2
           exact norm_nonneg _
@@ -277,14 +277,19 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
   have h_D_seq_weak_closed : IsWeaklySeqClosed D := closed_is_weakly_seq_closed D hD_convex hD_closed
   have hT_nonexp : NonexpansiveOn T D := by
     intro x hx y hy
-    simp [edist_dist] ;rw [dist_eq_norm, dist_eq_norm]
+    simp only [edist_dist, ENNReal.coe_one, one_mul, dist_nonneg, ENNReal.ofReal_le_ofReal_iff]; rw [dist_eq_norm, dist_eq_norm]
     exact hT_nonexpansive x y
 
   have h_weak_cluster_in : ∀ p : H, HasWeakSubseq p km.x → p ∈ (Fix' T D)  := by
     intro p h_cluster
     rcases h_cluster with ⟨ φ, hφ , tend ⟩
     have p_in_D : p ∈ D := by
-      apply h_D_seq_weak_closed (fun n => h_x (φ n) ) tend
+      have : ∀ n, (⇑(toWeakSpace ℝ H) ∘ fun k ↦ km.x (φ k)) n ∈ ⇑(toWeakSpace ℝ H) '' D := by
+        intro n
+        simp only [comp_apply, Set.mem_image, EmbeddingLike.apply_eq_iff_eq, exists_eq_right]
+        exact Set.mem_preimage.mp (h_x (φ n))
+      obtain h := h_D_seq_weak_closed this tend
+      exact inter_singleton_nonempty.mp (h_D_seq_weak_closed this tend)
     -- Prove that p is a fixpoint of T.
     have h_error_zero : Tendsto (fun n ↦ km.x (φ n) - T (km.x (φ n))) atTop (𝓝 0):= by
       have h1 : Tendsto φ atTop atTop := StrictMono.tendsto_atTop hφ

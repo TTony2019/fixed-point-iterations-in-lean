@@ -44,11 +44,11 @@ noncomputable def weakHomeomorph [CompleteSpace H] : WeakSpace ℝ H ≃ₜ Weak
     have : (fun v : WeakSpace ℝ H => (weakToWeakDual v) x)
       = fun v => (InnerProductSpace.toDual ℝ H x) v := by
         ext v
-        simp [weakToWeakDual, InnerProductSpace.toDual_apply]
+        simp only [weakToWeakDual, InnerProductSpace.toDual_apply_apply]
         change (InnerProductSpace.toDual ℝ H v) x = ⟪x, v⟫
-        simp
+        simp only [InnerProductSpace.toDual_apply_apply]
         exact real_inner_comm x v
-    simp [this]
+    simp only [this, InnerProductSpace.toDual_apply_apply]
     simp only [← topDualPairing_eq_inner]
     have : (fun v ↦ ((topDualPairing ℝ H).flip x) (@cont_inner_left H _ _ v)) =
       (fun v ↦ ((topDualPairing ℝ H).flip v) (@cont_inner_left H _ _ x)) := by
@@ -65,7 +65,7 @@ noncomputable def weakHomeomorph [CompleteSpace H] : WeakSpace ℝ H ≃ₜ Weak
         (weakToWeakDual.symm φ))
         = fun φ => φ x := by
         ext φ
-        simp [weakToWeakDual]
+        simp only [weakToWeakDual, InnerProductSpace.toDual_apply_apply]
         change ⟪x, ((InnerProductSpace.toDual ℝ H).symm φ) ⟫  = φ x
         rw [real_inner_comm, InnerProductSpace.toDual_symm_apply]
     rw [this]
@@ -77,15 +77,19 @@ lemma weakHom_image_eq [CompleteSpace H] {x : H} {r : ℝ} :
   ext y
   constructor
   · rintro ⟨x', h1, h2⟩
-    simp; rw [← h2]; simp [weakHomeomorph, weakToWeakDual]
+    simp only [Set.mem_preimage, coe_toStrongDual, mem_closedBall];
+    rw [← h2]; simp only [weakHomeomorph, weakToWeakDual, Homeomorph.homeomorph_mk_coe,
+      Equiv.coe_fn_mk]
     change dist ((InnerProductSpace.toDual ℝ H) x') ((InnerProductSpace.toDual ℝ H) x) ≤ r
     simpa
   intro hy
-  simp at hy; simp [weakHomeomorph, weakToWeakDual]
+  simp only [Set.mem_preimage, coe_toStrongDual, mem_closedBall] at hy;
+  simp only [weakHomeomorph, weakToWeakDual, Homeomorph.homeomorph_mk_coe, Equiv.coe_fn_mk,
+    Set.mem_image, mem_closedBall]
   obtain ⟨v, rfl⟩ := (InnerProductSpace.toDual ℝ H).surjective y
   use v
   constructor
-  · simp at hy; exact hy
+  · simp only [LinearIsometryEquiv.dist_map] at hy; exact hy
   change (InnerProductSpace.toDual ℝ H) v = (InnerProductSpace.toDual ℝ H) v
   rfl
 
@@ -96,7 +100,7 @@ theorem closed_unit_ball_is_weakly_compact [CompleteSpace H] (x : H) (r : ℝ) :
   IsWeaklyCompact (closedBall x r) := by
   let f := InnerProductSpace.toDual ℝ H x
   obtain h := isCompact_closedBall ℝ f r
-  simp [IsWeaklyCompact]
+  simp only [IsWeaklyCompact]
   have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by simp [f]
   simp [ball_eq] at h
   obtain h' := @weakHom_image_eq _ _ _ _ x r
@@ -105,17 +109,17 @@ theorem closed_unit_ball_is_weakly_compact [CompleteSpace H] (x : H) (r : ℝ) :
 
 def IsWeaklySeqCompact (s : Set H) := @IsSeqCompact (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
 
-theorem closed_ball_is_weakly_seqcompact [CompleteSpace H] (x : H) (r : ℝ) :
-  IsWeaklySeqCompact (closedBall x r) := by
-  let f := InnerProductSpace.toDual ℝ H x
-  -- obtain h := WeakDual.isSeqCompact_closedBall ℝ f r
-  -- simp [IsWeaklySeqCompact]
-  -- have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by simp [f]
-  -- simp [ball_eq] at h
-  -- obtain h' := @weakHom_image_eq _ _ _ _ x r
-  -- rw [s_eq (closedBall x r)] at h'
-  -- rwa [← weakHomeomorph.isCompact_image, h']
-  sorry
+-- theorem closed_ball_is_weakly_seqcompact [SeparableSpace H] [CompleteSpace H] (x : H) (r : ℝ) :
+--   IsWeaklySeqCompact (closedBall x r) := by
+--   let f := InnerProductSpace.toDual ℝ H x
+--   obtain h := WeakDual.isSeqCompact_closedBall ℝ H f r
+--   simp [IsWeaklySeqCompact]
+--   have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by simp [f]
+--   simp [ball_eq] at h
+--   obtain h' := @weakHom_image_eq _ _ _ _ x r
+--   rw [s_eq (closedBall x r)] at h'
+--   -- rwa [← weakHomeomorph.isCompact_image, h']
+--   sorry
 
 
 
@@ -143,9 +147,11 @@ lemma limsup_spec_lower
     · intro y hy; filter_upwards [h_eventually] with n hn; linarith
     · rcases hx_bdd with ⟨M, hM⟩; apply Filter.IsCoboundedUnder.of_frequently_ge ?_
       · exact - M
-      · rw [@frequently_atTop]; intro a; use a + 1; simp; specialize hM (a + 1)
+      · rw [@frequently_atTop]; intro a; use a + 1; simp only [ge_iff_le, le_add_iff_nonneg_right,
+        zero_le, true_and]; specialize hM (a + 1)
         apply abs_le.1 at hM; rcases hM with ⟨hM1, hM2⟩; assumption
-    · simp [IsBoundedUnder, IsBounded]; use (limsup x atTop - ε); use N
+    · simp only [IsBoundedUnder, IsBounded, eventually_map, eventually_atTop, ge_iff_le];
+      use (limsup x atTop - ε); use N
   linarith
 
 -- 辅助引理：limsup的上界逼近性质
@@ -153,12 +159,15 @@ lemma limsup_spec_upper
   (x : ℕ → ℝ) (hx_bdd : ∃ M : ℝ, ∀ k : ℕ, |x k| ≤ M) :
   ∀ ε > 0, ∀ᶠ n in atTop, x n ≤ limsup x atTop + ε := by
     set L := limsup x atTop with hL_def
-    intro ε hε; rw [Filter.eventually_atTop]; simp [limsup, limsSup] at hL_def
+    intro ε hε; rw [Filter.eventually_atTop]; simp only [limsup, limsSup, eventually_map,
+      eventually_atTop, ge_iff_le] at hL_def
     rcases hx_bdd with ⟨M, hM⟩
     have h_set_nonempty : {a | ∃ a_1, ∀ (b : ℕ), a_1 ≤ b → x b ≤ a}.Nonempty := by
-      use M; simp; use 0; simp; intro n; have := hM n; apply abs_le.1 at this; exact this.2
+      use M; simp only [Set.mem_setOf_eq]; use 0; simp only [zero_le, forall_const]; intro n;
+      have := hM n; apply abs_le.1 at this; exact this.2
     have h_set_bdd_below : BddBelow {a | ∃ a_1, ∀ (b : ℕ), a_1 ≤ b → x b ≤ a} := by
-      use -M - 1; intro y hy; simp at hy; by_contra! h_contra; rcases hy with ⟨a, ha⟩
+      use -M - 1; intro y hy; simp only [Set.mem_setOf_eq] at hy;
+      by_contra! h_contra; rcases hy with ⟨a, ha⟩
       specialize ha (a + 1); simp at ha
       have contra: x (a + 1) < -M - 1 := by linarith
       specialize hM (a + 1); apply abs_le.1 at hM; rcases hM with ⟨hM1, hM2⟩; linarith
@@ -190,18 +199,14 @@ theorem lim_subsequence_eq_limsup
   set L := limsup x atTop with hL_def
   have h_limsup_spec := limsup_spec_lower x hx_bdd
   have h_limsup_spec' := limsup_spec_upper x hx_bdd
-
   -- 步骤3：递归构造严格递增子序列 φ
   have ⟨φ, ⟨hφ_mono, h_φ_lower⟩⟩ : ∃ φ : ℕ → ℕ, (∀ m n, m < n → φ m < φ n) ∧
     (∀ k, x (φ k) ≥ L - 1 / (k + 1)) := by
     let find_next (N : ℕ) (ε : ℝ) (hε_pos : 0 < ε) : ℕ := (h_limsup_spec ε hε_pos N).choose
-
     have h_find_next_ge : ∀ N ε (hε : 0 < ε), find_next N ε hε ≥ N := fun N ε _ =>
       (h_limsup_spec ε (by positivity) N).choose_spec.1
-
     have h_find_next_value : ∀ N ε (hε : 0 < ε), x (find_next N ε hε) ≥ L - ε := fun N ε _ =>
       (h_limsup_spec ε (by positivity) N).choose_spec.2
-
     -- 递归构造序列 φ
     let φ : ℕ → ℕ := fun k => Nat.recOn k (find_next 0 1 (by positivity))
       (fun k' φk' => find_next (φk' + 1) (1 / (k' + 2)) (by positivity))
@@ -224,7 +229,8 @@ theorem lim_subsequence_eq_limsup
       intro k; induction k with
       | zero =>
         unfold φ; have h1 : (0 : ℝ) < 1 := by norm_num
-        simp
+        simp only [one_div, Nat.rec_zero, CharP.cast_eq_zero, zero_add, ne_eq, one_ne_zero,
+          not_false_eq_true, div_self, ge_iff_le, tsub_le_iff_right]
         exact (OrderedSub.tsub_le_iff_right L 1 (x (find_next 0 1
           (Mathlib.Meta.Positivity.pos_of_isNat (Mathlib.Meta.NormNum.isNat_ofNat ℝ Nat.cast_one)
             (Eq.refl (Nat.ble 1 1)))))).mp (h_find_next_value 0 1 h1)
@@ -252,7 +258,8 @@ theorem lim_subsequence_eq_limsup
   have hk_up := le_of_max_le_left hk; have hk_k₀ := le_of_max_le_right hk
   have h_upper := hN_up (φ k) (Nat.le_trans hk_up (h_phi_ge k))
   have h_lower := h_φ_lower k; have h_one_div_small := hk₀ k hk_k₀
-  rw [dist_eq_norm]; simp [Function.comp_apply]; apply abs_lt.2; constructor; repeat linarith
+  rw [dist_eq_norm]; simp only [Function.comp_apply, Real.norm_eq_abs, gt_iff_lt]
+  apply abs_lt.2; constructor; repeat linarith
 
 structure convergent_Subseq (x : ℕ → H) (f : ℕ → H) (m : ℕ) where
   φ : ℕ → ℕ
@@ -367,7 +374,7 @@ lemma StrictMono_phi_diag (x : ℕ → H)
   : StrictMono <| phi_diag x hx f := by
   refine strictMono_nat_of_lt_succ ?_
   intro n
-  simp [phi_diag]
+  simp only [phi_diag]
   rw [phi_comp_eq x hx f n]
   have h : n < (xφ x hx f (n + 1)).φ (n + 1) := by
     refine StrictMono_nge (xφ x hx f (n + 1)).φ ?_ n
@@ -495,7 +502,6 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
   (f : ℕ → H) (m : ℕ) :
   Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (xφ x hx f m).lim) := by
   have h_in_range := phi_diag_in_xφ_image x hx f m
-
   -- 步骤2：因此存在 k_n 使得 x (phi_diag x hx f n) = ((xφ x hx f m).xφ) k_n
   have h_exists_k : ∀ n ≥ m, ∃ k ≥ n, x (phi_diag x hx f n) = ((xφ x hx f m).xφ) k := by
     intro n hn
@@ -507,29 +513,25 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
       simp
     use j, hj_ge
     rw [← h_xφ_def, hj_eq]
-
   -- 步骤3：定义一个子列索引函数 ψ
   let ψ : ℕ → ℕ := fun n => (h_exists_k (m + n) (by linarith)).choose
   have h_ψ_ge : ∀ n, ψ n ≥ n := by
     intro n
     have : ψ n ≥ m + n := by
-      simp at h_exists_k
+      simp only [ge_iff_le] at h_exists_k
       exact (h_exists_k (m + n) (by linarith)).choose_spec.1
     linarith
-
   -- 步骤4：我们知道 ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫ = ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫
   have h_eq_xφ : ∀ n, ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫ =
     ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫ := by
     intro n
     have := (h_exists_k (m + n) (by linarith)).choose_spec
-    simp at this
+    simp only [ge_iff_le] at this
     exact congrArg (inner ℝ (f m)) this.2
-
   -- 步骤5：⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫ 是 ⟪f m, ((xφ x hx f m).xφ) k⟫ 的子列
   -- 而 ⟪f m, ((xφ x hx f m).xφ) k⟫ 收敛到 (xφ x hx f m).lim
   have h_base_conv : Tendsto (fun k => ⟪f m, ((xφ x hx f m).xφ) k⟫) atTop
     (𝓝 (xφ x hx f m).lim) := converge_inner_subseq_fm x hx f m
-
   -- 步骤6：子列也收敛到相同的极限
   have h_subseq_conv : Tendsto (fun n => ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫) atTop
     (𝓝 (xφ x hx f m).lim) := by
@@ -540,14 +542,12 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
     intro n hn
     specialize h_ψ_ge n
     linarith
-
   -- 步骤7：通过等式转换回原始序列（从 m 开始的平移）
   have h_shifted : Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫) atTop
     (𝓝 (xφ x hx f m).lim) := by
     convert h_subseq_conv using 1
     ext n
     exact h_eq_xφ n
-
   -- 步骤8：原始序列的收敛性等价于平移序列的收敛性
   have h_equiv : Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop
     (𝓝 (xφ x hx f m).lim) ↔
@@ -568,7 +568,8 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
       have : n - m + m = n := by omega
       rw [← this] at hN
       have hN_apply : (n - m) ≥ N := by omega
-      simp at *
+      simp only [ge_iff_le, Set.mem_range, Function.comp_apply, gt_iff_lt,
+        add_tsub_cancel_right] at *
       convert hN hN_apply
       linarith
   exact h_equiv.mpr h_shifted
@@ -580,16 +581,14 @@ lemma dense_f_forall (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖))
   (f : ℕ → H) (hf : Dense (Set.range f)) :
   ∀ y : H, CauchySeq (fun n => ⟪y, (x ∘ (phi_diag x hx f)) n⟫) := by
-  intro y; simp [Metric.cauchySeq_iff]; intro ε hε
+  intro y; simp only [Function.comp_apply, Metric.cauchySeq_iff, gt_iff_lt, ge_iff_le]; intro ε hε
   obtain ⟨M, hM_pos, hM⟩ := bdd_iff_exist_bound (x ∘ phi_diag x hx f)
     (bdd_subseq_bdd x hx (phi_diag x hx f))
-
   have h_eps_pos : 0 < ε / (3 * M + 1) := by positivity
   have ⟨fk, hfk_in_ball, hfk_in_f⟩ := Metric.dense_iff.mp hf y (ε / (3 * M + 1)) h_eps_pos
   have hfk_eq : ∃ k, fk = f k := by
     obtain ⟨k, hk⟩ := hfk_in_f; use k; rw [hk]
   obtain ⟨k, rfl⟩ := hfk_eq
-
   have h_fk_conv : Tendsto (fun n => ⟪f k, (x ∘ (phi_diag x hx f)) n⟫) atTop
     (𝓝 (xφ x hx f k).lim) := converge_inner_subseq_fm_phi_diag x hx f k
   have h_fk_cauchy : CauchySeq (fun n => ⟪f k, (x ∘ (phi_diag x hx f)) n⟫) :=
@@ -601,7 +600,6 @@ lemma dense_f_forall (x : ℕ → H)
       + dist ⟪f k, (x ∘ (phi_diag x hx f)) m⟫ ⟪f k, (x ∘ (phi_diag x hx f)) n⟫
       + dist ⟪f k, (x ∘ (phi_diag x hx f)) n⟫ ⟪y, (x ∘ (phi_diag x hx f)) n⟫ :=
     by simp only [Function.comp_apply]; exact dist_triangle4 _ _ _ _
-
   -- 估计第一项：|⟪y - f k, x(φ m)⟫| < ε/3
   have h_term : ∀ m, dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫
     ⟪f k, (x ∘ (phi_diag x hx f)) m⟫ < ε / 3 := by
@@ -613,7 +611,7 @@ lemma dense_f_forall (x : ℕ → H)
         apply abs_real_inner_le_norm
       _ ≤  (ε / (3 * M + 1)) * M := by
         apply mul_le_mul ?_ (hM p) (norm_nonneg (x (phi_diag x hx f p))) (by linarith)
-        · simp [ball, dist_eq_norm, ← norm_sub_rev] at hfk_in_ball ⊢
+        · simp only [ball, dist_eq_norm, ← norm_sub_rev, Set.mem_setOf_eq] at hfk_in_ball ⊢
           calc
             _ = ‖y - f k‖ := by rw [norm_sub_rev]
             _ ≤ ε / (3 * M + 1) := by linarith [hfk_in_ball]
@@ -621,17 +619,14 @@ lemma dense_f_forall (x : ℕ → H)
         rw [div_eq_mul_one_div]; nth_rewrite 2 [div_eq_mul_one_div]; rw [mul_assoc]
         apply mul_lt_mul_of_pos_left
         · field_simp
-          calc
-            _ < M / (3 * M) := by apply div_lt_div_of_pos_left; repeat' linarith
-            _ = 1 / 3 := by field_simp [hM_pos]
+          linarith
         · exact hε
   have h_term1 := h_term m; have h_term1' := h_term n; rw [dist_comm] at h_term1'
-
   -- 估计第二项：|⟪f k, x(φ m)⟫ - ⟪f k, x(φ n)⟫| < ε/3
   have h_term2 : dist ⟪f k, (x ∘ (phi_diag x hx f)) m⟫
     ⟪f k, (x ∘ (phi_diag x hx f)) n⟫ < ε / 3 := by
-    specialize hN m hm n hn; simp [dist_eq_norm, Function.comp_apply] at hN; exact hN
-
+    specialize hN m hm n hn;
+    simp only [Function.comp_apply, dist_eq_norm, Real.norm_eq_abs] at hN; exact hN
   -- 综合三项
   calc dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫ ⟪y, (x ∘ (phi_diag x hx f)) n⟫
       ≤ dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫ ⟪f k, (x ∘ (phi_diag x hx f)) m⟫
@@ -754,7 +749,8 @@ theorem bounded_seq_has_weakly_converge_subseq_separable [SeparableSpace H]
         y
   have hy2 (y : H): ⟪a,y⟫ = (y_StrongDual x hx f hdense).toFun y := by
     specialize hy y
-    simp [InnerProductSpace.toDual_apply] at hy
+    simp only [AddHom.toFun_eq_coe, LinearMap.coe_toAddHom, ContinuousLinearMap.coe_coe,
+      InnerProductSpace.toDual_apply_apply] at hy
     symm
     exact hy
   have xφc : WeakConverge (x ∘ φ) a := by
@@ -770,7 +766,7 @@ lemma IsWeaklySeqCompact_mono {s t : Set H}
   (x : ℕ → H) (hx : ∀ n : ℕ, x n ∈ s):
   (IsWeaklySeqCompact t) → s ⊆ t → ∃ a, ∃ φ, StrictMono φ ∧ WeakConverge (x ∘ φ) a := by
   intro ht hsub
-  simp [IsWeaklySeqCompact, IsSeqCompact] at ht ⊢
+  simp only [IsWeaklySeqCompact, IsSeqCompact] at ht ⊢
   have hx' : ∀ n : ℕ, x n ∈ t := fun n => hsub (hx n)
   have := ht hx'
   rcases this with ⟨a, ha_in_t, φ, hφ_strict, hφ_conv⟩

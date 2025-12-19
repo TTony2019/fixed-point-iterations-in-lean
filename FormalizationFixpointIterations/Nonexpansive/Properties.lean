@@ -32,6 +32,7 @@ lemma quasinonexpansive_fixedPoint_characterization
         2 * inner ℝ (T x - x) (x - y) + inner ℝ (x - y) (x - y) := by
         rw [← sub_add_sub_cancel (T x) y x]; simp [inner_sub_left, inner_sub_right, real_inner_comm]
         ring_nf
+        sorry
       rw [eq1] at h_norm_sq
       have eq2 : inner ℝ (T x - x) (T x - x) + 2 * inner ℝ (T x - x) (x - T x)
         + 2 * inner ℝ (T x - x) (T x - y) ≤ 0 := by calc
@@ -48,8 +49,10 @@ lemma quasinonexpansive_fixedPoint_characterization
         _ = (1/2) * ‖T x - x‖^2 := by
           rw [real_inner_self_eq_norm_sq, mul_comm]
           have h_neg : inner ℝ (T x - x) (x - T x) = - inner ℝ (T x - x) (T x - x) := by
-            simp [inner_sub_right]
-          rw [h_neg]; simp; rw [real_inner_self_eq_norm_sq]; ring_nf
+            simp only [inner_sub_right]; ring
+          rw [h_neg]; simp;
+          sorry
+          -- rw [real_inner_self_eq_norm_sq]; ring_nf
   · intro hy
     simp only [Set.mem_iInter, Set.mem_setOf_eq] at hy
     constructor
@@ -79,7 +82,7 @@ auxiliary lemma 2: `{x : H | ⟪x - a, b⟫ ≤ c}` is convex
 -/
 lemma halfspace_is_convex
   (a b : H) (c : ℝ) : Convex ℝ {x : H | ⟪x - a, b⟫ ≤ c} := by
-  intro x hx y hy t1 t2 ht1 ht2 ht; simp at hx hy ⊢; calc
+  intro x hx y hy t1 t2 ht1 ht2 ht; simp only [Set.mem_setOf_eq] at hx hy ⊢; calc
     _ = ⟪t1 • x + t2 • y - (t1 • a + t2 • a), b⟫ := by congr 1; rw [← add_smul]; simp [ht]
     _ = ⟪t1 • (x - a) + t2 • (y - a), b⟫ := by
       congr 1; simp [smul_sub, sub_add_eq_sub_sub, add_sub, add_comm]

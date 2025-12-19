@@ -12,12 +12,12 @@ open Filter
 -- Right hand side of Lemma 2.42
 lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (nhds p))
   (hxy : ∀ n, x n ≤ y n) : Real.toEReal p ≤ liminf (fun n => Real.toEReal (y n)) atTop := by
-  simp [liminf, limsInf]
+  simp only [liminf, limsInf, eventually_map, eventually_atTop, ge_iff_le]
   let s : Set EReal := {a : EReal | ∃ N, ∀ (n : ℕ), N ≤ n → (a ≤ y n)}
   change p ≤ sSup s
   have h1 : ∀ (ε : ℝ) , ε > 0 → Real.toEReal (p - ε) ∈ s := by
     intro ε hε
-    simp [s]
+    simp only [coe_sub, Set.mem_setOf_eq, s]
     obtain ⟨N, hN⟩ := Metric.tendsto_atTop.mp h ε hε  -- 从 Tendsto 得到 ε-N 条件
     use N
     intro n hn
@@ -41,7 +41,7 @@ lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (
     rw [this] at h2
     specialize h2 1 (by simp)
     rw [← EReal.coe_sub] at h2
-    simp at h2
+    simp only [coe_sub, coe_one, le_bot_iff] at h2
     exact EReal.coe_ne_bot (p - 1) h2
   lift (sSup s) to ℝ using ⟨hs1,hs2⟩ with d
   rw [EReal.coe_le_coe_iff]
