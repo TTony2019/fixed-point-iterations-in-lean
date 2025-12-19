@@ -8,7 +8,7 @@ import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Analysis.InnerProductSpace.Dual
 import FormalizationFixpointIterations.Theory.InnerProductSpace.Closedness
 import FormalizationFixpointIterations.Theory.InnerProductSpace.T2Space
-
+import Mathlib
 open Metric WeakDual Filter Topology TopologicalSpace
 section WeaklyCompact
 
@@ -16,7 +16,7 @@ variable {H : Type*}
 variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
-def IsWeaklyCompact (s : Set H) : Prop := @IsCompact (WeakSpace ℝ H) _ (s: Set (WeakSpace ℝ H))
+def IsWeaklyCompact (s : Set H) : Prop := IsCompact ((toWeakSpace ℝ H) '' s)
 /-
 Lemma 1.12
 -/
@@ -99,10 +99,26 @@ theorem closed_unit_ball_is_weakly_compact [CompleteSpace H] (x : H) (r : ℝ) :
   simp [IsWeaklyCompact]
   have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by simp [f]
   simp [ball_eq] at h
-  rwa [← weakHomeomorph.isCompact_image, weakHom_image_eq]
-
+  obtain h' := @weakHom_image_eq _ _ _ _ x r
+  rw [s_eq (closedBall x r)] at h'
+  rwa [← weakHomeomorph.isCompact_image, h']
 
 def IsWeaklySeqCompact (s : Set H) := @IsSeqCompact (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
+
+theorem closed_ball_is_weakly_seqcompact [CompleteSpace H] (x : H) (r : ℝ) :
+  IsWeaklySeqCompact (closedBall x r) := by
+  let f := InnerProductSpace.toDual ℝ H x
+  -- obtain h := WeakDual.isSeqCompact_closedBall ℝ f r
+  -- simp [IsWeaklySeqCompact]
+  -- have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by simp [f]
+  -- simp [ball_eq] at h
+  -- obtain h' := @weakHom_image_eq _ _ _ _ x r
+  -- rw [s_eq (closedBall x r)] at h'
+  -- rwa [← weakHomeomorph.isCompact_image, h']
+  sorry
+
+
+
 def IsWeaklySeqClusterPt (p : H) (x : ℕ → H):= @MapClusterPt (WeakSpace ℝ H) _ ℕ p atTop x
 
 -- ∀ k, φ k ≥ k

@@ -7,6 +7,8 @@ import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
 import Mathlib.Topology.Defs.Filter
+import Mathlib.Topology.Algebra.Module.WeakBilin
+import Mathlib.Analysis.LocallyConvex.WeakSpace
 -- import Mathlib.Logic.Function.Defs
 import FormalizationFixpointIterations.Theory.InnerProductSpace.WeakConverge
 import FormalizationFixpointIterations.Nonexpansive.Definitions
@@ -16,8 +18,15 @@ open WeakBilin Filter Topology Nonexpansive_operator Function
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
-def IsWeaklyClosed (s : Set H) := @IsClosed (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
-def IsWeaklySeqClosed (s : Set H) := @IsSeqClosed (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
+-- def IsWeaklyClosed (s : Set H) := @IsClosed (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
+#check toWeakSpace
+def IsWeaklyClosed (s : Set H) := IsClosed ((toWeakSpace ℝ H) '' s)
+def IsWeaklySeqClosed (s : Set H) := IsSeqClosed ((toWeakSpace ℝ H) '' s)
+-- def IsWeaklySeqClosed (s : Set H) := @IsSeqClosed (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
+
+lemma s_eq (s : Set H) : s = ((fun a ↦ (toWeakSpace ℝ H) a) '' s) := by
+  exact Eq.symm (Set.EqOn.image_eq_self fun ⦃x⦄ ↦ congrFun rfl)
+
 /-- Theorem 3.34
 Let `C` be a convex subset of `H`. The following statement are equivalent:
 1. `C` is weakly sequentially closed.
@@ -27,8 +36,11 @@ Let `C` be a convex subset of `H`. The following statement are equivalent:
 -/
 -- Theorem 3.34 (i) → (ii)
 theorem convex_weakly_seq_closed [CompleteSpace H] (s : Set H) (hw : IsWeaklySeqClosed s) :
-  IsSeqClosed s :=
-  fun x p hxn hx => @hw x p hxn ((strong_converge_iff_weak_norm_converge x p).1 hx).1
+  IsSeqClosed s := by
+  intro x p hxn hx
+  rw [s_eq s] at hxn
+  specialize hw hxn ((strong_converge_iff_weak_norm_converge x p).1 hx).1
+  exact Set.inter_singleton_nonempty.mp hw
 
 -- Theorem 3.34 (ii) ↔ (iii)
 #check isSeqClosed_iff_isClosed
@@ -43,53 +55,17 @@ theorem continuous_real_weakspace : Continuous (toWeakSpace ℝ ℝ).symm := by
   change Continuous (toWeakSpace ℝ ℝ).symm.toFun
   rw [heq']
   exact eval_continuous (topDualPairing ℝ ℝ).flip 1
-#check isOpenMap_toWeakSpace_symm
 
+#check isOpenMap_toWeakSpace_symm
+#check Convex.toWeakSpace_closure
 -- Theorem 3.34 (iii) → (iv)
 theorem closed_is_weakly_closed [CompleteSpace H] (s : Set H)
-  (hs : Convex ℝ s) (hw : IsClosed s) :
-  IsWeaklyClosed s := by
+  (hs : Convex ℝ s) (hw : IsClosed s) : IsWeaklyClosed s := by
+  obtain h := Convex.toWeakSpace_closure ℝ hs
+  rw [closure_eq_iff_isClosed.mpr hw] at h
   simp [IsWeaklyClosed]
-  refine { isOpen_compl := ?_ }
-  refine isOpen_iff_forall_mem_open.mpr ?_
-  intro x xsc
-  obtain ⟨f,u,fxu,fbu⟩ := geometric_hahn_banach_point_closed hs hw xsc
-  let U := f⁻¹' (Set.Iio u)
-  have hU: IsOpen U := by
-    refine Continuous.isOpen_preimage ?_ (Set.Iio u) ?_
-    exact ContinuousLinearMap.continuous f
-    exact isOpen_Iio
-  let yf := (InnerProductSpace.toDual ℝ H).symm f
-  have (x:H): ⟪yf,x⟫ = f x := by
-    exact InnerProductSpace.toDual_symm_apply
-  let f1 := WeakSpace.map f
-  let f2 := (toWeakSpace ℝ ℝ).symm
-  let f21 := f2 ∘ f1
-  have feq (x : H): f21 x = f x := rfl
-  let U' := f21⁻¹' (Set.Iio u)
-  use U'
-  have U'Open : IsOpen U' := by
-    refine Continuous.isOpen_preimage ?_ (Set.Iio u) ?_
-    · simp [f21]
-      refine Continuous.comp ?_ ?_
-      · simp [f2]
-        exact continuous_real_weakspace
-      exact ContinuousLinearMap.continuous f1
-    exact isOpen_Iio
-  have hU'insc : U' ⊆ sᶜ := by
-    intro g hg
-    simp; simp [U', feq g] at hg
-    by_contra! hgs
-    linarith [fbu g hgs]
-  have hxinU' : x ∈ U' := by
-    refine Set.mem_preimage.mpr ?_
-    simp [feq x]; exact fxu
-  constructor
-  · exact hU'insc
-  constructor
-  · exact U'Open
-  exact hxinU'
-
+  apply closure_eq_iff_isClosed.1
+  symm; exact h
 
 -- Theorem 3.34 (iv) → (i)
 theorem weakly_closed_seq_closed (s : Set H) (hs : IsWeaklyClosed s) :

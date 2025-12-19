@@ -81,11 +81,7 @@ section WeakConverge
 Definition: Weak convergence in an inner product space.
 -/
 def WeakConverge (x : ℕ → H) (p : H) :=
-  Tendsto (x: ℕ → WeakSpace ℝ H) atTop (nhds p : Filter (WeakSpace ℝ H))
-
-theorem h (x : ℕ → H) (p : H) : WeakConverge x p ↔
-  Tendsto (toWeakSpace ℝ H ∘ x) atTop (nhds (toWeakSpace ℝ H p)) := by
-  rfl
+  Tendsto ((toWeakSpace ℝ H) ∘ x) atTop (nhds ((toWeakSpace ℝ H) p))
 
 theorem weakConverge_iff_inner_converge_pre (x : ℕ → H) (p : H) : WeakConverge x p ↔
   ∀ y : H →L[ℝ] ℝ, Tendsto (fun n ↦ (topDualPairing ℝ H).flip (x n) y)
