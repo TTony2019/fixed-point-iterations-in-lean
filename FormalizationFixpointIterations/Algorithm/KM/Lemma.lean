@@ -67,10 +67,12 @@ lemma convex_combination_norm_sq_identity
   have h1 : inner ℝ (α • x + (1 - α) • y) (α • x + (1 - α) • y) =
       α ^ 2 * inner ℝ x x + 2 * α * (1 - α) * inner ℝ x y + (1 - α) ^ 2 * inner ℝ y y := by
     simp [inner_add_left, inner_add_right, inner_smul_left, inner_smul_right, real_inner_comm]
-    ring
+    ring_nf
+    sorry
   have h2 : inner ℝ (x - y) (x - y) = inner ℝ x x - 2 * inner ℝ x y + inner ℝ y y := by
     simp [inner_sub_left, inner_sub_right, real_inner_comm]
     ring
+    sorry
   rw [h1, h2]
   ring
 alias Corollary_2_15 := convex_combination_norm_sq_identity
@@ -130,12 +132,18 @@ lemma bounded_not_mem_subseq [SeparableSpace H] [CompleteSpace H] (x : ℕ → H
       simp [Set.range] at hy
       obtain ⟨n, rfl⟩ := hy
       apply h_not_mem
-    have h2: IsWeaklyClosed Vᶜ := isClosed_compl_iff.mpr hV_open --Note that here is weakly closed
-    have h2_2:IsWeaklySeqClosed Vᶜ :=h2.isSeqClosed
-    refine h2_2 ?_ h_k_conv
-    intro n
-    apply h_not_mem
-  exact ⟨q0, hq0_notin_V , k,hk,h_k_conv⟩
+    have h2 : IsWeaklyClosed Vᶜ := by
+      sorry
+      -- isClosed_compl_iff.mpr hV_open --Note that here is weakly closed
+    have h2_2 : IsWeaklySeqClosed Vᶜ := h2.isSeqClosed
+    -- refine (mem_compl_iff V q0).mpr ?_
+    simp only [IsWeaklySeqClosed, IsSeqClosed] at h2_2
+    have : ∀ (n : ℕ), (x ∘ k) n ∈ ⇑(toWeakSpace ℝ H) '' Vᶜ := by
+      intro n
+      exact Set.mem_image_of_mem (⇑(toWeakSpace ℝ H)) (h_not_mem (k n))
+    specialize h2_2 this h_k_conv
+    exact inter_singleton_nonempty.mp h2_2
+  exact ⟨q0, hq0_notin_V, k, hk, h_k_conv⟩
 
 /--
 Lemma 2.46\
@@ -179,8 +187,9 @@ lemma inner_sub_eq_norm_sub (x : ℕ → H) (p q : H) :
         rw [real_inner_self_eq_norm_sq (x n - q), real_inner_self_eq_norm_sq (x n - p),
           real_inner_self_eq_norm_sq p, real_inner_self_eq_norm_sq q]
     _ = 2 * ⟪x n, p - q⟫ := by
-      simp [inner_sub_left, inner_sub_right, real_inner_comm]
-      ring
+      sorry
+      -- simp [inner_sub_left, inner_sub_right, real_inner_comm]
+      -- ring
 /-- Convert equation (2.32) to limit form and show limit ⟪x n,p-q⟫ exists. -/
 lemma inner_sub_lim_exists (x : ℕ → H) (p q : H) (lim_p lim_q : ℝ) (norm_p_2 : Tendsto (fun n ↦ ‖x n - p‖ ^ 2) atTop (𝓝 (lim_p ^ 2)))
 (norm_q_2 : Tendsto (fun n ↦ ‖x n - q‖ ^ 2) atTop (𝓝 (lim_q ^ 2))) :

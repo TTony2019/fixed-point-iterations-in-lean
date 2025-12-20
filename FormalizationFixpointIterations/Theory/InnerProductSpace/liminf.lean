@@ -15,14 +15,20 @@ then `p ≤ liminf y n`.
 -/
 lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (nhds p))
   (hxy : ∀ n, x n ≤ y n) : Real.toEReal p ≤ liminf (fun n => Real.toEReal (y n)) atTop := by
-  simp [liminf, limsInf]
+  simp only [liminf, limsInf, eventually_map, eventually_atTop, ge_iff_le]
   let s : Set EReal := {a : EReal | ∃ N, ∀ (n : ℕ), N ≤ n → (a ≤ y n)}
   change p ≤ sSup s
   have h1 : ∀ (ε : ℝ) , ε > 0 → Real.toEReal (p - ε) ∈ s := by
-    intro ε hε; simp [s]; obtain ⟨N, hN⟩ := Metric.tendsto_atTop.mp h ε hε
-    use N; intro n hn; specialize hN n hn; rw [Real.dist_eq] at hN
-    have p_lt_xn : p - ε < x n := sub_lt_of_abs_sub_lt_left hN
-    have xn_lt_yn : x n ≤ y n := hxy n
+    intro ε hε
+    simp only [coe_sub, Set.mem_setOf_eq, s]
+    obtain ⟨N, hN⟩ := Metric.tendsto_atTop.mp h ε hε  -- 从 Tendsto 得到 ε-N 条件
+    use N
+    intro n hn
+    specialize hN n hn  -- hN: |x n - p| < ε
+    rw [Real.dist_eq] at hN  -- |x n - p| < ε，即 p - ε < x n < p + ε
+    have p_lt_xn : p - ε < x n := by
+      exact sub_lt_of_abs_sub_lt_left hN
+    have xn_lt_yn : x n ≤ y n := hxy n  -- 从假设 hxy: ∀ n, x n ≤ y n
     have : p - ε < y n := by linarith
     rw [← EReal.coe_lt_coe_iff] at this; exact le_of_lt this
   have h2 : ∀ (ε : ℝ) , ε > 0 → p - ε ≤ sSup s := by
@@ -31,7 +37,11 @@ lemma EReal.limit_le_liminf (x y : ℕ → ℝ) (p : ℝ) (h : Tendsto x atTop (
   · simp [hs1]
   push_neg at hs1
   have hs2 : sSup s ≠ ⊥ := by
-    by_contra!; rw [this] at h2; specialize h2 1 (by simp); simp at h2
+    by_contra!
+    rw [this] at h2
+    specialize h2 1 (by simp)
+    rw [← EReal.coe_sub] at h2
+    simp only [coe_sub, coe_one, le_bot_iff] at h2
     exact EReal.coe_ne_bot (p - 1) h2
   lift (sSup s) to ℝ using ⟨hs1,hs2⟩ with d; rw [EReal.coe_le_coe_iff]
   have h2' : ∀ ε > 0, p - ε ≤ d := by
