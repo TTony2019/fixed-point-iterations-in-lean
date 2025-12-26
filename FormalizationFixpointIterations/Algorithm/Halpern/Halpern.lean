@@ -152,18 +152,18 @@ lemma halpern_telescoping_ineq
   (μ : ℝ) (hμ_pos : μ > 0) (hμ_x_bound : ∀ n, ‖alg.x (n + 1) - alg.x n‖ ≤ μ)
   (h_norm_diff_ineq : ∀ n, ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤ μ * |alg.α (n + 1) - alg.α n| +
     (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖)
-  : ∀ n m, m ≤ n → ‖alg.x (n+2) - alg.x (n+1)‖ ≤ μ * (∑ k ∈ Finset.Icc m n,
-    |alg.α (k+1) - alg.α k|) + μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
+  : ∀ n m, m ≤ n → ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤ μ * (∑ k ∈ Finset.Icc m n,
+    |alg.α (k + 1) - alg.α k|) + μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
     intro n m hmn; have hμ_nonneg : 0 ≤ μ := le_of_lt hμ_pos; calc
-      _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k+1) - alg.α k|) + ‖alg.x (m+1) - alg.x m‖ *
-        (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
+      _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) + ‖alg.x (m + 1) - alg.x m‖ *
+        (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
           apply halpern_telescoping_bound hμ_nonneg h_α_range h_norm_diff_ineq; exact hmn
-      _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k+1) - alg.α k|) + μ *
-        (∏ k ∈ Finset.Icc m n, (1 - alg.α (k+1))) := by
+      _ ≤ μ * (∑ k ∈ Finset.Icc m n, |alg.α (k + 1) - alg.α k|) + μ *
+        (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))) := by
         apply add_le_add_right; apply mul_le_mul_of_nonneg_right
         · exact hμ_x_bound m
         · apply Finset.prod_nonneg; intro k hk
-          linarith [one_sub_pos_of_mem_Ioo (h_α_range (k+1))]
+          linarith [one_sub_pos_of_mem_Ioo (h_α_range (k + 1))]
 
 /--
 Lemma : The limit of the inequality in Lemma 30.12.2 : `lim m n → ∞, m ≤ n, ‖x (n + 2) - x (n + 1)‖
@@ -187,8 +187,8 @@ Lemma : Index transform :
   `lim n → ∞`, `(f (n + 2) - f (n + 1)) = 0` → `lim n → ∞`, `f (n + 1) - f n = 0`
 -/
 lemma adjacent_diff_from_shifted
-  {f : ℕ → H} : Tendsto (fun n => (f (n + 2) - f (n + 1))) atTop (𝓝 0) →
-  Tendsto (fun n => (f (n + 1) - f n)) atTop (𝓝 0) := by
+  {f : ℕ → H} : Tendsto (fun n => (f (n + 2) - f (n + 1))) atTop (nhds 0) →
+  Tendsto (fun n => (f (n + 1) - f n)) atTop (nhds 0) := by
   intro h
   have : (fun n ↦ f (n + 1) - f n) ∘ (fun n ↦ n + 1) = (fun n ↦ f (n + 2) - f (n + 1)) := by
     funext n; simp only [Function.comp_apply]
@@ -206,7 +206,7 @@ lemma halpern_diff_limit
     (1 - alg.α (n + 1)) * ‖alg.x (n + 1) - alg.x n‖)
   (h_telescoping : ∀ n m, m ≤ n → ‖alg.x (n + 2) - alg.x (n + 1)‖ ≤ μ * (∑ k ∈ Finset.Icc m n,
     |alg.α (k + 1) - alg.α k|) + μ * (∏ k ∈ Finset.Icc m n, (1 - alg.α (k + 1))))
-  : Tendsto (fun n => (alg.x (n + 1) - alg.x n)) atTop (𝓝 0) := by
+  : Tendsto (fun n => (alg.x (n + 1) - alg.x n)) atTop (nhds 0) := by
   have sq_lim_le := halpern_telescoping_limit alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
   have sq_lim2 := halpern_prod_tail_tendsto_zero alg μ hμ_pos h_α_range h_α_sum_inf
   have sq_lim3: ∀ ε > 0, ∀ᶠ m in atTop, ∀ᶠ n in atTop, m ≤ n → μ * ∏ k ∈ Finset.Icc m n,
@@ -233,11 +233,11 @@ lemma halpern_diff_limit
     obtain ⟨N, hN⟩ := h_eventually; specialize hN N (le_refl N); rw [eventually_atTop] at hN ⊢
     rcases hN with ⟨a, ha⟩; use max N a; intro n hn
     apply (ha n (le_of_max_le_right hn) (le_of_max_le_left hn))
-  have sq_lim6 : Tendsto (fun n => ‖alg.x (n + 2) - alg.x (n + 1)‖) atTop (𝓝 0) := by
+  have sq_lim6 : Tendsto (fun n => ‖alg.x (n + 2) - alg.x (n + 1)‖) atTop (nhds 0) := by
     rw [Metric.tendsto_atTop]; intros ε ε_pos
     obtain ⟨N, hN⟩ := (eventually_atTop).mp (sq_lim5' ε ε_pos); use N; intro n hn
     rw [Real.dist_eq]; simp only [sub_zero, abs_norm]; exact hN n hn
-  have sq_lim7 : Tendsto (fun n => (alg.x (n + 2) - alg.x (n + 1))) atTop (𝓝 0) :=
+  have sq_lim7 : Tendsto (fun n => (alg.x (n + 2) - alg.x (n + 1))) atTop (nhds 0) :=
     ((Iff.symm tendsto_zero_iff_norm_tendsto_zero).1 sq_lim6)
   exact adjacent_diff_from_shifted sq_lim7
 
@@ -246,13 +246,13 @@ Lemma 30.14 : The limit of `x n - T (x n)` : `lim n → ∞`, `x n - T (x n) = 0
 -/
 lemma halpern_x_sub_Tx_tendsto_zero
   {T : H → H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
-  (h_α_limit : Tendsto alg.α atTop (𝓝 0)) (μ : ℝ) (hμ_pos : μ > 0)
+  (h_α_limit : Tendsto alg.α atTop (nhds 0)) (μ : ℝ) (hμ_pos : μ > 0)
   (hμ_Tx_bound : ∀ n, ‖alg.u - T (alg.x n)‖ ≤ μ)
-  (h_diff_limit : Tendsto (fun n ↦ alg.x (n + 1) - alg.x n) atTop (𝓝 0))
-  : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (𝓝 0) := by
+  (h_diff_limit : Tendsto (fun n ↦ alg.x (n + 1) - alg.x n) atTop (nhds 0))
+  : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (nhds 0) := by
   have eq1 : ∀ n, alg.x (n + 1) - alg.x n = alg.α n • (alg.u - T (alg.x n)) +
     (T (alg.x n) - alg.x n) := by intro n; rw [alg.update]; simp [smul_sub, sub_smul]; abel
-  have h1 : Tendsto (fun n ↦ alg.α n * ‖alg.u - T (alg.x n)‖) atTop (𝓝 0) := by
+  have h1 : Tendsto (fun n ↦ alg.α n * ‖alg.u - T (alg.x n)‖) atTop (nhds 0) := by
     rw [Metric.tendsto_atTop] at ⊢ h_α_limit; intro ε ε_pos
     obtain ⟨N, hN⟩ := h_α_limit (ε / μ) (by positivity); use N; intro n hn; rw [Real.dist_eq]
     simp only [sub_zero]
@@ -264,9 +264,9 @@ lemma halpern_x_sub_Tx_tendsto_zero
       _ ≤ alg.α n * μ := by gcongr; exact hμ_Tx_bound n
       _ < (ε / μ) * μ := mul_lt_mul_of_pos_right h_α_small hμ_pos
       _ = ε := by field_simp [ne_of_gt hμ_pos]
-  have h2 : Tendsto (fun n ↦ alg.α n • (alg.u - T (alg.x n))) atTop (𝓝 0) := by
-    have h_norm_bound : Tendsto (fun n ↦ ‖alg.α n • (alg.u - T (alg.x n))‖) atTop (𝓝 0) := by
-      have : Tendsto (fun n ↦ |alg.α n| * ‖alg.u - T (alg.x n)‖) atTop (𝓝 0) := by
+  have h2 : Tendsto (fun n ↦ alg.α n • (alg.u - T (alg.x n))) atTop (nhds 0) := by
+    have h_norm_bound : Tendsto (fun n ↦ ‖alg.α n • (alg.u - T (alg.x n))‖) atTop (nhds 0) := by
+      have : Tendsto (fun n ↦ |alg.α n| * ‖alg.u - T (alg.x n)‖) atTop (nhds 0) := by
         convert h1 using 1; ext n; congr; simp; linarith [(h_α_range n).1]
       convert this using 1; funext n; rw [norm_smul]; simp
     rw [Metric.tendsto_atTop] at h_norm_bound ⊢
@@ -285,7 +285,7 @@ Lemma 30.17 : Upbd of the inner product and the norm : `∀ ε > 0, ∃ k, ∀ n
 -/
 lemma halpern_eps_exists_of_limsup_and_alpha
   {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H] {T : H → H}
-  (alg : Halpern T) (m : H) (h_α_limit : Tendsto alg.α atTop (𝓝 0))
+  (alg : Halpern T) (m : H) (h_α_limit : Tendsto alg.α atTop (nhds 0))
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0)
   (h_inner_bounded : ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M)
@@ -328,7 +328,7 @@ Lemma 30.18 : The distance is upbounded by `ε` : `∀ ε > 0, ∃ k, ∀ n ≥ 
 -/
 lemma halpern_xn_sub_PCx_upbd [CompleteSpace H]
   {T : H → H} {C : Set H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
-  (h_α_limit : Tendsto alg.α atTop (𝓝 0)) (m : H) (hm_in_C : m ∈ C)
+  (h_α_limit : Tendsto alg.α atTop (nhds 0)) (m : H) (hm_in_C : m ∈ C)
   (h_induction : ∀ z ∈ C, ∀ n, ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧ ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
   (h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0)
   (h_inner_bounded : ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M)
@@ -389,7 +389,7 @@ Lemma 30.19 : The distance is upbounded by `ε` : `∀ ε > 0, ∃ N, ∀ n k �
 -/
 lemma halpern_xn_sub_PCx_prod [CompleteSpace H]
   {T : H → H} {C : Set H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
-  (h_α_limit : Tendsto alg.α atTop (𝓝 0)) (m : H) (hm_in_C : m ∈ C)
+  (h_α_limit : Tendsto alg.α atTop (nhds 0)) (m : H) (hm_in_C : m ∈ C)
   (h_induction : ∀ z ∈ C, ∀ n, ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧ ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
   (h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0)
   (h_inner_bounded : ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M)
@@ -443,7 +443,7 @@ Lemma : The distance is upbounded by `ε` : `∀ ε > 0, ∃ N, ∀ n k ≥ N, n
 -/
 lemma halpern_limsup_bound_from_prod [CompleteSpace H]
   {T : H → H} {C : Set H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
-  (h_α_limit : Tendsto alg.α atTop (𝓝 0))
+  (h_α_limit : Tendsto alg.α atTop (nhds 0))
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop) (m : H)
   (hm_in_C : m ∈ C)
   (h_induction : ∀ z ∈ C, ∀ n, ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧ ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
@@ -554,14 +554,14 @@ Lemma : The convergence of `x n` : `lim n → ∞, x n = PCx`
 -/
 lemma halpern_convergence_aux [CompleteSpace H]
   {T : H → H} {C : Set H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
-  (h_α_limit : Tendsto alg.α atTop (𝓝 0))
+  (h_α_limit : Tendsto alg.α atTop (nhds 0))
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop) (m : H)
   (hm_in_C : m ∈ C)
   (h_induction : ∀ z ∈ C, ∀ n, ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧ ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖)
   (h_limsup_neg : limsup (fun k => ⟪(T (alg.x k) - m), (alg.u - m)⟫) atTop ≤ 0)
   (h_inner_bounded : ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M) (z : H)
   (h_seq_bounded : ∃ M, ∀ n, ‖alg.x n - z‖ ≤ M)
-  : Tendsto alg.x atTop (𝓝 m) := by
+  : Tendsto alg.x atTop (nhds m) := by
   have h_limsup_upbd : ∀ ε > 0, limsup (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop ≤ 3 * ε := by
     intro ε hε
     obtain ⟨N, hN⟩ := halpern_limsup_bound_from_prod alg h_α_range h_α_limit h_α_sum_inf m
@@ -586,7 +586,7 @@ lemma halpern_convergence_aux [CompleteSpace H]
     have h_bound := h_all_eps (L / 6) h_sixth
     have h_contradiction : L ≤ L / 2 := by linarith
     linarith
-  have h_norm_sq_tendsto_zero : Tendsto (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop (𝓝 0) := by
+  have h_norm_sq_tendsto_zero : Tendsto (fun n => ‖alg.x (n + 1) - m‖ ^ 2) atTop (nhds 0) := by
     rw [← h_limsup_zero]; have h_nonneg : ∀ n, 0 ≤ ‖alg.x (n + 1) - m‖ ^ 2 := fun n => sq_nonneg _
     rw [Metric.tendsto_atTop]; intro ε ε_pos
     have h_eventually : ∀ᶠ n in atTop, ‖alg.x (n + 1) - m‖ ^ 2 < ε := by
@@ -599,7 +599,7 @@ lemma halpern_convergence_aux [CompleteSpace H]
     obtain ⟨N, hN⟩ := (eventually_atTop).mp h_eventually; use N; intro n hn
     rw [Real.dist_eq, h_limsup_zero]; simp only [sub_zero, abs_pow, abs_norm]
     exact abs_of_nonneg (h_nonneg n) ▸ hN n hn
-  have h_shifted : Tendsto (fun n => alg.x (n + 1)) atTop (𝓝 m) := by
+  have h_shifted : Tendsto (fun n => alg.x (n + 1)) atTop (nhds m) := by
     rw [Metric.tendsto_atTop] at h_norm_sq_tendsto_zero ⊢; intro ε ε_pos
     obtain ⟨N, hN⟩ := h_norm_sq_tendsto_zero (ε ^ 2) (by positivity); use N; intro n hn
     rw [dist_eq_norm]
@@ -616,10 +616,10 @@ lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
   (hT_fixpoint : C.Nonempty) (alg : Halpern T) (halg_x0 : alg.x0 ∈ D)
   (halg_x_in_D : ∀ n, alg.x n ∈ D) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
-  (h_α_limit : Tendsto alg.α atTop (𝓝 0))
+  (h_α_limit : Tendsto alg.α atTop (nhds 0))
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
   (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|)) (coincidence : alg.u = alg.x0)
-  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (𝓝 p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
+  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (nhds p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
   have hT_quasinonexp := nonexpansive_leadsto_quasinonexpansive hT_nonexp
   have hC_closed_convex := quasinonexpansive_fixedPoint_closed_convex hD_closed hD_convex
     hD_nonempty hT_quasinonexp hC
@@ -658,12 +658,12 @@ lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
     alg h_α_range μ hμ_pos hμ_x_bound h_norm_diff_ineq
   have h_diff_limit := halpern_diff_limit alg h_α_range μ hμ_pos
     h_α_diff_finite h_α_sum_inf hμ_x_bound h_norm_diff_ineq h_telescoping
-  have h_x_Tx_limit : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (𝓝 0) :=
+  have h_x_Tx_limit : Tendsto (fun n ↦ alg.x n - T (alg.x n)) atTop (nhds 0) :=
     halpern_x_sub_Tx_tendsto_zero alg h_α_range h_α_limit μ hμ_pos hμ_Tx_bound h_diff_limit
   obtain ⟨p, z, m, q, h_n_strict_mono, ⟨h_z_in_D, h_weak_xn_to_z⟩, ⟨hm_in_C, hm_proj⟩, hq_def,
     h_n_tendsto⟩ := halpern_subsequence_weak_convergence hD_closed hD_convex (by use y)
       alg halg_x_in_D hC_closed_convex h_xn_bounded h_Txn_bounded
-  have h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (p k) - T (alg.x (p k))) atTop (𝓝 0) :=
+  have h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (p k) - T (alg.x (p k))) atTop (nhds 0) :=
     halpern_subseq_x_sub_Tx_tendsto_zero alg p h_n_strict_mono h_x_Tx_limit
   have h_z_fixed : z ∈ Fix T :=
     halpern_subseq_fixed_point hD_closed hD_convex hD_nonempty hT_nonexp
@@ -675,7 +675,7 @@ lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
     rw [hq_def] at h_n_tendsto; exact h_n_tendsto
   have h_inner_bounded : ∃ M, ∀ᶠ n in atTop, ⟪T (alg.x n) - m, alg.u - m⟫ ≤ M :=
     halpern_inner_bounded_of_limsup alg m μ hμ_Tx_bound h_limsup_neg
-  have h_x_conv : Tendsto alg.x atTop (𝓝 m) := by
+  have h_x_conv : Tendsto alg.x atTop (nhds m) := by
     exact halpern_convergence_aux alg h_α_range h_α_limit h_α_sum_inf m hm_in_C
       h_induction h_limsup_neg h_inner_bounded y h_seq_bounded
   use m; use hm_in_C; use h_x_conv; intro w hw_in_C
@@ -745,9 +745,10 @@ lemma halpern_prod_norm_diff_tendsto_zero
   {T : H → H} (alg : Halpern T) (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1)
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
   (s : ℕ → H)
-  : Tendsto (fun n => ((∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) * ‖alg.x 0 - s 0‖)) atTop (𝓝 0) := by
+  : Tendsto (fun n => ((∏ k ∈ Finset.Icc 0 n, (1 - alg.α k)) * ‖alg.x 0 - s 0‖))
+    atTop (nhds 0) := by
   have h_prod_tendsto_zero : Tendsto (fun n => (∏ k ∈ Finset.Icc 0 n, (1 - alg.α k))
-    * ‖alg.x 0 - s 0‖) atTop (𝓝 (0 * ‖alg.x 0 - s 0‖)) := by
+    * ‖alg.x 0 - s 0‖) atTop (nhds (0 * ‖alg.x 0 - s 0‖)) := by
     have h_prod := infinite_prod_zero alg h_α_range h_α_sum_inf 0
     apply Tendsto.mul_const; exact h_prod
   convert h_prod_tendsto_zero; simp
@@ -760,10 +761,10 @@ lemma halpern_convergence_point_different [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
   (hT_fixpoint : C.Nonempty) (hT_invariant : ∀ x ∈ D, T x ∈ D) (alg : Halpern T)
   (halg_u : alg.u ∈ D) (halg_x_in_D : ∀ n, alg.x n ∈ D)
-  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (h_α_limit : Tendsto alg.α atTop (𝓝 0))
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (h_α_limit : Tendsto alg.α atTop (nhds 0))
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
   (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|))
-  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (𝓝 p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
+  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (nhds p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
   have h_α_pos : ∀ n, 0 < alg.α n := by intro n; exact (h_α_range n).1
   have h_α_lt_one : ∀ n, alg.α n < 1 := by intro n; exact (h_α_range n).2
   let s0 := alg.u
@@ -778,7 +779,7 @@ lemma halpern_convergence_point_different [CompleteSpace H] [SeparableSpace H]
       rw [h_s_update]
       exact hD_convex halg_u (hT_invariant (s k) ih) (by linarith [h_α_pos k, h_α_lt_one k])
         (by linarith [h_α_pos k, h_α_lt_one k]) (by simp)
-  have ⟨p, hp_in_C, hp_s_conv, hp_inner⟩ : ∃ (p : H), p ∈ C ∧ Tendsto s atTop (𝓝 p) ∧
+  have ⟨p, hp_in_C, hp_s_conv, hp_inner⟩ : ∃ (p : H), p ∈ C ∧ Tendsto s atTop (nhds p) ∧
     (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
     apply halpern_convergence_point_same
       hD_closed hD_convex hD_nonempty hT_nonexp hC hT_fixpoint
@@ -794,7 +795,7 @@ lemma halpern_convergence_point_different [CompleteSpace H] [SeparableSpace H]
     h_α_range s h_s_init h_s_in_D h_s_update
   have h_prod_tendsto_zero' :=
     halpern_prod_norm_diff_tendsto_zero alg h_α_range h_α_sum_inf s
-  have h_diff_tendsto_zero : Tendsto (fun n => ‖alg.x (n + 1) - s (n + 1)‖) atTop (𝓝 0) := by
+  have h_diff_tendsto_zero : Tendsto (fun n => ‖alg.x (n + 1) - s (n + 1)‖) atTop (nhds 0) := by
     rw [Metric.tendsto_atTop] at h_prod_tendsto_zero' ⊢
     intro ε ε_pos; obtain ⟨N, hN⟩ := h_prod_tendsto_zero' ε ε_pos; use N; intro n hn
     specialize hN n hn; rw [Real.dist_eq] at hN ⊢; simp only [sub_zero] at hN ⊢
@@ -806,9 +807,9 @@ lemma halpern_convergence_point_different [CompleteSpace H] [SeparableSpace H]
         · apply mul_nonneg ?_ (norm_nonneg _); apply Finset.prod_nonneg; intro k hk; simp
           linarith [h_α_lt_one k]
       _ < ε := hN
-  have h_x_tendsto_p : Tendsto alg.x atTop (𝓝 p) := by
+  have h_x_tendsto_p : Tendsto alg.x atTop (nhds p) := by
     rw [Metric.tendsto_atTop] at hp_s_conv ⊢; intro ε ε_pos
-    have h_diff_tendsto : Tendsto (fun n => alg.x n - s n) atTop (𝓝 0) :=
+    have h_diff_tendsto : Tendsto (fun n => alg.x n - s n) atTop (nhds 0) :=
       ((tendsto_add_atTop_iff_nat 1).mp (Metric.tendsto_atTop.mpr fun ε hε => by
           rw [Metric.tendsto_atTop] at h_diff_tendsto_zero
           obtain ⟨N, hN⟩ := h_diff_tendsto_zero ε hε; use N; intro n hn; specialize hN n hn
@@ -833,10 +834,10 @@ theorem halpern_convergence [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
   (hT_fixpoint : C.Nonempty) (hT_invariant : ∀ x ∈ D, T x ∈ D) (alg : Halpern T)
   (halg_x0 : alg.x0 ∈ D) (halg_u : alg.u ∈ D) (halg_x_in_D : ∀ n, alg.x n ∈ D)
-  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (h_α_limit : Tendsto alg.α atTop (𝓝 0))
+  (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (h_α_limit : Tendsto alg.α atTop (nhds 0))
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
   (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|))
-  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (𝓝 p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
+  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (nhds p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
   by_cases h_coincidence : alg.u = alg.x0
   · -- Case: u = x0
     exact halpern_convergence_point_same hD_closed hD_convex hD_nonempty hT_nonexp hC hT_fixpoint

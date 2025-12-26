@@ -1,0 +1,28 @@
+# Copilot Instructions
+
+- Project: Lean 4.27.0-rc1 with mathlib via Lake; top module is FormalizationFixpointIterations (see [FormalizationFixpointIterations.lean](FormalizationFixpointIterations.lean)).
+- Build/verify: run `lake build FormalizationFixpointIterations` (or `lake build`); for a single file use `lake env lean FILE.lean`. No custom test suite is present.
+- Lake options enforce `autoImplicit = false` and `relaxedAutoImplicit = false` (see [lakefile.toml](lakefile.toml)); always provide binder types explicitly.
+- Library layout: algorithms under [FormalizationFixpointIterations/Algorithm](FormalizationFixpointIterations/Algorithm), foundational nonexpansive notions under [FormalizationFixpointIterations/Nonexpansive](FormalizationFixpointIterations/Nonexpansive), inner-product topology lemmas under [FormalizationFixpointIterations/Theory](FormalizationFixpointIterations/Theory).
+- Nonexpansive namespace: definitions like `Nonexpansive`, `NonexpansiveOn`, `Firmly_Nonexpansive`, `Fix`, and basic norm/edist lemmas live in [FormalizationFixpointIterations/Nonexpansive/Definitions.lean](FormalizationFixpointIterations/Nonexpansive/Definitions.lean). Reuse those instead of re-proving Lipschitz facts.
+- Algorithm aggregation: [FormalizationFixpointIterations/Algorithm.lean](FormalizationFixpointIterations/Algorithm.lean) imports KM and Halpern iterations; Halpern is currently the main filled-out iteration.
+- Halpern setup: the core structure `Halpern` is defined in [FormalizationFixpointIterations/Algorithm/Halpern/Lemma.lean](FormalizationFixpointIterations/Algorithm/Halpern/Lemma.lean); fields `x0 u x α update initial_value` encode the iteration `x (k+1) = α k • u + (1 - α k) • T (x k)`.
+- Halpern proofs assume `α n ∈ (0,1)` and typically require boundedness hypotheses for sequences `x`, `T (x)`, and step differences; preserve these when extending lemmas.
+- Local notation `⟪a, b⟫` for the real inner product is opened with `InnerProductSpace ℝ` contexts; keep the same notation in new lemmas.
+- Standard proof tools in this codebase: `calc` chains with `norm_add_le`, `mul_le_mul_of_nonneg`, `linarith`, `gcongr`, and Finset telescoping identities; follow these patterns for norm/edist bounds.
+- Asymptotic statements use `Filter` and `Tendsto` heavily; convergence of products/sums is expressed with `Finset.Icc` telescoping and `Summable` assumptions (see halpern_telescoping_* lemmas in [Algorithm/Halpern/Halpern.lean](FormalizationFixpointIterations/Algorithm/Halpern/Halpern.lean)).
+- Weak convergence arguments rely on `WeakConverge` lemmas from [Theory/InnerProductSpace/WeakConverge.lean](FormalizationFixpointIterations/Theory/InnerProductSpace/WeakConverge.lean) and subsequence extraction (`bounded_seq_has_weakly_converge_subseq_separable` etc.).
+- Fixed-point reasoning uses `Fix`/`Fix'` sets and nonexpansive ⇒ quasinonexpansive conversions from [Nonexpansive/Properties.lean](FormalizationFixpointIterations/Nonexpansive/Properties.lean); use these when proving distances decrease along iterates.
+- Many estimates separate bounds on `‖x (n+1) - x n‖` and `‖u - T (x n)‖`; keep those as independent assumptions to reuse existing lemmas like `halpern_norm_diff_ineq`.
+- Products of `(1 - α k)` are handled with logarithms (`prod_exp_sum`, `infinite_prod_zero`) and reindexing (`h_reindex`); reuse these helpers instead of manual rewrites.
+- When proving limits of `x n - T (x n)`, first prove step differences go to zero (`halpern_diff_limit`), then apply `halpern_x_sub_Tx_tendsto_zero`.
+- For projection points on convex closed sets, use `existence_of_projection_point` and `proj_pt_inner_le_zero` to get nearest-point witnesses before bounding inner products.
+- Namespace discipline: Halpern lemmas live in the default namespace with `open Nonexpansive_operator Filter Topology`; keep imports minimal and prefer existing namespace openings to avoid qualifier noise.
+- Prefer ℝ inner product spaces with `[CompleteSpace H]` or `[SeparableSpace H]` assumptions explicitly; many lemmas require them, so state them up front.
+- Use `Set.Ioo 0 1` for step-size constraints and helper lemmas `one_sub_pos_of_mem_Ioo`, `one_sub_lt_one_of_mem_Ioo` when needing positivity of `1 - α n`.
+- For new bounds over `Finset.Icc`, check existing telescoping lemmas (`halpern_telescoping_bound`, `halpern_telescoping_ineq`, `halpern_telescoping_limit`) before rolling custom inductions.
+- If you need eventual smallness of products or sums, prefer `halpern_sum_tail_tendsto_zero` and `halpern_prod_tail_tendsto_zero` to avoid redoing filter arithmetic.
+- To show a subsequence hits the fixed-point set, use `halpern_subseq_fixed_point` with a weak-limit and `x - T x → 0` hypothesis.
+- Keep proofs classical Lean 4 mathlib style; avoid tactics-only scripts and favor structured term proofs (`by` + calc) as in existing files.
+- When editing notation or imports, ensure Unicode pretty-printing remains enabled (lake option `pp.unicode.fun = true`) but stick to ASCII identifiers otherwise.
+- Before adding dependencies, prefer mathlib equivalents already imported (Topology, MetricSpace, InnerProductSpace); avoid duplicating standard lemmas.

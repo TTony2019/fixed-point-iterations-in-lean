@@ -10,7 +10,9 @@ open Nonexpansive_operator Filter Topology TopologicalSpace
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 
---3.1
+/--
+Lemma 3.1 : equation for xj : `xj = (1 / (j + 1)) • x0 + (j / (j + 1)) • T (x (j - 1))`
+-/
 lemma halpern_eq_3_1
   {T : H → H} (alg : Halpern T) (h_α_form : ∀ n, alg.α n = (1 / (n + 2) : ℝ))
   (h_u_eq_x0 : alg.u = alg.x 0) {k : ℕ}
@@ -34,7 +36,9 @@ lemma halpern_eq_3_1
     rw [eq3]; ring_nf
   rw [eq1, eq2] at xj_eq; assumption
 
---3.2
+/--
+Lemma 3.2 : equation for T (x (j - 1)) : `T (x (j - 1)) = ((j + 1) / j) • xj - (1 / j) • x0`
+-/
 lemma halpern_eq_3_2
   {T : H → H} (alg : Halpern T) (h_α_form : ∀ n, alg.α n = 1 / (n + 2))
   (h_u_eq_x0 : alg.u = alg.x 0) {k : ℕ}
@@ -50,7 +54,9 @@ lemma halpern_eq_3_2
     linarith
   rw [eq2]; simp only [one_smul]
 
---4
+/--
+Lemma 4 : upper-bound for ‖T (xk) - x*‖² : `‖T (xk) - x*‖² ≤ ‖xk - x*‖²`
+-/
 lemma halpern_norm_bdd4 [CompleteSpace H] [SeparableSpace H]
   {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
   (alg : Halpern T) (halg_x_in_D : ∀ n, alg.x n ∈ D)
@@ -66,7 +72,9 @@ lemma halpern_norm_bdd4 [CompleteSpace H] [SeparableSpace H]
   simp only [edist_dist, dist_eq_norm, ofReal_norm] at hT_nonexp
   exact enorm_le_iff_norm_le.mp hT_nonexp
 
---lemma before 6
+/--
+inequality for lemma 6 : `0 ≥ j (j + 1) (‖T (xj) - T (x (j - 1))‖² - ‖xj - x (j - 1)‖²)`
+-/
 lemma halpern_lemma1_for_ineq6 [CompleteSpace H] [SeparableSpace H]
   {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D)
   (alg : Halpern T) (halg_x_in_D : ∀ n, alg.x n ∈ D) {k : ℕ}
@@ -80,7 +88,10 @@ lemma halpern_lemma1_for_ineq6 [CompleteSpace H] [SeparableSpace H]
   simp only [edist_dist, dist_eq_norm, ofReal_norm, ENNReal.coe_one, one_mul] at hT_nonexp
   exact enorm_le_iff_norm_le.mp hT_nonexp
 
---lemma before 6
+/--
+inequality under Ico for lemma 6 :
+`0 ≥ ∑ j=1 to k  j (j + 1) (‖T (xj) - T (x (j - 1))‖² - ‖xj - x (j - 1)‖²)`
+-/
 lemma halpern_lemma2_for_ineq6 [CompleteSpace H] [SeparableSpace H]
   {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D)
   (alg : Halpern T) (halg_x_in_D : ∀ n, alg.x n ∈ D) {k : ℕ}
@@ -92,7 +103,10 @@ lemma halpern_lemma2_for_ineq6 [CompleteSpace H] [SeparableSpace H]
   · apply Nat.lt_succ_iff.mp
     · simp only [Nat.succ_eq_add_one]; simp only [Finset.mem_Ico] at hj; exact hj.right
 
---6
+/--
+inequality under Icc for lemma 6 :
+`0 ≥ ∑ j=1 to k  j (j + 1) (‖T (xj) - T (x (j - 1))‖² - ‖xj - x (j - 1)‖²)`
+-/
 lemma halpern_ineq6 [CompleteSpace H] [SeparableSpace H]
   {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D)
   (alg : Halpern T) (halg_x_in_D : ∀ n, alg.x n ∈ D) {k : ℕ}
@@ -103,7 +117,11 @@ lemma halpern_ineq6 [CompleteSpace H] [SeparableSpace H]
     (‖T (alg.x j) - T (alg.x (j - 1))‖ ^ 2 - ‖alg.x j - alg.x (j - 1)‖ ^ 2) := by
       apply halpern_lemma2_for_ineq6 hT_nonexp alg halg_x_in_D
 
---7
+/--
+Lemma 7 :
+`j (j + 1) ‖T (xj) - T (x (j - 1))‖² = j (j + 1) ‖xj - T (xj)‖² +
+  2 (j + 1) ⟪xj - T (xj), xj - x0⟫ + (j + 1) / j ‖xj - x0‖²`
+-/
 lemma halpern_eq7 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) (h_α_form : ∀ n, alg.α n = 1 / (n + 2))
   (h_u_eq_x0 : alg.u = alg.x 0) {k : ℕ}
@@ -144,7 +162,11 @@ lemma halpern_eq7 [CompleteSpace H] [SeparableSpace H]
         rw [norm_smul, mul_pow]; simp only [one_div, norm_inv, RCLike.norm_natCast, inv_pow]
       rw [h_inner_smul, h_norm_smul]; field_simp
 
---8
+/--
+Lemma 8 : `j (j + 1) ‖xj - x (j - 1)‖² = (j / (j + 1)) ‖x0 - T (x (j - 1))‖² +
+  2 j ⟪x0 - T (x (j - 1)), T (x (j - 1)) - x (j - 1)⟫ +
+    j (j + 1) ‖T (x (j - 1)) - x (j - 1)‖²`
+-/
 lemma halpern_eq8 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) (h_α_form : ∀ n, alg.α n = 1 / (n + 2))
   (h_u_eq_x0 : alg.u = alg.x 0) {k : ℕ}
@@ -179,7 +201,9 @@ lemma halpern_eq8 [CompleteSpace H] [SeparableSpace H]
               (T (alg.x (j - 1)) - alg.x (j - 1)) (1 / ((j : ℝ) + 1))
       rw [h_norm_add, h_norm_smul, h_inner_smul]; field_simp
 
---9
+/--
+Lemma 9 : `(j / (j + 1)) ‖x0 - T (x (j - 1))‖² = ((j + 1) / j) ‖x0 - xj‖²`
+-/
 lemma halpern_eq9 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) (h_α_form : ∀ n, alg.α n = 1 / (n + 2))
   (h_u_eq_x0 : alg.u = alg.x 0) {k : ℕ}
@@ -213,7 +237,11 @@ lemma halpern_eq9 [CompleteSpace H] [SeparableSpace H]
         simp only [abs_eq_self, ge_iff_le]; linarith
       rw [← smul_sub, h_norm_smul]; field_simp
 
---lemma before 10
+/--
+equality for Lemma 10 :
+`∑ j=1 to k 2 (j + 1) ⟪xj - T (xj), xj - x0⟫
+  = ∑ j=1 to (k - 1) 2 (j + 1) ⟪xj - T (xj), xj - x0⟫ + 2 (k + 1) ⟪xk - T (xk), xk - x0⟫`
+-/
 lemma halpern_lemma1_for_eq10 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) {k : ℕ} (hk : k ≥ 1)
   : ∑ j ∈ Finset.Icc 1 k, 2 * ((j : ℝ) + 1) * ⟪alg.x j - T (alg.x j), alg.x j - alg.x 0⟫
@@ -232,7 +260,11 @@ lemma halpern_lemma1_for_eq10 [CompleteSpace H] [SeparableSpace H]
     · simp only [id (Eq.symm this)]
     · linarith
 
---lemma before 10
+/--
+equality for Lemma 10 :
+`∑ j=1 to k 2 j ⟪x0 - T (x (j - 1)), T (x (j - 1)) - x (j - 1)⟫
+  = - 2 ‖x0 - T (x0)‖² + ∑ j=1 to (k - 1) 2 (j + 1) ⟪x0 - T (xj), T (xj) - xj⟫`
+-/
 lemma halpern_lemma2_for_eq10 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) {k : ℕ} (hk : k ≥ 1)
   : ∑ j ∈ Finset.Icc 1 k, 2 * (j : ℝ) *
@@ -283,7 +315,12 @@ lemma halpern_lemma2_for_eq10 [CompleteSpace H] [SeparableSpace H]
               _ = (j : ℝ) := by simp only [sub_add_cancel]
         rw [h_reindex]
 
---lemma before 10
+/--
+equality for Lemma 10 :
+`∑ j=1 to (k - 1) 2 (j + 1) ‖xj - T (xj)‖²
+  = ∑ j=1 to (k - 1) 2 (j + 1) ⟪xj - T (xj), xj - x0⟫
+    - ∑ j=1 to (k - 1) 2 (j + 1) ⟪x0 - T (xj), T (xj) - xj⟫`
+-/
 lemma halpern_lemma3_for_eq10 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) {k : ℕ}
   : ∑ j ∈ Finset.Icc 1 (k - 1), 2 * ((j : ℝ) + 1) *
@@ -306,7 +343,13 @@ lemma halpern_lemma3_for_eq10 [CompleteSpace H] [SeparableSpace H]
       rw [h_inner, inner_add_right, sub_eq_add_neg]; congr
       simp only [real_inner_comm, ← inner_neg_left, neg_sub]
 
---10
+/--
+Lemma 10 :
+`2 (k + 1) ⟪xk - T (xk), xk - x0⟫ +
+  ∑ j=1 to (k - 1) 2 (j + 1) ‖xj - T (xj)‖² + 2 ‖x0 - T (x0)‖²
+    = ∑ j=1 to k 2 (j + 1) ⟪xj - T (xj), xj - x0⟫
+      - ∑ j=1 to k 2 j ⟪x0 - T (x (j - 1)), T (x (j - 1)) - x (j - 1)⟫`
+-/
 lemma halpern_eq10 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) {k : ℕ} (hk : k ≥ 1)
   : 2 * ((k : ℝ) + 1) * ⟪alg.x k - T (alg.x k), alg.x k - alg.x 0⟫ +
@@ -323,7 +366,11 @@ lemma halpern_eq10 [CompleteSpace H] [SeparableSpace H]
   rw [eq7, eq8]; simp only [inner_self_eq_norm_sq_to_K, Real.ringHom_apply, add_comm, ← add_assoc,
     neg_mul, ← sub_sub, sub_neg_eq_add]; rw [eq9]; simp only [real_inner_comm, add_sub]
 
---lemma before 11
+/--
+equality for Lemma 11 :
+`∑ j=1 to k j (j + 1) ‖x (j - 1) - T (x (j - 1))‖²
+  = ∑ j=0 to (k - 1) (j + 1) (j + 2) ‖xj - T (xj)‖²`
+-/
 lemma halpern_lemma1_for_eq11 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) {k : ℕ} (hk : k ≥ 1)
   : ∑ j ∈ Finset.Icc 1 k, (j : ℝ) * ((j : ℝ) + 1) *
@@ -345,7 +392,11 @@ lemma halpern_lemma1_for_eq11 [CompleteSpace H] [SeparableSpace H]
     have : (j - 1 : ℝ) + 2 = j + 1 := by ring
     simp only [Nat.cast_sub, Nat.cast_one, *]
 
---lemma before 11
+/--
+equality for Lemma 11 :
+`∑ j=1 to k j (j + 1) ‖xj - T (xj)‖²
+  = ∑ j=1 to (k - 1) j (j + 1) ‖xj - T (xj)‖² + k (k + 1) ‖xk - T (xk)‖²`
+-/
 lemma halpern_lemma2_for_eq11 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) {k : ℕ} (hk : k ≥ 1)
   : ∑ j ∈ Finset.Icc 1 k, (j : ℝ) * ((j : ℝ) + 1) * ‖alg.x j - T (alg.x j)‖ ^ 2 =
@@ -364,7 +415,11 @@ lemma halpern_lemma2_for_eq11 [CompleteSpace H] [SeparableSpace H]
     · simp only [id (Eq.symm this)]
     · linarith
 
---lemma before 11
+/--
+equality for Lemma 11 :
+`∑ j=0 to (k - 1) (j + 1) (j + 2) ‖xj - T (xj)‖²
+  = (0 + 1)(0 + 2) ‖x0 - T (x0)‖² + ∑ j=1 to (k - 1) (j + 1) (j + 2) ‖xj - T (xj)‖²`
+-/
 lemma halpern_lemma3_for_eq11 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) {k : ℕ} (hk : k ≥ 1)
   : ∑ j ∈ Finset.Icc 0 (k - 1), ((j : ℝ) + 1) * ((j : ℝ) + 2) *
@@ -390,7 +445,11 @@ lemma halpern_lemma3_for_eq11 [CompleteSpace H] [SeparableSpace H]
           · simp only [CharP.cast_eq_zero, zero_add, one_mul]
           linarith
 
---11
+/--
+Lemma 11 :
+`∑ j=1 to k j (j + 1) ‖xj - T (xj)‖² - ∑ j=1 to k j (j + 1) ‖x (j - 1) - T (x (j - 1))‖²
+  = k (k + 1) ‖xk - T (xk)‖² - ∑ j=1 to (k - 1) 2 (j + 1) ‖xj - T (xj)‖² - 2 ‖x0 - T (x0)‖²`
+-/
 lemma halpern_eq11 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) {k : ℕ} (hk : k ≥ 1)
   : ∑ j ∈ Finset.Icc 1 k, (j : ℝ) * ((j : ℝ) + 1) * ‖alg.x j - T (alg.x j)‖ ^ 2 -
@@ -418,7 +477,10 @@ lemma halpern_eq11 [CompleteSpace H] [SeparableSpace H]
       ∑ j ∈ Finset.Icc 1 (k - 1), 2 * ((j : ℝ) + 1) * ‖alg.x j - T (alg.x j)‖ ^ 2 -
         2 * ‖alg.x 0 - T (alg.x 0)‖ ^ 2 := by rw [key]; ring
 
---12
+/--
+Lemma 12 :
+`0 ≥ k (k + 1) ‖xk - T (xk)‖² + 2 (k + 1) ⟪xk - T (xk), xk - x0⟫`
+-/
 lemma halpern_ineq12 [CompleteSpace H] [SeparableSpace H]
   {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D)
   (alg : Halpern T) (halg_x_in_D : ∀ n, alg.x n ∈ D)
@@ -506,7 +568,13 @@ lemma halpern_ineq12 [CompleteSpace H] [SeparableSpace H]
       simp only [eq10_term2, eq11_term2, eq10_term3, eq11_term3]; ring
     _ = _ := by ring
 
---lemma before 13
+/--
+equality for Lemma 13 :
+`k ‖xk - T (xk)‖² + 2 ⟪xk - T (xk), xk - x0⟫ +
+  ‖T (xk) - x*‖² - ‖xk - x*‖²
+    = ((k + 1) / 2) ‖xk - T (xk)‖² - (2 / (k + 1)) ‖x0 - x*‖² +
+      (2 / (k + 1)) ‖x0 - x* - (((k + 1) / 2) • (xk - T (xk)))‖²`
+-/
 lemma halpern_lemma1_for_ineq13 [CompleteSpace H] [SeparableSpace H]
   {T : H → H} (alg : Halpern T) {k : ℕ} (hk : k ≥ 1) (x_star : H)
   : (k : ℝ) * ‖alg.x k - T (alg.x k)‖ ^ 2 + 2 * ⟪alg.x k - T (alg.x k), alg.x k - alg.x 0⟫ +
@@ -551,7 +619,11 @@ lemma halpern_lemma1_for_ineq13 [CompleteSpace H] [SeparableSpace H]
       simp only [RCLike.re_to_real, real_inner_comm, sub_left_inj]; ring_nf
     _ = _ := by symm; linarith [inner_eq]
 
---13
+/--
+Lemma 13 :
+`0 ≥ ((k + 1) / 2) ‖xk - T (xk)‖² - (2 / (k + 1)) ‖x0 - x*‖² +
+      (2 / (k + 1)) ‖x0 - x* - (((k + 1) / 2) • (xk - T (xk)))‖²`
+-/
 lemma halpern_ineq13 [CompleteSpace H] [SeparableSpace H]
   {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D)
   (alg : Halpern T) (halg_x_in_D : ∀ n, alg.x n ∈ D)
