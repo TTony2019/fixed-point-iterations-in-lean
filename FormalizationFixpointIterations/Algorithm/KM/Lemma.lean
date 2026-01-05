@@ -66,13 +66,13 @@ lemma convex_combination_norm_sq_identity
     ← real_inner_self_eq_norm_sq x, ← real_inner_self_eq_norm_sq y]
   have h1 : inner ℝ (α • x + (1 - α) • y) (α • x + (1 - α) • y) =
       α ^ 2 * inner ℝ x x + 2 * α * (1 - α) * inner ℝ x y + (1 - α) ^ 2 * inner ℝ y y := by
-    simp [inner_add_left, inner_add_right, inner_smul_left, inner_smul_right, real_inner_comm]
-    ring_nf
-    sorry
-  have h2 : inner ℝ (x - y) (x - y) = inner ℝ x x - 2 * inner ℝ x y + inner ℝ y y := by
-    simp [inner_sub_left, inner_sub_right, real_inner_comm]
+    simp only [inner_add_left, inner_add_right, real_inner_comm]
+    simp only [inner_smul_left, inner_smul_right, inner_smul_left, inner_smul_right]
+    simp
     ring
-    sorry
+  have h2 : inner ℝ (x - y) (x - y) = inner ℝ x x - 2 * inner ℝ x y + inner ℝ y y := by
+    simp only [inner_sub_left, inner_sub_right, real_inner_comm]
+    ring
   rw [h1, h2]
   ring
 alias Corollary_2_15 := convex_combination_norm_sq_identity
@@ -96,15 +96,15 @@ lemma frequently_subseq {x : ℕ → H} {U : Set H}
   have hl_mono : StrictMono l := by
     refine strictMono_nat_of_lt_succ ?_
     intro n
-    simp [l]   --  l (n+1) = g (l n + 1)
+    simp only [l]   --  l (n+1) = g (l n + 1)
     have h1 : l n < l n + 1 := Nat.lt_succ_self _
     have h2 : l n + 1 ≤ g (l n + 1) := hg_ge (l n + 1)
     exact lt_of_lt_of_le h1 h2
   have hl_not_mem : ∀ n, x (l n) ∉ U := by
     intro n
-    induction' n with k hk
-    · simpa [l] using hg_not_mem 0
-    · simpa [l, hk] using hg_not_mem (l k + 1)
+    induction n with
+    | zero => simpa [l] using hg_not_mem 0
+    | succ k hk => simpa [l, hk] using hg_not_mem (l k + 1)
   exact ⟨l, hl_mono, hl_not_mem⟩
 
 /--
@@ -129,21 +129,17 @@ lemma bounded_not_mem_subseq [SeparableSpace H] [CompleteSpace H] (x : ℕ → H
   have hq0_notin_V : q0 ∈ Vᶜ := by
     have h1 : range (x∘k) ⊆ Vᶜ := by
       intro y hy
-      simp [Set.range] at hy
+      simp only [Set.range] at hy
       obtain ⟨n, rfl⟩ := hy
       apply h_not_mem
-    have h2 : IsWeaklyClosed Vᶜ := by
-      sorry
-      -- isClosed_compl_iff.mpr hV_open --Note that here is weakly closed
-    have h2_2 : IsWeaklySeqClosed Vᶜ := h2.isSeqClosed
+    have h2 := isClosed_compl_iff.mpr hV_open --Note that here is weakly closed
+    have h2_seqWeaklyClosed := h2.isSeqClosed
     -- refine (mem_compl_iff V q0).mpr ?_
-    simp only [IsWeaklySeqClosed, IsSeqClosed] at h2_2
-    have : ∀ (n : ℕ), (x ∘ k) n ∈ ⇑(toWeakSpace ℝ H) '' Vᶜ := by
-      intro n
-      exact Set.mem_image_of_mem (⇑(toWeakSpace ℝ H)) (h_not_mem (k n))
-    specialize h2_2 this h_k_conv
-    exact inter_singleton_nonempty.mp h2_2
-  exact ⟨q0, hq0_notin_V, k, hk, h_k_conv⟩
+    simp only [IsSeqClosed] at h2_seqWeaklyClosed
+    refine h2_seqWeaklyClosed ?_ h_k_conv
+    intro n
+    apply h_not_mem
+  exact ⟨q0, hq0_notin_V , k,hk,h_k_conv⟩
 
 /--
 Lemma 2.46\
@@ -155,7 +151,7 @@ lemma WeakConv_of_bounded_clusterptUnique [SeparableSpace H] [CompleteSpace H] (
   have  ⟨p0, k, hk, h_k_conv⟩ :=bounded_seq_has_weakly_converge_subseq_separable x hx
   use p0
   by_contra h_not_conv  --proof by contradiction
-  simp [WeakConverge] at h_not_conv
+  simp only [WeakConverge] at h_not_conv
   rw [not_tendsto_iff_exists_frequently_notMem] at h_not_conv
   rcases h_not_conv with ⟨U, hU_nbds, h_fre⟩
   obtain ⟨V, hVsub, hVopen, hVmem⟩ := (mem_nhds_iff.mp hU_nbds) --Obtain the weakly open set V from the neighborhood U
@@ -187,9 +183,8 @@ lemma inner_sub_eq_norm_sub (x : ℕ → H) (p q : H) :
         rw [real_inner_self_eq_norm_sq (x n - q), real_inner_self_eq_norm_sq (x n - p),
           real_inner_self_eq_norm_sq p, real_inner_self_eq_norm_sq q]
     _ = 2 * ⟪x n, p - q⟫ := by
-      sorry
-      -- simp [inner_sub_left, inner_sub_right, real_inner_comm]
-      -- ring
+      simp only [inner_sub_left, inner_sub_right, real_inner_comm]
+      ring
 /-- Convert equation (2.32) to limit form and show limit ⟪x n,p-q⟫ exists. -/
 lemma inner_sub_lim_exists (x : ℕ → H) (p q : H) (lim_p lim_q : ℝ) (norm_p_2 : Tendsto (fun n ↦ ‖x n - p‖ ^ 2) atTop (𝓝 (lim_p ^ 2)))
 (norm_q_2 : Tendsto (fun n ↦ ‖x n - q‖ ^ 2) atTop (𝓝 (lim_q ^ 2))) :
@@ -199,9 +194,9 @@ lemma inner_sub_lim_exists (x : ℕ → H) (p q : H) (lim_p lim_q : ℝ) (norm_p
     (𝓝 ( (lim_q ^ 2)-(lim_p ^ 2)+‖p‖^2-‖q‖^2)) := by
     apply Tendsto.sub
     · apply Tendsto.add
-      apply Tendsto.sub
-      · exact norm_q_2
-      · exact norm_p_2
+      · apply Tendsto.sub
+        · exact norm_q_2
+        · exact norm_p_2
       · exact tendsto_const_nhds
     · exact tendsto_const_nhds
   have h1 : Tendsto (fun n => 2*⟪x n,p-q⟫) atTop (𝓝 ((lim_q ^ 2)-(lim_p ^ 2)+‖p‖^2-‖q‖^2)) :=by
@@ -268,9 +263,9 @@ lemma bounded_converge_of_Fejermonotone (C : Set H) (h_C_nonempty : C.Nonempty) 
   · use M
     · intro n
       have h1 : ‖x n - y0‖ ≤ ‖x 0 - y0‖ := by
-        induction' n with i hi
-        · simp
-        · apply le_trans (h_fejer y0 hy0 i) hi
+        induction n with
+        | zero => simp
+        | succ i hi => apply le_trans (h_fejer y0 hy0 i) hi
       have h2 : ‖x n‖ ≤ ‖x n - y0‖ + ‖y0‖ := by
         apply norm_le_norm_sub_add
       linarith

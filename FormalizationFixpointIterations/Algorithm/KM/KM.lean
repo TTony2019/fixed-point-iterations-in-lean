@@ -115,13 +115,11 @@ lemma groetsch_theorem_ii {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : Is
       have hN := key_inequality T h_Im_T_in_D hT_nonexpansive km y0 hy0 N
       simp [Finset.sum_range_succ]
       linarith
-
   have partial_le : ∀ N, ∑ i ∈ Finset.range N, km.stepsize i * (1 - km.stepsize i) * ‖T (km.x i) - km.x i‖ ^ 2 ≤
       ‖km.x 0 - y0‖ ^ 2 := by
       intro N
       refine (sum_bound N).trans ?_
       simp
-
   let a := fun n => ‖T (km.x n) - km.x n‖ -- define a_n = ‖T x_n - x_n‖
   have a_noninc : ∀ n, a (n + 1) ≤ a n := by
     intro n
@@ -136,7 +134,6 @@ lemma groetsch_theorem_ii {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : Is
           nth_rw 2 [km.update n]
           simp only [smul_sub, sub_smul, one_smul]
           abel_nf
-
     calc
       a (n + 1) = ‖T (km.x (n + 1)) - km.x (n + 1)‖ := rfl
       _ = ‖(T (km.x (n + 1)) - T (km.x n)) + (1 - km.stepsize n) • (T (km.x n) - km.x n)‖ := by rw [eq]
@@ -155,7 +152,6 @@ lemma groetsch_theorem_ii {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : Is
       _= ‖km.stepsize n • (T (km.x n) - km.x n)‖ + (1 - km.stepsize n) * ‖T (km.x n) - km.x n‖ := by rw [hx]
       _= km.stepsize n * ‖T (km.x n) - km.x n‖ + (1 - km.stepsize n) * ‖T (km.x n) - km.x n‖ := by rw [norm_smul,Real.norm_eq_abs,abs_of_nonneg (hs0)]
       _= ‖T (km.x n) - km.x n‖ := by ring
-
   rw [Converge_iff _ _]
   --Conduct a case-by-case analysis. If x0 = y0,trivial. Otherwise, use the method of contradiction.
   by_cases h_x0_eq_y0:  km.x 0 = y0
@@ -165,14 +161,10 @@ lemma groetsch_theorem_ii {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : Is
     rcases hy0 with ⟨-, hyfix⟩
     rw[← h_x0_eq_y0] at hyfix
     have fixed_point: T (km.x n) - km.x n = 0 := by
-      induction' n with n ih
-      rw[sub_eq_zero]
-      exact hyfix
-      rw [km.update n]
-      simp [ih _]
-    rw[fixed_point]
-    simpa
-
+      induction n with
+      | zero => rw[sub_eq_zero]; exact hyfix
+      | succ i ih => rw [km.update i];simp [ih _]
+    rw[fixed_point];simpa
   --x0 ≠ y0. Prove by contradiction: If a does not converge to 0, then there exists ε > 0 such that for any N, there is n ≥ N with a n ≥ ε
   by_contra! hnot
   rcases hnot with ⟨ε, εpos, hε⟩
@@ -202,7 +194,6 @@ lemma groetsch_theorem_ii {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : Is
     · apply mul_nonneg
       · exact hs0
       · exact sub_nonneg.mpr hs1
-
   -- S ≥ 2*‖x0-y0‖^2 / ε^2
   have S_ge : ∑ i ∈ range (n0 + 1), km.stepsize i * (1 - km.stepsize i)
   ≥ 2*‖km.x 0 - y0‖ ^ 2 / ε^2:= by
@@ -253,15 +244,13 @@ Sequence `x n` in KM algorithm converges weakly to a point `y0` in Fix T.
 lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
 (hD_convex : Convex ℝ D) (hD_closed : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
 (hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖) (km : KM D T) :
-    ∃ y0 ∈ (Fix' T D),
-      WeakConverge km.x y0
-    := by
+    ∃ y0 ∈ (Fix' T D), WeakConverge km.x y0 := by
   have h_fejer := (groetsch_theorem_i hD_convex hD_closed T h_Im_T_in_D hT_nonexpansive km)
   have h_x : ∀ n, km.x n ∈ D := by  --The proposition that D is a convex set is only used in the third conclusion.
     intro n                          --That is, conclusions (i) and (ii) do not require that D be a convex closed set.
-    induction' n with n ih
-    · rw [km.initial_value]
-      exact km.hx0
+    induction n with
+    | zero =>  rw [km.initial_value];exact km.hx0
+    | succ n ih =>
     have eq : km.x (n + 1) = (1 - km.stepsize n) • km.x n + km.stepsize n • (T (km.x n)) := by
       rw [km.update n]
       simp [smul_sub, sub_smul, one_smul]
@@ -272,14 +261,12 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
       exact hD_convex (ih) h1 (sub_nonneg.mpr hs_le_one) (hs_nonneg) (sub_add_cancel _ _)
     rw [eq]
     exact combo_in
-
   --Prove that D is a sequentially weakly closed set --Theorem 3.34
   have h_D_seq_weak_closed : IsWeaklySeqClosed D := closed_is_weakly_seq_closed D hD_convex hD_closed
   have hT_nonexp : NonexpansiveOn T D := by
     intro x hx y hy
     simp only [edist_dist, ENNReal.coe_one, one_mul, dist_nonneg, ENNReal.ofReal_le_ofReal_iff]; rw [dist_eq_norm, dist_eq_norm]
     exact hT_nonexpansive x y
-
   have h_weak_cluster_in : ∀ p : H, HasWeakSubseq p km.x → p ∈ (Fix' T D)  := by
     intro p h_cluster
     rcases h_cluster with ⟨ φ, hφ , tend ⟩
@@ -322,8 +309,7 @@ theorem groetsch_theorem [SeparableSpace H] [CompleteSpace H] {D : Set H}
     -- (ii) converges strongly to 0
     ∧(Tendsto (fun n ↦ ‖T (km.x n) - km.x n‖)  atTop (𝓝 0))
     -- (iii) converges weakly to a fixpoint
-    ∧∃ y0 ∈ (Fix' T D),
-      WeakConverge km.x y0
+    ∧∃ y0 ∈ (Fix' T D),WeakConverge km.x y0
     :=
       ⟨
         groetsch_theorem_i hD_convex hD_closed T h_Im_T_in_D hT_nonexpansive km,
