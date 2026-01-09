@@ -30,9 +30,13 @@ lemma quasinonexpansive_fixedPoint_characterization
       rw [← real_inner_self_eq_norm_sq, ← real_inner_self_eq_norm_sq] at h_norm_sq
       have eq1 : inner ℝ (T x - y) (T x - y) = inner ℝ (T x - x) (T x - x) +
         2 * inner ℝ (T x - x) (x - y) + inner ℝ (x - y) (x - y) := by
-        rw [← sub_add_sub_cancel (T x) y x]; simp [inner_sub_left, inner_sub_right, real_inner_comm]
-        ring_nf
-        sorry
+        calc
+          _ = inner ℝ ((T x - x) + (x - y)) ((T x - x) + (x - y)) := by
+            congr 1; repeat rw [sub_add_sub_cancel]
+          _ = inner ℝ (T x - x) (T x - x) + 2 * inner ℝ (T x - x) (x - y)
+            + inner ℝ (x - y) (x - y) := by
+            simp only [inner_add_left, inner_add_right,
+              inner_sub_left, inner_sub_right, real_inner_comm]; ring_nf
       rw [eq1] at h_norm_sq
       have eq2 : inner ℝ (T x - x) (T x - x) + 2 * inner ℝ (T x - x) (x - T x)
         + 2 * inner ℝ (T x - x) (T x - y) ≤ 0 := by calc
@@ -50,11 +54,9 @@ lemma quasinonexpansive_fixedPoint_characterization
           rw [real_inner_self_eq_norm_sq, mul_comm]
           have h_neg : inner ℝ (T x - x) (x - T x) = - inner ℝ (T x - x) (T x - x) := by
             simp only [inner_sub_right]; ring
-          rw [h_neg]; simp;
-          sorry
-          -- rw [real_inner_self_eq_norm_sq]; ring_nf
-  · intro hy
-    simp only [Set.mem_iInter, Set.mem_setOf_eq] at hy
+          rw [h_neg]; simp
+          field_simp [norm_eq_zero]; linarith
+  · intro hy; simp only [Set.mem_iInter, Set.mem_setOf_eq] at hy
     constructor
     · obtain ⟨x0, hx0⟩ := hD_nonempty; have hy_D := (hy x0 hx0).1; have h_y := (hy y hy_D).2
       have h_eq : inner ℝ (y - T y) (y - T y) = ‖y - T y‖ ^ 2 := real_inner_self_eq_norm_sq _

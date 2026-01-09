@@ -17,6 +17,9 @@ local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 section topDualPairing
 
+/--
+The inner product is left continuous.
+-/
 def cont_inner_left (a : H) : H →L[ℝ] ℝ where
   toFun := fun x => ⟪x, a⟫
   map_add' := by
@@ -26,6 +29,9 @@ def cont_inner_left (a : H) : H →L[ℝ] ℝ where
     intro c x
     simp [inner_smul_left]
 
+/--
+The flip of the topological dual pairing is injective.
+-/
 lemma topDualPairing_is_injective : Function.Injective ⇑(topDualPairing ℝ H).flip := by
   simp only [Function.Injective]
   intro a b hab
@@ -106,15 +112,12 @@ theorem weakConverge_iff_inner_converge [CompleteSpace H] (x : ℕ → H) (p : H
   have : (fun n ↦ inner ℝ ((InnerProductSpace.toDual ℝ H).symm y) (x n)) =
     (fun n ↦ inner ℝ  (x n) ((InnerProductSpace.toDual ℝ H).symm y)) := by
     ext n; rw [real_inner_comm]
-  rw [real_inner_comm, this]
-  apply h
-
+  rw [real_inner_comm, this]; apply h
 
 omit [InnerProductSpace ℝ H] in
 lemma tendsto_iff_sub_tendsto_zero {G : Type*} [NormedAddCommGroup G]
   (x : ℕ → G) (p : G) : Tendsto x atTop (nhds p)
-  ↔ Tendsto (fun n ↦ x n - p) atTop (nhds 0) := by
-  exact Iff.symm tendsto_sub_nhds_zero_iff
+  ↔ Tendsto (fun n ↦ x n - p) atTop (nhds 0) := Iff.symm tendsto_sub_nhds_zero_iff
 
 lemma tendsto_iff_sub_tendsto_zero_inner (x : ℕ → H) (p : H) (y : H) :
   Tendsto (fun n ↦ ⟪x n, y⟫) atTop (nhds ⟪p, y⟫)
@@ -132,11 +135,8 @@ theorem weakConverge_iff_inner_converge' [CompleteSpace H] (x : ℕ → H) (p : 
   · intro h y
     refine (tendsto_iff_sub_tendsto_zero_inner x p y).mp ?_
     apply (weakConverge_iff_inner_converge x p).1 h
-  intro h
-  rw [weakConverge_iff_inner_converge]
-  intro y
-  specialize h y
-  exact (tendsto_iff_sub_tendsto_zero_inner x p y).mpr h
+  intro h; rw [weakConverge_iff_inner_converge]; intro y
+  specialize h y; exact (tendsto_iff_sub_tendsto_zero_inner x p y).mpr h
 
 
 -- Left hand side in proof of Lemma 2.42
@@ -202,16 +202,12 @@ theorem tsum_tendsto_zero (w : Finset H) (f : {x//x ∈ w} → ℕ → ℝ)
   Tendsto (fun n => ∑ i : {x//x ∈ w}, f i n) atTop (nhds 0) := by
   have h_sum : Tendsto (fun n => ∑ i : {x//x ∈ w}, f i n) atTop
     (nhds (∑ i : {x//x ∈ w}, (0 : ℝ))) := by
-    apply tendsto_finset_sum
-    intro i _
-    exact h i
-  simp only [Finset.sum_const_zero] at h_sum
-  exact h_sum
+    apply tendsto_finset_sum; exact fun i a ↦ h i
+  simp only [Finset.sum_const_zero] at h_sum; exact h_sum
 
 theorem tendsto_norm_congr (x : ℕ → ℝ) (h : Tendsto x atTop (nhds 0)) :
   Tendsto (fun n => ‖x n‖^2) atTop (nhds 0) := by
-  rw[← sub_zero x]
-  exact (seq_converge_iff_norm_converge x 0).mp h
+  rw[← sub_zero x]; exact (seq_converge_iff_norm_converge x 0).mp h
 
 theorem finite_weak_converge_iff_converge [FiniteDimensional ℝ H] (x : ℕ → H) (p : H)
   (h : WeakConverge x p) : Tendsto x atTop (nhds p) := by
@@ -221,14 +217,10 @@ theorem finite_weak_converge_iff_converge [FiniteDimensional ℝ H] (x : ℕ →
   have (n:ℕ) := OrthonormalBasis.sum_sq_norm_inner_left b (x n - p)
   have hfuneq: (fun n ↦ ‖x n - p‖ ^ 2) = fun n => ∑ i : {x//x ∈ w},
     ‖inner ℝ (x n - p) (b i)‖ ^ 2 := by
-    ext n; symm
-    exact this n
+    ext n; symm; exact this n
   rw [hfuneq]
   apply tsum_tendsto_zero w (fun i:{x//x ∈ w} => (fun n => ‖inner ℝ (x n - p) (b i)‖ ^ 2))
-  intro i
-  apply tendsto_norm_congr
-  apply (weakConverge_iff_inner_converge' x p).1
-  exact h
+  intro i; apply tendsto_norm_congr; apply (weakConverge_iff_inner_converge' x p).1; exact h
 
 theorem strong_converge_then_weak_converge [CompleteSpace H] (x : ℕ → H) (p : H)
   (h : Tendsto x atTop (nhds p)) : WeakConverge x p := by
@@ -248,13 +240,12 @@ section WeakConvergeBounded
 --   map_add' := fun u v => inner_add_right p u v
 --   map_smul' := fun c u => inner_smul_right p u c
 
--- 引理：弱收敛序列的范数有界
+/--
+The norm of a weakly convergent sequence is bounded.
+-/
 theorem weakly_converge_norm_bounded [CompleteSpace H]
-  (x : ℕ → H) (p : H) (h_wkconv_x : WeakConverge x p) :
-    ∃ M, ∀ n, ‖x n‖ ≤ M := by
-  -- f 为有界线性算子
-  let f : ℕ → H →L[ℝ] ℝ := fun n =>
-    LinearMap.mkContinuous
+  (x : ℕ → H) (p : H) (h_wkconv_x : WeakConverge x p) : ∃ M, ∀ n, ‖x n‖ ≤ M := by
+  let f : ℕ → H →L[ℝ] ℝ := fun n => LinearMap.mkContinuous
       { toFun := fun z => ⟪x n, z⟫
         map_add' := fun u v => inner_add_right (x n) u v
         map_smul' := fun c u => inner_smul_right (x n) u c}
@@ -264,8 +255,7 @@ theorem weakly_converge_norm_bounded [CompleteSpace H]
         simp only [LinearMap.coe_mk, AddHom.coe_mk, Real.norm_eq_abs]
         exact abs_real_inner_le_norm (x n) z
   have h_f_n_y_upbd : ∀ y : H, ∃ N : ℕ, ∃ M : ℝ, ∀ n ≥ N, |f n y| ≤ M := by
-    intro y
-    rw [weakConverge_iff_inner_converge] at h_wkconv_x
+    intro y; rw [weakConverge_iff_inner_converge] at h_wkconv_x
     specialize h_wkconv_x y; rw [Metric.tendsto_atTop] at h_wkconv_x
     specialize h_wkconv_x (1) (one_pos)
     obtain ⟨N, hN⟩ := h_wkconv_x
@@ -279,9 +269,7 @@ theorem weakly_converge_norm_bounded [CompleteSpace H]
         _ < 1 := hN
     linarith
   have h_f_n_y_pointwise_bounded : ∀ y : H, ∃ M : ℝ, ∀ n : ℕ, |f n y| ≤ M := by
-    intro y
-    specialize h_f_n_y_upbd y
-    obtain ⟨N, hN⟩ := h_f_n_y_upbd
+    intro y; specialize h_f_n_y_upbd y; obtain ⟨N, hN⟩ := h_f_n_y_upbd
     by_cases N_zero : N = 0
     · rw [N_zero] at hN; rcases hN with ⟨M, hM⟩; use M; intro n; exact hM n (Nat.zero_le n)
     · let M0 := (Finset.range N).sup' ⟨0, Finset.mem_range.mpr
@@ -294,11 +282,11 @@ theorem weakly_converge_norm_bounded [CompleteSpace H]
       rcases hN with ⟨M1, hM1⟩; use max M0 M1; intro n
       by_cases hn : n < N
       · calc
-          |f n y| ≤ M0 := by apply ha n; exact Finset.mem_range.mpr hn
+          _ ≤ M0 := by apply ha n; exact Finset.mem_range.mpr hn
           _ ≤ max M0 M1 := by apply le_max_left
       · push_neg at hn
         calc
-          |f n y| ≤ M1 := by apply hM1; exact hn
+          _ ≤ M1 := by apply hM1; exact hn
           _ ≤ max M0 M1 := by apply le_max_right
   have h_norm_sup_t_n_y : ∀ y : H, ∃ M : ℝ, ⨆ n : ℕ, |f n y| ≤ M := by
     intro y; rcases h_f_n_y_pointwise_bounded y with ⟨M, hM⟩; use M; exact ciSup_le hM
@@ -329,27 +317,23 @@ theorem weakly_converge_norm_bounded [CompleteSpace H]
 
 end WeakConvergeBounded
 
--- Lemma 2.42
+/--
+Lemma 2.42 : `‖p‖ ≤ liminf ‖x n‖` if `x n` weakly converges to `p`.
+-/
 theorem norm_weakly_lsc [CompleteSpace H] (x : ℕ → H) (p : H) (h : WeakConverge x p) :
   Real.toEReal ‖p‖ ≤ liminf (fun n => Real.toEReal ‖x n‖) atTop := by
   let x' := fun ( n : ℕ ) => ⟪x n, p⟫
   let y' := fun ( n : ℕ ) => ‖x n‖ * ‖p‖
   have hxy : ∀ n, x' n ≤ y' n := by
-    intro n
-    exact real_inner_le_norm (x n) p
-  have h1 : Tendsto x' atTop (nhds (‖p‖ ^ 2)) := by
-    apply lim_inner_seq_eq_norm x p h
-  have nonneg1 : Real.toEReal ‖p‖ ≥ 0 := by
-    exact EReal.coe_nonneg.mpr (norm_nonneg p)
-  have nonneg2 : ∀ n, Real.toEReal ‖x n‖ ≥ 0 := by
-    refine fun n ↦ ?_
-    exact EReal.coe_nonneg.mpr (norm_nonneg (x n))
+    intro n; exact real_inner_le_norm (x n) p
+  have h1 : Tendsto x' atTop (nhds (‖p‖ ^ 2)) := lim_inner_seq_eq_norm x p h
+  have nonneg1 : Real.toEReal ‖p‖ ≥ 0 := EReal.coe_nonneg.mpr (norm_nonneg p)
+  have nonneg2 : ∀ n, Real.toEReal ‖x n‖ ≥ 0 := fun n ↦ EReal.coe_nonneg.mpr (norm_nonneg (x n))
   by_cases hp1 : Real.toEReal ‖p‖ = 0
   · simp only [hp1]
     calc
       _ = liminf (fun n ↦ (0 : EReal)) atTop := by
-        symm
-        apply @Filter.liminf_const EReal ℕ _ atTop _ (Real.toEReal 0)
+        symm; apply @Filter.liminf_const EReal ℕ _ atTop _ (Real.toEReal 0)
       _ ≤ liminf (fun n ↦ Real.toEReal ‖x n‖) atTop := by
         apply liminf_le_liminf
         · apply Eventually.of_forall
@@ -381,52 +365,42 @@ theorem norm_weakly_lsc [CompleteSpace H] (x : ℕ → H) (p : H) (h : WeakConve
       EReal.limit_le_liminf x' y' (‖p‖ ^ 2) h1 hxy
     simp only [EReal.coe_pow, EReal.coe_mul, y'] at h_lim
     have h2 : liminf (fun n ↦ Real.toEReal ‖x n‖ * Real.toEReal ‖p‖) atTop
-    = (liminf (fun n ↦ Real.toEReal ‖x n‖) atTop) * Real.toEReal ‖p‖ := by
+      = (liminf (fun n ↦ Real.toEReal ‖x n‖) atTop) * Real.toEReal ‖p‖ := by
       apply EReal.liminf_mul_const x p
     rw [h2] at h_lim
     have p_norm_eq : Real.toEReal (‖p‖ * ‖p‖)  = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
       rw [← EReal.coe_mul]
-    have eq: ‖p‖^2 = ‖p‖ * ‖p‖ := by
-      linarith
-    have eq': Real.toEReal (‖p‖ ^ 2) = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
-      rw [eq, p_norm_eq]
+    have eq: ‖p‖^2 = ‖p‖ * ‖p‖ := by linarith
+    have eq': Real.toEReal (‖p‖ ^ 2) = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by rw [eq, p_norm_eq]
     have : Real.toEReal ‖p‖ * Real.toEReal ‖p‖
-      ≤ liminf (fun n ↦ Real.toEReal ‖x n‖) atTop * Real.toEReal ‖p‖ := by calc
-      Real.toEReal ‖p‖ * Real.toEReal ‖p‖ = Real.toEReal (‖p‖ ^ 2) := by rw [eq']
-      _ ≤ liminf (fun n => Real.toEReal (y' n)) atTop := by convert h_lim
-      _ = liminf (fun n => Real.toEReal (‖x n‖ * ‖p‖)) atTop := by simp [y']
-      _ = liminf (fun n => Real.toEReal ‖x n‖ * Real.toEReal ‖p‖ ) atTop := by congr
-      _ = liminf (fun n ↦ Real.toEReal ‖x n‖) atTop * Real.toEReal ‖p‖ := by rw [← h2]
+      ≤ liminf (fun n ↦ Real.toEReal ‖x n‖) atTop * Real.toEReal ‖p‖ := by
+      calc
+        _ = Real.toEReal (‖p‖ ^ 2) := by rw [eq']
+        _ ≤ liminf (fun n => Real.toEReal (y' n)) atTop := by convert h_lim
+        _ = liminf (fun n => Real.toEReal (‖x n‖ * ‖p‖)) atTop := by simp [y']
+        _ = liminf (fun n => Real.toEReal ‖x n‖ * Real.toEReal ‖p‖ ) atTop := by congr
+        _ = liminf (fun n ↦ Real.toEReal ‖x n‖) atTop * Real.toEReal ‖p‖ := by rw [← h2]
     calc
       _ = Real.toEReal ‖p‖ / Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
-        symm
-        apply EReal.div_mul_cancel
-        · exact hp2
-        · exact hp3
-        exact hp1
+        symm; apply EReal.div_mul_cancel hp2 hp3 hp1
       _ = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ / Real.toEReal ‖p‖ := by apply EReal.mul_div_right
       _ ≤ liminf (fun n ↦ ↑‖x n‖) atTop * Real.toEReal ‖p‖ / Real.toEReal ‖p‖ := by
-        apply EReal.div_le_div_right_of_nonneg
-        · exact nonneg1
-        exact this
+        apply EReal.div_le_div_right_of_nonneg nonneg1 this
       _ = liminf (fun n ↦ ↑‖x n‖) atTop / Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
-        symm
-        apply EReal.mul_div_right
-      _ = liminf (fun n ↦ ↑‖x n‖) atTop := by
-        apply EReal.div_mul_cancel
-        · exact hp2
-        · exact hp3
-        exact hp1
+        symm; apply EReal.mul_div_right
+      _ = liminf (fun n ↦ ↑‖x n‖) atTop := EReal.div_mul_cancel hp2 hp3 hp1
 
--- Lemma 2.51 (i)
+/--
+Lemma 2.51 (i) : ``Tendsto x atTop (nhds p)`` if and only if `WeakConverge x p` and
+`limsup ‖x n‖ ≤ ‖p‖`.
+-/
 theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ → H) (p : H) :
   WeakConverge x p ∧ limsup (fun n => Real.toEReal ‖x n‖) atTop ≤ Real.toEReal ‖p‖ ↔
   Tendsto x atTop (nhds p) := by
   by_cases upper_bound : ¬ (∃ M : ℝ, ∀ n, ‖x n‖ ≤ M)
   · push_neg at upper_bound
     constructor
-    · rintro ⟨hweak, hlimsup⟩
-      exfalso
+    · rintro ⟨hweak, hlimsup⟩; exfalso
       have hlimsup_top : limsup (fun n => Real.toEReal ‖x n‖) atTop = ⊤ := by
         simp only [limsup, limsSup, eventually_map, eventually_atTop, ge_iff_le, sInf_eq_top,
           Set.mem_setOf_eq, forall_exists_index]
@@ -443,16 +417,13 @@ theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ �
         · simp only [hN, zero_le, EReal.coe_le_coe_iff, forall_const] at hb
           obtain ⟨m, hm⟩ := upper_bound (a0 + 1)
           have : ‖x m‖ ≤ a0 := by
-            specialize hb m
-            assumption
+            specialize hb m; assumption
           linarith
-        · -- N ≠ 0 时，可以定义 M1
-          push_neg at hN
+        · push_neg at hN
           let M1 := Finset.sup' (Finset.range N) (by simp [hN]) (fun k => ‖x k‖)
           let M := max M1 a0
           have hall : ∀ n, ‖x n‖ ≤ M := by
-            intro n
-            by_cases hn : n < N
+            intro n; by_cases hn : n < N
             · have : ‖x n‖ ≤ M1 := by
                 apply Finset.le_sup'_of_le
                 · simp only [Finset.mem_range]; exact hn
@@ -460,19 +431,13 @@ theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ �
               exact le_trans this (le_max_left M1 a0)
             · push_neg at hn
               have : Real.toEReal ‖x n‖ ≤ Real.toEReal a0 := hb n hn
-              rw [EReal.coe_le_coe_iff] at this
-              exact le_trans this (le_max_right M1 a0)
-          obtain ⟨m, hm⟩ := upper_bound (M + 1)
-          specialize hall m
-          linarith
-      rw [hlimsup_top] at hlimsup
-      simp at hlimsup
+              rw [EReal.coe_le_coe_iff] at this; exact le_trans this (le_max_right M1 a0)
+          obtain ⟨m, hm⟩ := upper_bound (M + 1); specialize hall m; linarith
+      rw [hlimsup_top] at hlimsup; simp at hlimsup
     intro h
     constructor
     · exact strong_converge_then_weak_converge x p h
-    rw[Metric.tendsto_atTop] at h
-    exfalso
-    specialize h 1 zero_lt_one
+    rw[Metric.tendsto_atTop] at h; exfalso; specialize h 1 zero_lt_one
     obtain ⟨N, hN⟩ := h
     let x0 := Finset.sup' (Finset.range (N + 1)) (by simp) (fun n ↦ ‖x n‖)
     let M := max (x0 + 1) (‖p‖ + 1)
@@ -483,9 +448,7 @@ theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ �
       have hx0_le : ‖x n‖ ≤ x0 := by
         have hmem : n ∈ Finset.range (N + 1) := by
           have : n < N + 1 := by
-            apply Nat.lt_succ_of_lt
-            push_neg at hlt
-            exact hlt
+            apply Nat.lt_succ_of_lt; push_neg at hlt; exact hlt
           simpa [Finset.mem_range] using this
         exact Finset.le_sup'_of_le (fun k ↦ ‖x k‖) hmem (le_rfl)
       have hcontr : ‖x n‖ ≤ M := by
@@ -495,8 +458,7 @@ theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ �
       exact not_lt_of_ge hcontr hn
     have hdist : dist (x n) p > 1 := by
       have hnorm : ‖x n‖ > ‖p‖ + 1 := lt_of_le_of_lt (le_max_right _ _) hn
-      have hbound : ‖x n - p‖ ≥ ‖x n‖ - ‖p‖ := by
-        exact norm_sub_norm_le (x n) p
+      have hbound : ‖x n - p‖ ≥ ‖x n‖ - ‖p‖ := norm_sub_norm_le (x n) p
       have h1: ‖x n‖ - ‖p‖ > 1 := by linarith
       simp only [dist_eq_norm, gt_iff_lt]
       exact lt_of_lt_of_le h1 hbound
@@ -505,8 +467,7 @@ theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ �
     exact (not_lt_of_ge hdist') this
   have h: liminf (fun n => Real.toEReal ‖x n‖) atTop
     ≤ limsup (fun n => Real.toEReal ‖x n‖) atTop := by
-    push_neg at upper_bound
-    apply liminf_le_limsup
+    push_neg at upper_bound; apply liminf_le_limsup
     · obtain ⟨M, hM⟩ := upper_bound
       have hbounded : IsBoundedUnder (· ≤ ·) atTop (fun n ↦ Real.toEReal ‖x n‖) := by
         refine ⟨M, ?_⟩
@@ -515,37 +476,23 @@ theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ �
       exact hbounded
     have hbounded : IsBoundedUnder (· ≥ ·) atTop (fun n ↦ Real.toEReal ‖x n‖) := by
       refine ⟨0, ?_⟩
-      have : ∀ᶠ n in atTop, 0 ≤ ‖x n‖ :=
-        Eventually.of_forall (by intro n; exact norm_nonneg (x n))
+      have : ∀ᶠ n in atTop, 0 ≤ ‖x n‖ := Eventually.of_forall (by intro n; exact norm_nonneg (x n))
       simp
     exact hbounded
   push_neg at upper_bound
   constructor
   · rintro ⟨hweak, hlimsup⟩
     have h' :Real.toEReal ‖p‖ ≤ liminf (fun n => Real.toEReal ‖x n‖) atTop := by
-      apply norm_weakly_lsc
-      exact hweak
-    have eq: limsup (fun n ↦ Real.toEReal ‖x n‖) atTop
-      = liminf (fun n ↦ Real.toEReal ‖x n‖) atTop:= by
+      apply norm_weakly_lsc; exact hweak
+    have eq: limsup (fun n ↦ Real.toEReal ‖x n‖) atTop =
+      liminf (fun n ↦ Real.toEReal ‖x n‖) atTop:= by
       apply le_antisymm
       · calc
           _ ≤ Real.toEReal ‖p‖ := hlimsup
           _ ≤ liminf (fun n => Real.toEReal ‖x n‖) atTop := h'
-      exact h
-    have hnorm_bounds :
-        IsBoundedUnder (· ≤ ·) atTop (fun n ↦ Real.toEReal ‖x n‖) ∧
-        IsBoundedUnder (· ≥ ·) atTop (fun n ↦ Real.toEReal ‖x n‖) := by
-      refine ⟨?_, ?_⟩
-      · obtain ⟨M, hM⟩ := upper_bound
-        exact ⟨M, (Eventually.of_forall hM).mono (by intro n hn; simpa)⟩
-      · refine ⟨0, ?_⟩
-        have hnonneg : ∀ n, 0 ≤ Real.toEReal ‖x n‖ := by
-          intro n
-          apply EReal.coe_nonneg.mpr (norm_nonneg (x n))
-        apply Eventually.of_forall hnonneg
+      · exact h
     have hlim : Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖) := by
-      apply EReal.tendsto_coe.mp
-      apply tendsto_of_liminf_eq_limsup
+      apply EReal.tendsto_coe.mp; apply tendsto_of_liminf_eq_limsup
       · rw [eq] at hlimsup
         apply le_antisymm
         · exact hlimsup
@@ -566,52 +513,44 @@ theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ �
           Eventually.of_forall (by intro n; exact norm_nonneg (x n))
         simp
       exact hbounded
-    have hnorm : Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖) := by
-      simpa using hlim
+    have hnorm : Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖) := by simpa using hlim
     have hsub : Tendsto (fun n => x n - p) atTop (nhds 0) := by
       apply (tendsto_iff_sub_tendsto_zero x p).1
       apply (seq_converge_iff_norm_converge x p).2
       have eq2:∀ n, ‖x n - p‖ ^2 = ‖x n‖^2 - 2 * ⟪x n, p⟫ + ‖p‖^2 := by
-        intro n
-        rw [← @norm_sub_sq_real]
+        intro n; rw [← @norm_sub_sq_real]
       simp only [eq2]
       have h1 : Tendsto (fun n => ‖x n‖^2) atTop (nhds (‖p‖^2)) := by
         simpa [pow_two] using hnorm.mul hnorm
       have h2 : Tendsto (fun n => 2 * ⟪x n, p⟫) atTop (nhds (2 * ‖p‖^2)) := by
-        have : Tendsto (fun n => ⟪x n, p⟫) atTop (nhds (‖p‖^2)) := by
-          exact lim_inner_seq_eq_norm x p hweak
+        have : Tendsto (fun n => ⟪x n, p⟫) atTop (nhds (‖p‖^2)) := lim_inner_seq_eq_norm x p hweak
         simpa using (tendsto_const_nhds (x := (2:ℝ))).mul this
       have h3 : Tendsto (fun n => ‖p‖^2) atTop (nhds (‖p‖^2)) := tendsto_const_nhds (α := ℕ)
-      convert h1.sub h2 |>.add h3 using 2
-      ring
-    have hnorm_sq :
-        Tendsto (fun n => ‖x n - p‖ ^ 2) atTop (nhds 0) := by
-      have hnorm : Tendsto (fun n => ‖x n - p‖) atTop (nhds 0) := by
-        exact tendsto_zero_iff_norm_tendsto_zero.mp hsub
+      convert h1.sub h2 |>.add h3 using 2; ring
+    have hnorm_sq : Tendsto (fun n => ‖x n - p‖ ^ 2) atTop (nhds 0) := by
+      have hnorm : Tendsto (fun n => ‖x n - p‖) atTop (nhds 0) :=
+        tendsto_zero_iff_norm_tendsto_zero.mp hsub
       simpa [pow_two] using hnorm.mul hnorm
     exact (seq_converge_iff_norm_converge x p).2 hnorm_sq
   intro h'
   constructor
   · exact strong_converge_then_weak_converge x p h'
   have hnorm : Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖) := Tendsto.norm h'
-  -- 将 Real 转成 EReal 的收敛
   have hnorm_ereal : Tendsto (fun n => Real.toEReal ‖x n‖) atTop (nhds (Real.toEReal ‖p‖)) := by
     exact EReal.tendsto_coe.mpr hnorm
-  -- 当序列收敛时，limsup = liminf = 极限值
   have hlimsup : limsup (fun n => Real.toEReal ‖x n‖) atTop = Real.toEReal ‖p‖ := by
     obtain ⟨M, hM⟩ := upper_bound
     have hbdd_above : IsBoundedUnder (· ≤ ·) atTop (fun n ↦ Real.toEReal ‖x n‖) := by
-      refine ⟨M, ?_⟩
-      exact (Eventually.of_forall hM).mono (by intro n hn; simpa)
+      refine ⟨M, ((Eventually.of_forall hM).mono (by intro n hn; simpa))⟩
     have hbdd_below : IsBoundedUnder (· ≥ ·) atTop (fun n ↦ Real.toEReal ‖x n‖) := by
-      refine ⟨0, ?_⟩
-      apply Eventually.of_forall (fun (n : ℕ) => ?_)
-      simp
-    apply Tendsto.limsup_eq
-    exact hnorm_ereal
+      refine ⟨0, ?_⟩; apply Eventually.of_forall (fun (n : ℕ) => ?_); simp
+    apply Tendsto.limsup_eq; exact hnorm_ereal
   rw [hlimsup]
 
--- Corollary 2.52
+/--
+Corollary 2.52 : `Tendsto x atTop (nhds p)` if and only if `WeakConverge x p` and
+`Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖)`.
+-/
 theorem strong_converge_iff_weak_norm_converge [CompleteSpace H] (x : ℕ → H) (p : H) :
   Tendsto x atTop (nhds p) ↔
   WeakConverge x p ∧ Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖) := by
@@ -620,25 +559,23 @@ theorem strong_converge_iff_weak_norm_converge [CompleteSpace H] (x : ℕ → H)
     constructor
     · exact strong_converge_then_weak_converge x p h
     exact Tendsto.norm h
-  intro ⟨h1, h2⟩
-  apply (seq_converge_iff_norm_converge x p).2
+  intro ⟨h1, h2⟩; apply (seq_converge_iff_norm_converge x p).2
   have norm_expand : ∀ n, ‖x n - p‖^2 = ‖x n‖^2 - 2 * ⟪x n, p⟫ + ‖p‖^2 := by
-    intro n
-    rw [← @norm_sub_sq_real]
+    intro n; rw [← @norm_sub_sq_real]
   simp only [norm_expand]
   have hnorm_sq : Tendsto (fun n => ‖x n‖^2) atTop (nhds (‖p‖^2)) := by
     simpa [pow_two] using h2.mul h2
   have hinner : Tendsto (fun n => 2 * ⟪x n, p⟫) atTop (nhds (2 * ‖p‖^2)) := by
-    have : Tendsto (fun n => ⟪x n, p⟫) atTop (nhds (‖p‖^2)) := by
-      exact lim_inner_seq_eq_norm x p h1
+    have : Tendsto (fun n => ⟪x n, p⟫) atTop (nhds (‖p‖^2)) := lim_inner_seq_eq_norm x p h1
     simpa using (tendsto_const_nhds (x := (2:ℝ))).mul this
-  have hconst : Tendsto (fun n => ‖p‖^2) atTop (nhds (‖p‖^2)) :=
-    tendsto_const_nhds (α := ℕ)
-  convert hnorm_sq.sub hinner |>.add hconst using 2
-  ring
+  have hconst : Tendsto (fun n => ‖p‖^2) atTop (nhds (‖p‖^2)) := tendsto_const_nhds (α := ℕ)
+  convert hnorm_sq.sub hinner |>.add hconst using 2; ring
 
-
---x n弱收敛到x_lim, u n强收敛到u_lim,lim ⟪x_n, u_n⟫ = ⟪x_lim, u_lim⟫
+/--
+For a weakly convergent sequence `x n` converging to `x_lim` and a strongly convergent
+sequence `u n` converging to `u_lim`, the inner product sequence `inner ℝ (x n) (u n)`
+converges to `inner ℝ x_lim u_lim`.
+-/
 lemma wkconv_conv_ledsto_conv [CompleteSpace H]
   {x : ℕ → H} {x_lim : H} {u : ℕ → H} {u_lim : H} {h_wkconv_x : WeakConverge x x_lim}
   {h_conv_u : Tendsto u atTop (𝓝 u_lim)}
@@ -646,15 +583,13 @@ lemma wkconv_conv_ledsto_conv [CompleteSpace H]
   have eq : (fun n => inner ℝ (x n) (u n) - inner ℝ x_lim u_lim) =
     (fun n => inner ℝ (x n) (u n - u_lim)) + (fun n => inner ℝ (x n - x_lim) u_lim) := by
       funext n; simp [inner_sub_left, inner_sub_right]
-  have h_norm_x_n_bdd : ∃ M, ∀ n, ‖x n‖ ≤ M :=
+  have ⟨M, hM⟩ : ∃ M, ∀ n, ‖x n‖ ≤ M :=
     weakly_converge_norm_bounded x x_lim h_wkconv_x
   have h1: Tendsto (fun n => inner ℝ (x n) (u n - u_lim)) atTop (𝓝 0) := by
-    obtain ⟨M, hM⟩ := h_norm_x_n_bdd
-    have h_u_diff : Tendsto (fun n => u n - u_lim) atTop (𝓝 0) := by
-      exact (tendsto_iff_sub_tendsto_zero u u_lim).mp h_conv_u
+    have h_u_diff : Tendsto (fun n => u n - u_lim) atTop (𝓝 0) :=
+      (tendsto_iff_sub_tendsto_zero u u_lim).mp h_conv_u
     by_cases M_zero : M = 0
-    · -- M = 0 时，x n 恒为 0 向量
-      have h_xn_zero : ∀ n, x n = 0 := by
+    · have h_xn_zero : ∀ n, x n = 0 := by
         intro n; specialize hM n
         have : ‖x n‖ ≤ 0 := by rw [M_zero] at hM; exact hM
         have h_norm_nonneg : ‖x n‖ ≥ 0 := norm_nonneg (x n)
@@ -664,14 +599,12 @@ lemma wkconv_conv_ledsto_conv [CompleteSpace H]
         specialize hM 0; push_neg at M_zero
         have h_M_nonneg : M ≥ 0 := by
           calc
-            M ≥ ‖x 0‖ := hM
+            _ ≥ ‖x 0‖ := hM
             _ ≥ 0 := norm_nonneg (x 0)
         exact lt_of_le_of_ne h_M_nonneg (id (Ne.symm M_zero))
-      have h_ε_pos_div : ∀ ε > 0, ε / M > 0 := by
-        intros ε ε_pos; exact div_pos ε_pos h_M_pos
+      have h_ε_pos_div : ∀ ε > 0, ε / M > 0 := by intros ε ε_pos; exact div_pos ε_pos h_M_pos
       rw [Metric.tendsto_atTop] at h_u_diff ⊢; intro ε ε_pos
-      specialize h_u_diff (ε / M) (h_ε_pos_div ε ε_pos)
-      obtain ⟨N, hN⟩ := h_u_diff
+      specialize h_u_diff (ε / M) (h_ε_pos_div ε ε_pos); obtain ⟨N, hN⟩ := h_u_diff
       use N; intro n hn; specialize hN n hn; rw [Real.dist_eq]; simp only [sub_zero]
       rw [dist_eq_norm, sub_zero] at hN
       calc
@@ -697,5 +630,5 @@ lemma wkconv_conv_ledsto_conv [CompleteSpace H]
       (inner ℝ x_lim u_lim)).mpr h]
   rw [eq]
   have h_add : Tendsto (fun n => inner ℝ (x n) (u n - u_lim) + inner ℝ (x n - x_lim) u_lim)
-      atTop (𝓝 (0 + 0)) := Tendsto.add h1 h2
+    atTop (𝓝 (0 + 0)) := Tendsto.add h1 h2
   convert h_add; simp
