@@ -75,17 +75,19 @@ theorem weakly_closed_seq_closed (s : Set H) (hs : IsWeaklyClosed s) :
   simp only [IsWeaklySeqClosed]
   exact IsClosed.isSeqClosed hs
 
-/--
-Theorem 3.34 (iii) → (i)
-Let `C` be a convex subset of `H`. The following statement are equivalent:
-1. `C` is weakly sequentially closed.
-2. `C` is sequentially closed.
-3. `C` is closed.
-4. `C` is weakly closed.
--/
+-- Theorem 3.34 (iii) → (i)
 theorem closed_is_weakly_seq_closed [CompleteSpace H] (s : Set H) (hs : Convex ℝ s)
   (hc : IsClosed s) : IsWeaklySeqClosed s :=
   weakly_closed_seq_closed s (closed_is_weakly_closed s hs hc)
+
+
+theorem seq_closed_tfae [CompleteSpace H] (s : Set H) (hs : Convex ℝ s) :
+  [IsWeaklySeqClosed s, IsSeqClosed s, IsClosed s, IsWeaklyClosed s].TFAE := by
+  tfae_have 1 → 2 := convex_weakly_seq_closed s
+  tfae_have 2 → 3 := isSeqClosed_iff_isClosed.1
+  tfae_have 3 → 4 := closed_is_weakly_closed s hs
+  tfae_have 4 → 1 := weakly_closed_seq_closed s
+  tfae_finish
 
 /--
 definition of demiclosed
@@ -108,11 +110,8 @@ lemma norm_sq_eq_inner (a b : H) : ‖a + b‖^2 = ‖a‖^2 + ‖b‖^2 + 2 * �
       repeat rw [← real_inner_self_eq_norm_sq]
 
 -- Theorem 4.27: Browder's demiclosedness principle
-theorem browder_demiclosed_principle [CompleteSpace H]
-  {D : Set H}
-  {T : H → H}
-  (hT_nonexp : NonexpansiveOn T D)
-  : Demiclosed (id - T) D := by
+theorem browder_demiclosed_principle [CompleteSpace H] {D : Set H} {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D) : Demiclosed (id - T) D := by
   intro u h_D_nonempty h_D_weakly_seq_closed x hx_in_D x_lim hx_lim_in_D h_weak_conv h_diff_tendsto
   --取一个弱收敛到x_lim的列x n
   simp only [Pi.sub_apply, id_eq] at h_diff_tendsto

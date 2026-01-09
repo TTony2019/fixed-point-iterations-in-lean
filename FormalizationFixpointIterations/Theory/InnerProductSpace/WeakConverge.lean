@@ -96,6 +96,8 @@ theorem weakConverge_iff_inner_converge_pre (x : ℕ → H) (p : H) : WeakConver
   apply tendsto_iff_forall_eval_tendsto
   exact topDualPairing_is_injective
 
+lemma ddd : (topDualPairing ℝ H).flip = (ContinuousLinearMap.coeLM ℝ).flip := rfl
+
 theorem weakConverge_iff_inner_converge [CompleteSpace H] (x : ℕ → H) (p : H) : WeakConverge x p ↔
   ∀ y : H, Tendsto (fun n ↦ ⟪x n, y⟫) atTop (nhds ⟪p, y⟫) := by
   constructor
@@ -241,15 +243,15 @@ section WeakConvergeBounded
 --   map_smul' := fun c u => inner_smul_right p u c
 
 /--
-The norm of a weakly convergent sequence is bounded.
+Theorem: Weakly convergent sequence is bounded.
 -/
-theorem weakly_converge_norm_bounded [CompleteSpace H]
-  (x : ℕ → H) (p : H) (h_wkconv_x : WeakConverge x p) : ∃ M, ∀ n, ‖x n‖ ≤ M := by
-  let f : ℕ → H →L[ℝ] ℝ := fun n => LinearMap.mkContinuous
+theorem weakly_converge_norm_bounded [CompleteSpace H] (x : ℕ → H) (p : H)
+  (h_wkconv_x : WeakConverge x p) : ∃ M, ∀ n, ‖x n‖ ≤ M := by
+  let f : ℕ → H →L[ℝ] ℝ := fun n =>
+    LinearMap.mkContinuous
       { toFun := fun z => ⟪x n, z⟫
         map_add' := fun u v => inner_add_right (x n) u v
         map_smul' := fun c u => inner_smul_right (x n) u c}
-      -- (fun z => cont_inner_left z)
       ‖x n‖
       fun z => by
         simp only [LinearMap.coe_mk, AddHom.coe_mk, Real.norm_eq_abs]
@@ -318,7 +320,7 @@ theorem weakly_converge_norm_bounded [CompleteSpace H]
 end WeakConvergeBounded
 
 /--
-Lemma 2.42 : `‖p‖ ≤ liminf ‖x n‖` if `x n` weakly converges to `p`.
+Theorem: norm is weakly lsc. (Lemma 2.42)
 -/
 theorem norm_weakly_lsc [CompleteSpace H] (x : ℕ → H) (p : H) (h : WeakConverge x p) :
   Real.toEReal ‖p‖ ≤ liminf (fun n => Real.toEReal ‖x n‖) atTop := by
@@ -356,22 +358,20 @@ theorem norm_weakly_lsc [CompleteSpace H] (x : ℕ → H) (p : H) (h : WeakConve
           use 0
           intro n hn
           exact hM n
-  · have hp2 : Real.toEReal ‖p‖ ≠ ⊥ := by
-      simp
-    have hp3 : Real.toEReal ‖p‖ ≠ ⊤ := by
-      simp
+  · have hp2 : Real.toEReal ‖p‖ ≠ ⊥ := by simp
+    have hp3 : Real.toEReal ‖p‖ ≠ ⊤ := by simp
     push_neg at hp1
     have h_lim : Real.toEReal (‖p‖ ^ 2) ≤ liminf (fun n => Real.toEReal (y' n)) atTop :=
       EReal.limit_le_liminf x' y' (‖p‖ ^ 2) h1 hxy
     simp only [EReal.coe_pow, EReal.coe_mul, y'] at h_lim
     have h2 : liminf (fun n ↦ Real.toEReal ‖x n‖ * Real.toEReal ‖p‖) atTop
-      = (liminf (fun n ↦ Real.toEReal ‖x n‖) atTop) * Real.toEReal ‖p‖ := by
-      apply EReal.liminf_mul_const x p
+      = (liminf (fun n ↦ Real.toEReal ‖x n‖) atTop) * Real.toEReal ‖p‖ := EReal.liminf_mul_const x p
     rw [h2] at h_lim
     have p_norm_eq : Real.toEReal (‖p‖ * ‖p‖)  = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
       rw [← EReal.coe_mul]
     have eq: ‖p‖^2 = ‖p‖ * ‖p‖ := by linarith
-    have eq': Real.toEReal (‖p‖ ^ 2) = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by rw [eq, p_norm_eq]
+    have eq': Real.toEReal (‖p‖ ^ 2) = Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
+      rw [eq, p_norm_eq]
     have : Real.toEReal ‖p‖ * Real.toEReal ‖p‖
       ≤ liminf (fun n ↦ Real.toEReal ‖x n‖) atTop * Real.toEReal ‖p‖ := by
       calc
@@ -388,7 +388,7 @@ theorem norm_weakly_lsc [CompleteSpace H] (x : ℕ → H) (p : H) (h : WeakConve
         apply EReal.div_le_div_right_of_nonneg nonneg1 this
       _ = liminf (fun n ↦ ↑‖x n‖) atTop / Real.toEReal ‖p‖ * Real.toEReal ‖p‖ := by
         symm; apply EReal.mul_div_right
-      _ = liminf (fun n ↦ ↑‖x n‖) atTop := EReal.div_mul_cancel hp2 hp3 hp1
+      _ = liminf (fun n ↦ ↑‖x n‖) atTop := by apply EReal.div_mul_cancel hp2 hp3 hp1
 
 /--
 Lemma 2.51 (i) : ``Tendsto x atTop (nhds p)`` if and only if `WeakConverge x p` and

@@ -619,8 +619,8 @@ lemma halpern_convergence_point_same [CompleteSpace H] [SeparableSpace H]
   (h_α_limit : Tendsto alg.α atTop (nhds 0))
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
   (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|)) (coincidence : alg.u = alg.x0)
-  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (nhds p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
-  have hT_quasinonexp := nonexpansive_leadsto_quasinonexpansive hT_nonexp
+  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (𝓝 p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
+  have hT_quasinonexp := nonexpansive_quasinonexpansive hT_nonexp
   have hC_closed_convex := quasinonexpansive_fixedPoint_closed_convex hD_closed hD_convex
     hD_nonempty hT_quasinonexp hC
   obtain ⟨y, hy_in_C⟩ := hT_fixpoint
@@ -836,8 +836,8 @@ theorem halpern_convergence [CompleteSpace H] [SeparableSpace H]
   (halg_x0 : alg.x0 ∈ D) (halg_u : alg.u ∈ D) (halg_x_in_D : ∀ n, alg.x n ∈ D)
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (h_α_limit : Tendsto alg.α atTop (nhds 0))
   (h_α_sum_inf : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
-  (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|))
-  : ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (nhds p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
+  (h_α_diff_finite : Summable (fun n => |alg.α (n + 1) - alg.α n|)) :
+  ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (𝓝 p) ∧ (∀ w ∈ C, ⟪alg.u - p, w - p⟫ ≤ 0) := by
   by_cases h_coincidence : alg.u = alg.x0
   · -- Case: u = x0
     exact halpern_convergence_point_same hD_closed hD_convex hD_nonempty hT_nonexp hC hT_fixpoint

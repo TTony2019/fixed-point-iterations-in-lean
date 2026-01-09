@@ -33,7 +33,7 @@ lemma WeakSpace.continuous_of_continuous_eval
 noncomputable def weakToWeakDual [CompleteSpace H] : WeakSpace ℝ H ≃ₗ[ℝ] WeakDual ℝ H :=
   (InnerProductSpace.toDual ℝ H).toLinearEquiv
 
-noncomputable def weakHomeomorph [CompleteSpace H] : WeakSpace ℝ H ≃ₜ WeakDual ℝ H where
+noncomputable def weakHomeomorph [CompleteSpace H] : Homeomorph (WeakSpace ℝ H) (WeakDual ℝ H) where
   toFun := weakToWeakDual
   invFun := weakToWeakDual.symm
   left_inv := weakToWeakDual.left_inv

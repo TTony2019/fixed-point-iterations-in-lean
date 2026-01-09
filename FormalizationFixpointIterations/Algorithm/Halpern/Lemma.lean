@@ -121,20 +121,20 @@ lemma halpern_distance_monotone
   (alg : Halpern T) (halg_x0 : alg.x0 ∈ D) (halg_x_in_D : ∀ n, alg.x n ∈ D)
   (h_α_range : ∀ n, alg.α n ∈ Set.Ioo 0 1) (coincidence : alg.u = alg.x0) :
   ∀ z ∈ C, ∀ n, ‖T (alg.x n) - z‖ ≤ ‖alg.x n - z‖ ∧ ‖alg.x n - z‖ ≤ ‖alg.x0 - z‖ := by
-  have hT_quasinonexp := nonexpansive_leadsto_quasinonexpansive hT_nonexp
+  have hT_quasinonexp := nonexpansive_quasinonexpansive hT_nonexp
   intro z hzC n
   induction n with
   | zero =>
     constructor
     · have ⟨hz_fix, hz_D⟩ : z ∈ Fix T ∩ D := by convert hzC; exact hC.symm
-      have hz_in_fix' : z ∈ Fix' T D := ⟨hz_D, hz_fix⟩
+      have hz_in_fix' : z ∈ FixOn T D := ⟨hz_D, hz_fix⟩
       rw [alg.initial_value]
       exact hT_quasinonexp halg_x0 hz_in_fix'
     · rw [alg.initial_value]
   | succ k ih =>
     constructor
     · have ⟨hz_fix, hz_D⟩ :z ∈ Fix T ∩ D := by convert hzC; exact hC.symm
-      have hz_in_fix' : z ∈ Fix' T D := ⟨hz_D, hz_fix⟩
+      have hz_in_fix' : z ∈ FixOn T D := ⟨hz_D, hz_fix⟩
       exact hT_quasinonexp (halg_x_in_D (k+1)) hz_in_fix'
     · rw [alg.update]; calc
         _ = ‖alg.α k • (alg.u - z) + (1 - alg.α k) • (T (alg.x k) - z)‖ := by
