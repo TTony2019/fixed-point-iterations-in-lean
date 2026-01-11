@@ -143,7 +143,7 @@ lemma bounded_not_mem_subseq [SeparableSpace H] [CompleteSpace H] (x : ℕ → H
 
 /--
 Lemma 2.46\
-if sequence `x` is bounded and possesses at most one weak sequential cluster point, then `x` weakly converges to some point `p0` in `H`.
+if sequence `x` is bounded and possesses at most one weak subsequential limit point, then `x` weakly converges to some point `p0` in `H`.
 -/
 lemma WeakConv_of_bounded_clusterptUnique [SeparableSpace H] [CompleteSpace H] (x : ℕ → H) (h_bounded : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M)
 (h_atmost_one_cluster : ∀ p q : H,  HasWeakSubseq p x → HasWeakSubseq q x  → p = q) : ∃ p0 : H, WeakConverge x p0 := by
@@ -289,7 +289,7 @@ alias Prop_5_04_i_ii := bounded_converge_of_Fejermonotone
 
 /--
 Theorem 5.5
-If the sequence `x` is Fejér monotone with respect to a nonempty set `C`, and if every weak sequential cluster point of `x` belongs to `C`, then
+If the sequence `x` is Fejér monotone with respect to a nonempty set `C`, and if every weak subsequential limit point of `x` belongs to `C`, then
 `x` weakly converges to some point `p0` in `C`.
 -/
 theorem WeakConv_of_Fejermonotone_of_clusterpt_in [SeparableSpace H] [CompleteSpace H] (C : Set H) (h_C_nonempty : C.Nonempty) (x : ℕ → H)
