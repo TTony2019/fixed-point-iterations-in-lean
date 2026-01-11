@@ -13,7 +13,8 @@ local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 
-/-- Krasnosel'skii-Mann iteration structure
+/--
+Krasnosel'skii-Mann iteration structure
 -/
 structure KM (D : Set H) (T : H → H) where
   x0 : H
@@ -24,7 +25,7 @@ structure KM (D : Set H) (T : H → H) where
   x : ℕ → H
   update : ∀ n, x (n + 1) = x n + stepsize n • (T (x n) - x n)
   initial_value : x 0 = x0
-  fix_T_nonempty : (Fix' T D).Nonempty
+  fix_T_nonempty : (FixOn T D).Nonempty
 
 
 -- The formalization of Groetsch's theorem for Krasnosel'skii-Mann iteration
@@ -37,7 +38,7 @@ Here km.stepsize n corresponds to λ n in the paper.
 lemma key_inequality {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
 (hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖)
     (km : KM D T) :
-    ∀ (y : H) (hy : y ∈ Fix' T D) (n : ℕ),
+    ∀ (y : H) (hy : y ∈ FixOn T D) (n : ℕ),
       ‖km.x (n + 1) - y‖^2 ≤ ‖km.x n - y‖^2
       - km.stepsize n * (1 - km.stepsize n) * ‖T (km.x n) - km.x n‖^2 := by
     intro y hy n
@@ -78,7 +79,7 @@ Sequence `x` in KM algorithm is Fejer monotone with respect to Fix T.
 lemma groetsch_theorem_i {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsClosed D)
     (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D) (hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖)
     (km : KM D T) :
-    IsFejerMonotone km.x (Fix' T D) := by
+    IsFejerMonotone km.x (FixOn T D) := by
     intro y hy n
     rcases km.hstepsize n with ⟨hs_nonneg, hs_le_one⟩
     have calc1 :‖km.x (n + 1) - y‖ ^ 2 ≤ ‖km.x n - y‖ ^ 2 := by
@@ -244,7 +245,7 @@ Sequence `x n` in KM algorithm converges weakly to a point `y0` in Fix T.
 lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
 (hD_convex : Convex ℝ D) (hD_closed : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
 (hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖) (km : KM D T) :
-    ∃ y0 ∈ (Fix' T D), WeakConverge km.x y0 := by
+    ∃ y0 ∈ (FixOn T D), WeakConverge km.x y0 := by
   have h_fejer := (groetsch_theorem_i hD_convex hD_closed T h_Im_T_in_D hT_nonexpansive km)
   have h_x : ∀ n, km.x n ∈ D := by  --The proposition that D is a convex set is only used in the third conclusion.
     intro n                          --That is, conclusions (i) and (ii) do not require that D be a convex closed set.
@@ -267,7 +268,7 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
     intro x hx y hy
     simp only [edist_dist, ENNReal.coe_one, one_mul, dist_nonneg, ENNReal.ofReal_le_ofReal_iff]; rw [dist_eq_norm, dist_eq_norm]
     exact hT_nonexpansive x y
-  have h_weak_cluster_in : ∀ p : H, HasWeakSubseq p km.x → p ∈ (Fix' T D)  := by
+  have h_weak_cluster_in : ∀ p : H, HasWeakSubseq p km.x → p ∈ (FixOn T D)  := by
     intro p h_cluster
     rcases h_cluster with ⟨ φ, hφ , tend ⟩
     have p_in_D : p ∈ D := by
@@ -296,7 +297,7 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
     have := corollary_4_28 hD_closed hD_convex D_nonempty hT_nonexp (fun n => km.x (φ n) ) (fun n => h_x (φ n) )
       p p_in_D tend h_error_zero
     exact ⟨ p_in_D, this ⟩
-  apply WeakConv_of_Fejermonotone_of_clusterpt_in (Fix' T D) (km.fix_T_nonempty) km.x h_fejer h_weak_cluster_in
+  apply WeakConv_of_Fejermonotone_of_clusterpt_in (FixOn T D) (km.fix_T_nonempty) km.x h_fejer h_weak_cluster_in
 
 /--
 Formalization of Groetsch's theorem for Krasnosel'skii-Mann iteration
@@ -305,11 +306,11 @@ theorem groetsch_theorem [SeparableSpace H] [CompleteSpace H] {D : Set H}
     (hD_convex : Convex ℝ D) (hD_closed : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
     (hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖) (km : KM D T) :
     -- (i) Fejér monotonicity
-    IsFejerMonotone km.x (Fix' T D)
+    IsFejerMonotone km.x (FixOn T D)
     -- (ii) converges strongly to 0
     ∧(Tendsto (fun n ↦ ‖T (km.x n) - km.x n‖)  atTop (𝓝 0))
     -- (iii) converges weakly to a fixpoint
-    ∧∃ y0 ∈ (Fix' T D),WeakConverge km.x y0
+    ∧∃ y0 ∈ (FixOn T D),WeakConverge km.x y0
     :=
       ⟨
         groetsch_theorem_i hD_convex hD_closed T h_Im_T_in_D hT_nonexpansive km,

@@ -15,24 +15,28 @@ local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 Proposition 4.23 (i) : If T if quasinonexpansive on D, then
   `Fix T ∩ D = ⋂ {x ∈ D} {y ∈ D | ⟪y - T x, x - T x⟫ ≤ (1/2) * ‖T x - x‖^2}`
 -/
-lemma quasinonexpansive_fixedPoint_characterization
-  {D : Set H} (hD_nonempty : D.Nonempty) {T : H → H} (hT_quasi : QuasiNonexpansiveOn T D)
-  : Fix T ∩ D = ⋂ x ∈ D, {y ∈ D | ⟪y - T x, x - T x⟫ ≤ (1/2) * ‖T x - x‖^2} := by
+theorem quasinonexpansive_fixedPoint_characterization {D : Set H} (hD_nonempty : D.Nonempty)
+  {T : H → H} (hT : QuasiNonexpansiveOn T D) :
+  Fix T ∩ D = ⋂ x ∈ D, {y ∈ D | ⟪y - T x, x - T x⟫ ≤ (1/2) * ‖T x - x‖^2} := by
   ext y; constructor
   · intro ⟨hy_fix, hy_D⟩; simp only [Set.mem_iInter, Set.mem_setOf_eq]; intro x hx
     constructor
     · exact hy_D
     · have h_fix : IsFixedPt T y := hy_fix
-      have hy_in_fix' : y ∈ Fix' T D := ⟨hy_D, h_fix⟩
-      have h_quasi := hT_quasi hx hy_in_fix'
+      have hy_in_fix' : y ∈ FixOn T D := ⟨hy_D, h_fix⟩
+      have h_quasi := hT hx hy_in_fix'
       have h_norm_sq : ‖T x - y‖^2 ≤ ‖x - y‖^2 :=
         sq_le_sq' (by linarith [norm_nonneg (T x - y)]) h_quasi
       rw [← real_inner_self_eq_norm_sq, ← real_inner_self_eq_norm_sq] at h_norm_sq
       have eq1 : inner ℝ (T x - y) (T x - y) = inner ℝ (T x - x) (T x - x) +
         2 * inner ℝ (T x - x) (x - y) + inner ℝ (x - y) (x - y) := by
-        rw [← sub_add_sub_cancel (T x) y x]; simp [inner_sub_left, inner_sub_right, real_inner_comm]
-        ring_nf
-        sorry
+        calc
+          _ = inner ℝ ((T x - x) + (x - y)) ((T x - x) + (x - y)) := by
+            congr 1; repeat rw [sub_add_sub_cancel]
+          _ = inner ℝ (T x - x) (T x - x) + 2 * inner ℝ (T x - x) (x - y)
+            + inner ℝ (x - y) (x - y) := by
+            simp only [inner_add_left, inner_add_right,
+              inner_sub_left, inner_sub_right, real_inner_comm]; ring_nf
       rw [eq1] at h_norm_sq
       have eq2 : inner ℝ (T x - x) (T x - x) + 2 * inner ℝ (T x - x) (x - T x)
         + 2 * inner ℝ (T x - x) (T x - y) ≤ 0 := by calc
@@ -50,11 +54,9 @@ lemma quasinonexpansive_fixedPoint_characterization
           rw [real_inner_self_eq_norm_sq, mul_comm]
           have h_neg : inner ℝ (T x - x) (x - T x) = - inner ℝ (T x - x) (T x - x) := by
             simp only [inner_sub_right]; ring
-          rw [h_neg]; simp;
-          sorry
-          -- rw [real_inner_self_eq_norm_sq]; ring_nf
-  · intro hy
-    simp only [Set.mem_iInter, Set.mem_setOf_eq] at hy
+          rw [h_neg]; simp
+          field_simp [norm_eq_zero]; linarith
+  · intro hy; simp only [Set.mem_iInter, Set.mem_setOf_eq] at hy
     constructor
     · obtain ⟨x0, hx0⟩ := hD_nonempty; have hy_D := (hy x0 hx0).1; have h_y := (hy y hy_D).2
       have h_eq : inner ℝ (y - T y) (y - T y) = ‖y - T y‖ ^ 2 := real_inner_self_eq_norm_sq _
@@ -106,11 +108,10 @@ lemma intersection_set_is_closed_convex
 /--
 Proposition 4.23(ii) : If T is quasinonexpansive on D, then `Fix T ∩ D` is closed and convex
 -/
-lemma quasinonexpansive_fixedPoint_closed_convex
+theorem quasinonexpansive_fixedPoint_closed_convex
   {C D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
-  {T : H → H} (hT_quasi : QuasiNonexpansiveOn T D) (hC : C = Fix T ∩ D)
-  : IsClosed C ∧ Convex ℝ C := by
-  rw [hC, quasinonexpansive_fixedPoint_characterization hD_nonempty hT_quasi]
+  {T : H → H} (hT : QuasiNonexpansiveOn T D) (hC : C = Fix T ∩ D) : IsClosed C ∧ Convex ℝ C := by
+  rw [hC, quasinonexpansive_fixedPoint_characterization hD_nonempty hT]
   constructor
   · exact isClosed_biInter fun x _ => (intersection_set_is_closed_convex hD_closed hD_convex x).1
   · exact convex_iInter₂ fun x _ => (intersection_set_is_closed_convex hD_closed hD_convex x).2
@@ -119,11 +120,10 @@ omit [InnerProductSpace ℝ H] in
 /--
 Lemma : T is nonexpansive on D → T is quasinonexpansive on D
 -/
-lemma nonexpansive_leadsto_quasinonexpansive
-  {D : Set H} {T : H → H} (hT_nonexp : NonexpansiveOn T D) :
-    QuasiNonexpansiveOn T D := by
+theorem nonexpansive_quasinonexpansive {D : Set H} {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D) : QuasiNonexpansiveOn T D := by
   intro x hx y hy
-  rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp; rw [Fix'] at hy; rcases hy with ⟨hyD,hyFix⟩
+  rw [NonexpansiveOn, LipschitzOnWith] at hT_nonexp; rw [FixOn] at hy; rcases hy with ⟨hyD,hyFix⟩
   have h_edist := hT_nonexp hx hyD; simp only [ENNReal.coe_one, one_mul] at h_edist
   rw [hyFix, edist_dist, edist_dist] at h_edist
   have h_dist : dist (T x) y ≤ dist x y := (ENNReal.ofReal_le_ofReal_iff dist_nonneg).mp h_edist

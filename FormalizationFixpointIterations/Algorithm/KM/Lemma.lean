@@ -56,8 +56,10 @@ lemma WeakConverge_Subseq_inner {x : ℕ → H} {p : H} {φ : ℕ → ℕ} (hφ 
   apply Filter.Tendsto.comp hconv
   exact StrictMono.tendsto_atTop hφ
 
-/-- Corollary 2.15: for x,y ∈ H and α ∈ ℝ\
- `‖αx + (1-α)y‖^2 + α(1-α)‖x - y‖^2 = α‖x‖^2 + (1-α)‖y‖^2` -/
+/--
+Corollary 2.15: for x,y ∈ H and α ∈ ℝ
+ `‖αx + (1-α)y‖^2 + α(1-α)‖x - y‖^2 = α‖x‖^2 + (1-α)‖y‖^2`
+-/
 lemma convex_combination_norm_sq_identity
   {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
   (x y : H) (α : ℝ) :
@@ -142,8 +144,8 @@ lemma bounded_not_mem_subseq [SeparableSpace H] [CompleteSpace H] (x : ℕ → H
   exact ⟨q0, hq0_notin_V , k,hk,h_k_conv⟩
 
 /--
-Lemma 2.46\
-if sequence `x` is bounded and possesses at most one weak subsequential limit point, then `x` weakly converges to some point `p0` in `H`.
+Lemma 2.46
+if sequence `x` is bounded and possesses at most one weak sequential cluster point, then `x` weakly converges to some point `p0` in `H`.
 -/
 lemma WeakConv_of_bounded_clusterptUnique [SeparableSpace H] [CompleteSpace H] (x : ℕ → H) (h_bounded : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M)
 (h_atmost_one_cluster : ∀ p q : H,  HasWeakSubseq p x → HasWeakSubseq q x  → p = q) : ∃ p0 : H, WeakConverge x p0 := by
@@ -172,7 +174,9 @@ lemma WeakConv_of_bounded_clusterptUnique [SeparableSpace H] [CompleteSpace H] (
   exact hq0 hVmem
 alias Lemma_2_46_backword := WeakConv_of_bounded_clusterptUnique
 
-/-- equation (2.32):`2*⟪x n,p-q⟫ =‖x n - q‖^2-‖x n - p‖^2+‖p‖^2-‖q‖^2` -/
+/--
+equation (2.32):`2*⟪x n,p-q⟫ =‖x n - q‖^2-‖x n - p‖^2+‖p‖^2-‖q‖^2`
+-/
 lemma inner_sub_eq_norm_sub (x : ℕ → H) (p q : H) :
   ∀ n : ℕ, 2 * ⟪x n, p - q⟫ = ‖x n - q‖ ^ 2 - ‖x n - p‖ ^ 2 + ‖p‖ ^ 2 - ‖q‖ ^ 2 := by
   intro n
@@ -185,7 +189,9 @@ lemma inner_sub_eq_norm_sub (x : ℕ → H) (p q : H) :
     _ = 2 * ⟪x n, p - q⟫ := by
       simp only [inner_sub_left, inner_sub_right, real_inner_comm]
       ring
-/-- Convert equation (2.32) to limit form and show limit ⟪x n,p-q⟫ exists. -/
+/--
+Convert equation (2.32) to limit form and show limit ⟪x n,p-q⟫ exists.
+-/
 lemma inner_sub_lim_exists (x : ℕ → H) (p q : H) (lim_p lim_q : ℝ) (norm_p_2 : Tendsto (fun n ↦ ‖x n - p‖ ^ 2) atTop (𝓝 (lim_p ^ 2)))
 (norm_q_2 : Tendsto (fun n ↦ ‖x n - q‖ ^ 2) atTop (𝓝 (lim_q ^ 2))) :
 ∃ l: ℝ ,Tendsto (fun n => ⟪x n,p-q⟫) atTop (𝓝 (l)) :=by

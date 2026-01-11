@@ -34,7 +34,6 @@ Let `C` be a convex subset of `H`. The following statement are equivalent:
 3. `C` is closed.
 4. `C` is weakly closed.
 -/
--- Theorem 3.34 (i) → (ii)
 theorem convex_weakly_seq_closed [CompleteSpace H] (s : Set H) (hw : IsWeaklySeqClosed s) :
   IsSeqClosed s := by
   intro x p hxn hx
@@ -42,18 +41,20 @@ theorem convex_weakly_seq_closed [CompleteSpace H] (s : Set H) (hw : IsWeaklySeq
   specialize hw hxn ((strong_converge_iff_weak_norm_converge x p).1 hx).1
   exact Set.inter_singleton_nonempty.mp hw
 
--- Theorem 3.34 (ii) ↔ (iii)
-#check isSeqClosed_iff_isClosed
-
+/--
+Theorem 3.34 (ii) ↔ (iii)
+Let `C` be a convex subset of `H`. The following statement are equivalent:
+1. `C` is weakly sequentially closed.
+2. `C` is sequentially closed.
+3. `C` is closed.
+4. `C` is weakly closed.
+-/
 theorem continuous_real_weakspace : Continuous (toWeakSpace ℝ ℝ).symm := by
   have heq (w : ℝ): (toWeakSpace ℝ ℝ).symm w = (topDualPairing ℝ ℝ).flip w 1 := by
-    simp [topDualPairing_apply]
-    rfl
+    simp [topDualPairing_apply]; rfl
   have heq' : (toWeakSpace ℝ ℝ).symm.toFun = fun w => (topDualPairing ℝ ℝ).flip w 1 := by
-    ext w
-    exact heq w
-  change Continuous (toWeakSpace ℝ ℝ).symm.toFun
-  rw [heq']
+    ext w; exact heq w
+  change Continuous (toWeakSpace ℝ ℝ).symm.toFun; rw [heq']
   exact eval_continuous (topDualPairing ℝ ℝ).flip 1
 
 #check isOpenMap_toWeakSpace_symm
@@ -74,26 +75,29 @@ theorem weakly_closed_seq_closed (s : Set H) (hs : IsWeaklyClosed s) :
   simp only [IsWeaklySeqClosed]
   exact IsClosed.isSeqClosed hs
 
-
 -- Theorem 3.34 (iii) → (i)
-theorem closed_is_weakly_seq_closed [CompleteSpace H] (s : Set H)
-  (hs : Convex ℝ s) (hc : IsClosed s) : IsWeaklySeqClosed s := by
-  have hwkclosed := closed_is_weakly_closed s hs hc
-  exact weakly_closed_seq_closed s hwkclosed
+theorem closed_is_weakly_seq_closed [CompleteSpace H] (s : Set H) (hs : Convex ℝ s)
+  (hc : IsClosed s) : IsWeaklySeqClosed s :=
+  weakly_closed_seq_closed s (closed_is_weakly_closed s hs hc)
 
 
--- demiclosed 的定义
+theorem seq_closed_tfae [CompleteSpace H] (s : Set H) (hs : Convex ℝ s) :
+  [IsWeaklySeqClosed s, IsSeqClosed s, IsClosed s, IsWeaklyClosed s].TFAE := by
+  tfae_have 1 → 2 := convex_weakly_seq_closed s
+  tfae_have 2 → 3 := isSeqClosed_iff_isClosed.1
+  tfae_have 3 → 4 := closed_is_weakly_closed s hs
+  tfae_have 4 → 1 := weakly_closed_seq_closed s
+  tfae_finish
+
+/--
+definition of demiclosed
+-/
 def DemiclosedAt (D : Set H) (T : H → H) (u : H) : Prop :=
-  (h_D_nonempty : D.Nonempty) →
-  (h_D_weakly_seq_closed : IsWeaklySeqClosed D) →
-  ∀ (x : ℕ → H), (∀ n, x n ∈ D) →
-  ∀ (x_lim : H), x_lim ∈ D →
-  WeakConverge x x_lim →
-  Tendsto (fun n => T (x n)) atTop (𝓝 u) →
-  T x_lim = u
+  (h_D_nonempty : D.Nonempty) → (h_D_weakly_seq_closed : IsWeaklySeqClosed D) →
+  ∀ (x : ℕ → H), (∀ n, x n ∈ D) → ∀ (x_lim : H), x_lim ∈ D → WeakConverge x x_lim →
+  Tendsto (fun n => T (x n)) atTop (𝓝 u) → T x_lim = u
 
-def Demiclosed (T : H → H) (D : Set H) : Prop :=
-  ∀ u : H, DemiclosedAt D T u
+def Demiclosed (T : H → H) (D : Set H) : Prop := ∀ u : H, DemiclosedAt D T u
 
 lemma norm_sq_eq_inner (a b : H) : ‖a + b‖^2 = ‖a‖^2 + ‖b‖^2 + 2 * ⟪a,b⟫ := by
   calc
@@ -106,11 +110,8 @@ lemma norm_sq_eq_inner (a b : H) : ‖a + b‖^2 = ‖a‖^2 + ‖b‖^2 + 2 * �
       repeat rw [← real_inner_self_eq_norm_sq]
 
 -- Theorem 4.27: Browder's demiclosedness principle
-theorem browder_demiclosed_principle [CompleteSpace H]
-  {D : Set H}
-  {T : H → H}
-  (hT_nonexp : NonexpansiveOn T D)
-  : Demiclosed (id - T) D := by
+theorem browder_demiclosed_principle [CompleteSpace H] {D : Set H} {T : H → H}
+  (hT_nonexp : NonexpansiveOn T D) : Demiclosed (id - T) D := by
   intro u h_D_nonempty h_D_weakly_seq_closed x hx_in_D x_lim hx_lim_in_D h_weak_conv h_diff_tendsto
   --取一个弱收敛到x_lim的列x n
   simp only [Pi.sub_apply, id_eq] at h_diff_tendsto
@@ -124,10 +125,10 @@ theorem browder_demiclosed_principle [CompleteSpace H]
               2 * ⟪x_lim - x n, x n - T x_lim - u⟫ := by
               rw [norm_sq_eq_inner]
           _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
-              2 * ⟪x_lim - x n, (x n - x_lim) + (x_lim - T x_lim - u)⟫ := by congr 1; abel_nf
+            2 * ⟪x_lim - x n, (x n - x_lim) + (x_lim - T x_lim - u)⟫ := by congr 1; abel_nf
           _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
-              2 * (⟪x_lim - x n, x n - x_lim⟫ + ⟪x_lim - x n, x_lim - T x_lim - u⟫) := by
-              congr 1; rw [inner_add_right]
+            2 * (⟪x_lim - x n, x n - x_lim⟫ + ⟪x_lim - x n, x_lim - T x_lim - u⟫) := by
+            congr 1; rw [inner_add_right]
           _ = ‖x_lim - x n‖ ^ 2 + ‖x n - T x_lim - u‖ ^ 2 +
               2 * (-‖x_lim - x n‖ ^ 2 + ⟪x_lim - x n, x_lim - T x_lim - u⟫) := by
             congr 1; simp only [mul_eq_mul_left_iff, add_left_inj, OfNat.ofNat_ne_zero, or_false];
@@ -143,7 +144,7 @@ theorem browder_demiclosed_principle [CompleteSpace H]
             · have : - (x n - x_lim) = (x_lim - x n) := by abel
               rw [← this]; rw [inner_neg_left]; ring_nf
           _ = ‖(x n - T (x n) - u) + (T (x n) - T x_lim)‖ ^ 2 - ‖x n - x_lim‖ ^ 2
-              - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by congr 1; abel_nf
+            - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by congr 1; abel_nf
           _ = ‖x n - T (x n) - u‖ ^ 2 + ‖T (x n) - T x_lim‖ ^ 2 +
               2 * ⟪x n - T (x n) - u, T (x n) - T x_lim⟫ - ‖x n - x_lim‖ ^ 2
               - 2 * ⟪x n - x_lim, x_lim - T x_lim - u⟫ := by
@@ -158,8 +159,7 @@ theorem browder_demiclosed_principle [CompleteSpace H]
               rw [dist_eq_norm, dist_eq_norm] at this; exact this
             linarith
   have h1 : Tendsto (fun n => ‖x n - T (x n) - u‖) atTop (𝓝 0) := by
-    apply Metric.tendsto_atTop.mpr
-    intro ε ε_pos
+    apply Metric.tendsto_atTop.mpr; intro ε ε_pos
     rw [Metric.tendsto_atTop] at h_diff_tendsto
     obtain ⟨N, hN⟩ := h_diff_tendsto ε ε_pos
     use N
@@ -180,8 +180,7 @@ theorem browder_demiclosed_principle [CompleteSpace H]
     simp only [sub_zero, norm_norm] at ⊢ hN
     exact hN
   have h3 : WeakConverge (fun n => x n - x_lim) 0 := by
-    rw [weakConverge_iff_inner_converge']
-    intro y
+    rw [weakConverge_iff_inner_converge']; intro y
     have h4 : Tendsto (fun n => ⟪x n, y⟫) atTop (𝓝 ⟪x_lim, y⟫) := by
       apply (weakConverge_iff_inner_converge x x_lim).1 h_weak_conv
     have h5 : Tendsto (fun (n : ℕ) => ⟪x_lim, y⟫) atTop (𝓝 ⟪x_lim, y⟫) := tendsto_const_nhds
@@ -191,14 +190,10 @@ theorem browder_demiclosed_principle [CompleteSpace H]
     · ext n; simp only [sub_zero]; rw [inner_sub_left];
     ring_nf
   have h4 : WeakConverge (fun n => x n - T (x n)) u := by
-    rw [weakConverge_iff_inner_converge']
-    intro y
+    rw [weakConverge_iff_inner_converge']; intro y
     by_cases hy : y = 0
-    · -- 情况1：y = 0
-      simp [hy]
-    · have h2' : Tendsto (fun n => (x n - T (x n)) - u) atTop (𝓝 0) := by
-        convert h2 using 1
-      -- 内积的连续性
+    · simp [hy]
+    · have h2' : Tendsto (fun n => (x n - T (x n)) - u) atTop (𝓝 0) := by convert h2 using 1
       have h_inner : Tendsto (fun n => ⟪(x n - T (x n)) - u, y⟫) atTop (𝓝 0) := by
         rw [Metric.tendsto_atTop]
         intro ε ε_pos
@@ -211,15 +206,12 @@ theorem browder_demiclosed_principle [CompleteSpace H]
         by_cases hy : y = 0
         · simp [hy]; linarith
         · calc
-            |⟪(x n - T (x n)) - u, y⟫|
-                ≤ ‖(x n - T (x n)) - u‖ * ‖y‖ := by apply abs_real_inner_le_norm _ _
+            _ ≤ ‖(x n - T (x n)) - u‖ * ‖y‖ := by apply abs_real_inner_le_norm _ _
               _ < (ε / ‖y‖) * ‖y‖ := by gcongr
               _ = ε := by field_simp [ne_of_gt (norm_pos_iff.mpr hy)]
       exact h_inner
   have h4 : WeakConverge (fun n => T (x n) - x n) (- u) := by
-    rw [weakConverge_iff_inner_converge'] at h4 ⊢
-    intro y
-    specialize h4 y
+    rw [weakConverge_iff_inner_converge'] at h4 ⊢; intro y; specialize h4 y
     have := Tendsto.neg h4
     convert this using 1
     · ext n; simp only [sub_neg_eq_add]
@@ -227,9 +219,7 @@ theorem browder_demiclosed_principle [CompleteSpace H]
     simp
   have h5 : WeakConverge (fun n => T (x n) - x n + (x n - x_lim)
     + (x_lim - T x_lim)) (x_lim - T x_lim - u) := by
-    rw [weakConverge_iff_inner_converge]
-    intro y
-    -- 分解内积
+    rw [weakConverge_iff_inner_converge]; intro y
     have h4_inner : Tendsto (fun n => ⟪T (x n) - x n, y⟫) atTop (𝓝 ⟪-u, y⟫) := by
       apply (weakConverge_iff_inner_converge _ _).1 h4
     have h3_inner : Tendsto (fun n => ⟪x n - x_lim, y⟫) atTop (𝓝 ⟪(0 : H), y⟫) := by
@@ -304,8 +294,10 @@ theorem browder_demiclosed_principle [CompleteSpace H]
   rw [sub_eq_zero] at this
   exact this
 
-
--- Corollary 4.28: 弱收敛且误差趋零蕴含固定点
+/--
+Corollary 4.28: If `x n` weakly converges to a point `p` in `D` and the error `x n - T (x n)`
+  strongly converges to 0, then `p` is a fixed point of `T`.
+-/
 lemma corollary_4_28 [CompleteSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) (x : ℕ → H) (h_x_in_D : ∀ n, x n ∈ D)
