@@ -136,7 +136,6 @@ lemma bounded_not_mem_subseq [SeparableSpace H] [CompleteSpace H] (x : ℕ → H
       apply h_not_mem
     have h2 := isClosed_compl_iff.mpr hV_open --Note that here is weakly closed
     have h2_seqWeaklyClosed := h2.isSeqClosed
-    -- refine (mem_compl_iff V q0).mpr ?_
     simp only [IsSeqClosed] at h2_seqWeaklyClosed
     refine h2_seqWeaklyClosed ?_ h_k_conv
     intro n
@@ -255,8 +254,7 @@ alias Lemma_2_47 := WeakConv_of_sub_norm_of_clusterpt_in
 
 /--
 Proposition 5.4.i
-If the sequence `x` is Fejér monotone with respect to a nonempty set `C`, then `x` is bounded.
-(ii) For every point `a` in `C`, the sequence `‖x n - a‖` converges.
+If the sequence `x` is Fejér monotone with respect to a nonempty set `C`, then (i) `x` is bounded.
 -/
 theorem Fejermono_bounded (C : Set H) (hC : C.Nonempty) (x : ℕ → H)
   (hx : IsFejerMonotone x C) : ∃ M:ℝ , ∀ n, ‖x n‖ ≤ M := by
@@ -273,7 +271,7 @@ theorem Fejermono_bounded (C : Set H) (hC : C.Nonempty) (x : ℕ → H)
 alias Prop_5_04_i := Fejermono_bounded
 
 /--
-Proposition 5.4.i
+Proposition 5.4.ii
 If the sequence `x` is Fejér monotone with respect to a nonempty set `C`,
 then for every point `a` in `C`, the sequence `‖x n - a‖` converges.
 -/

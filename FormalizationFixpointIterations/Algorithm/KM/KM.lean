@@ -76,8 +76,7 @@ lemma key_inequality {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x �
 /--
 Sequence `x` in KM algorithm is Fejer monotone with respect to Fix T.
 -/
-lemma groetsch_theorem_i {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsClosed D)
-    (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D) (hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖)
+lemma groetsch_theorem_i {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D) (hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖)
     (km : KM D T) :
     IsFejerMonotone km.x (FixOn T D) := by
     intro y hy n
@@ -102,8 +101,8 @@ lemma groetsch_theorem_i {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsC
 /--
 Sequence `T (x n) - x n` in KM algorithm converges strongly to 0.
 -/
-lemma groetsch_theorem_ii {D : Set H} (hD_convex : Convex ℝ D) (hD_closed : IsClosed D)
-    (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D) (hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖)
+lemma groetsch_theorem_ii {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
+(hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖)
     (km : KM D T) :
     (Tendsto (fun n ↦ ‖T (km.x n) - km.x n‖)  atTop (𝓝 0)) := by
   rcases km.fix_T_nonempty with ⟨y0, hy0⟩
@@ -246,7 +245,7 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
 (hD_convex : Convex ℝ D) (hD_closed : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
 (hT_nonexpansive : ∀ x y, ‖T x - T y‖ ≤ ‖x - y‖) (km : KM D T) :
     ∃ y0 ∈ (FixOn T D), WeakConverge km.x y0 := by
-  have h_fejer := (groetsch_theorem_i hD_convex hD_closed T h_Im_T_in_D hT_nonexpansive km)
+  have h_fejer := (groetsch_theorem_i T h_Im_T_in_D hT_nonexpansive km)
   have h_x : ∀ n, km.x n ∈ D := by  --The proposition that D is a convex set is only used in the third conclusion.
     intro n                          --That is, conclusions (i) and (ii) do not require that D be a convex closed set.
     induction n with
@@ -290,7 +289,7 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
           intro n
           rw [norm_sub_rev]
         rw[eq]
-        exact (groetsch_theorem_ii hD_convex hD_closed T h_Im_T_in_D hT_nonexpansive km)
+        exact (groetsch_theorem_ii T h_Im_T_in_D hT_nonexpansive km)
       exact Tendsto.comp h2 h1
     have D_nonempty: (D).Nonempty := by
       exact ⟨ km.x0,km.hx0⟩
@@ -313,7 +312,7 @@ theorem groetsch_theorem [SeparableSpace H] [CompleteSpace H] {D : Set H}
     ∧∃ y0 ∈ (FixOn T D),WeakConverge km.x y0
     :=
       ⟨
-        groetsch_theorem_i hD_convex hD_closed T h_Im_T_in_D hT_nonexpansive km,
-        groetsch_theorem_ii hD_convex hD_closed T h_Im_T_in_D hT_nonexpansive km,
+        groetsch_theorem_i T h_Im_T_in_D hT_nonexpansive km,
+        groetsch_theorem_ii  T h_Im_T_in_D hT_nonexpansive km,
         groetsch_theorem_iii hD_convex hD_closed T h_Im_T_in_D hT_nonexpansive km
       ⟩
