@@ -829,7 +829,7 @@ lemma halpern_convergence_point_different [CompleteSpace H] [SeparableSpace H]
 /--
 Theorem 30.1 Halpern's Algorithm
 -/
-theorem halpern_convergence [CompleteSpace H] [SeparableSpace H]
+theorem halpern_convergence' [CompleteSpace H] [SeparableSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
   (hT_fixpoint : C.Nonempty) (hT_invariant : ∀ x ∈ D, T x ∈ D) (alg : Halpern T)
@@ -846,3 +846,22 @@ theorem halpern_convergence [CompleteSpace H] [SeparableSpace H]
     exact halpern_convergence_point_different hD_closed hD_convex hD_nonempty hT_nonexp hC
       hT_fixpoint hT_invariant alg halg_u halg_x_in_D h_α_range h_α_limit h_α_sum_inf
       h_α_diff_finite
+
+theorem halpern_convergence [CompleteSpace H] [SeparableSpace H]
+  {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
+  {T : H → H} (hT_nonexp : NonexpansiveOn T D) {C : Set H} (hC : C = Fix T ∩ D)
+  (hCn : C.Nonempty) (hT_inD : ∀ x ∈ D, T x ∈ D) (alg : Halpern T)
+  (halg_x0 : alg.x0 ∈ D) (halg_u : alg.u ∈ D) (halg_xD : ∀ n, alg.x n ∈ D)
+  (hα1 : ∀ n, alg.α n ∈ Set.Ioo 0 1) (hα2 : Tendsto alg.α atTop (nhds 0))
+  (hα3 : Tendsto (fun N => ∑ n ∈ Finset.range N, alg.α n) atTop atTop)
+  (hα4 : Summable (fun n => |alg.α (n + 1) - alg.α n|)) :
+  ∃ (p : H), p ∈ C ∧ Tendsto alg.x atTop (𝓝 p) ∧ (‖alg.u - p‖ = ⨅ w : C, ‖alg.u - w‖) := by
+    obtain ⟨p,hp1,hp2,hp3⟩ := halpern_convergence' hD_closed hD_convex
+      hD_nonempty hT_nonexp hC hCn hT_inD alg halg_x0 halg_u halg_xD hα1 hα2 hα3 hα4
+    use p,hp1,hp2
+    have hCc: Convex ℝ C := by
+      have hq : QuasiNonexpansiveOn T D := by
+        exact nonexpansive_quasinonexpansive hT_nonexp
+      exact (quasinonexpansive_fixedPoint_closed_convex hD_closed hD_convex hD_nonempty hq hC).2
+    obtain hh:= (norm_eq_iInf_iff_real_inner_le_zero hCc hp1).2 hp3
+    exact hh
