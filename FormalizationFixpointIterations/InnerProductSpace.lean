@@ -1,0 +1,5 @@
+import FormalizationFixpointIterations.InnerProductSpace.WeakConverge
+import FormalizationFixpointIterations.InnerProductSpace.Closedness
+import FormalizationFixpointIterations.InnerProductSpace.Compact
+import FormalizationFixpointIterations.InnerProductSpace.liminf
+import FormalizationFixpointIterations.InnerProductSpace.T2Space

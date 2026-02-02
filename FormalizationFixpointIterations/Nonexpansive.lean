@@ -1,1 +1,2 @@
 import FormalizationFixpointIterations.Nonexpansive.Definitions
+import FormalizationFixpointIterations.Nonexpansive.Properties

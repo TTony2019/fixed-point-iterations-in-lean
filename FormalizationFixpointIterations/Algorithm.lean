@@ -1,2 +1,5 @@
-import FormalizationFixpointIterations.Algorithm.KM
-import FormalizationFixpointIterations.Algorithm.Halpern
+import FormalizationFixpointIterations.Algorithm.KM.KM
+import FormalizationFixpointIterations.Algorithm.KM.Lemma
+import FormalizationFixpointIterations.Algorithm.Halpern.Halpern
+import FormalizationFixpointIterations.Algorithm.Halpern.Halpern_Convergence_Rate
+import FormalizationFixpointIterations.Algorithm.Halpern.Lemma

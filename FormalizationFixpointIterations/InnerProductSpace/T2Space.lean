@@ -5,8 +5,8 @@ Authors: Yifan Bai, Yantao Li
 -/
 import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Analysis.InnerProductSpace.ProdL2
-import FormalizationFixpointIterations.Theory.InnerProductSpace.WeakConverge
-import FormalizationFixpointIterations.Theory.InnerProductSpace.Closedness
+import FormalizationFixpointIterations.InnerProductSpace.WeakConverge
+import FormalizationFixpointIterations.InnerProductSpace.Closedness
 
 open WeakDual
 -- open Filter WeakDual Metric WeakBilin Topology Function TopologicalSpace

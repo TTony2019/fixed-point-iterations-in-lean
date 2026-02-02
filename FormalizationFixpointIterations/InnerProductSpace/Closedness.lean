@@ -10,7 +10,7 @@ import Mathlib.Topology.Defs.Filter
 import Mathlib.Topology.Algebra.Module.WeakBilin
 import Mathlib.Analysis.LocallyConvex.WeakSpace
 -- import Mathlib.Logic.Function.Defs
-import FormalizationFixpointIterations.Theory.InnerProductSpace.WeakConverge
+import FormalizationFixpointIterations.InnerProductSpace.WeakConverge
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 
 open WeakBilin Filter Topology Nonexpansive_operator Function
@@ -93,11 +93,11 @@ theorem seq_closed_tfae [CompleteSpace H] (s : Set H) (hs : Convex ℝ s) :
 definition of demiclosed
 -/
 def DemiclosedAt (D : Set H) (T : H → H) (u : H) : Prop :=
-  (h_D_nonempty : D.Nonempty) → (h_D_weakly_seq_closed : IsWeaklySeqClosed D) →
-  ∀ (x : ℕ → H), (∀ n, x n ∈ D) → ∀ (x_lim : H), x_lim ∈ D → WeakConverge x x_lim →
-  Tendsto (fun n => T (x n)) atTop (𝓝 u) → T x_lim = u
+  (hD : D.Nonempty) → (hw : IsWeaklySeqClosed D) →
+  ∀ (x : ℕ → H), (∀ n, x n ∈ D) → ∀ (l : H), l ∈ D → WeakConverge x l →
+  Tendsto (fun n => T (x n)) atTop (𝓝 u) → T l = u
 
-def Demiclosed (T : H → H) (D : Set H) : Prop := ∀ u : H, DemiclosedAt D T u
+def DemiclosedOn (T : H → H) (D : Set H) : Prop := ∀ u : H, DemiclosedAt D T u
 
 lemma norm_sq_eq_inner (a b : H) : ‖a + b‖^2 = ‖a‖^2 + ‖b‖^2 + 2 * ⟪a,b⟫ := by
   calc
@@ -111,7 +111,7 @@ lemma norm_sq_eq_inner (a b : H) : ‖a + b‖^2 = ‖a‖^2 + ‖b‖^2 + 2 * �
 
 -- Theorem 4.27: Browder's demiclosedness principle
 theorem browder_demiclosed_principle [CompleteSpace H] {D : Set H} {T : H → H}
-  (hT_nonexp : NonexpansiveOn T D) : Demiclosed (id - T) D := by
+  (hT_nonexp : NonexpansiveOn T D) : DemiclosedOn (id - T) D := by
   intro u h_D_nonempty h_D_weakly_seq_closed x hx_in_D x_lim hx_lim_in_D h_weak_conv h_diff_tendsto
   --取一个弱收敛到x_lim的列x n
   simp only [Pi.sub_apply, id_eq] at h_diff_tendsto
@@ -249,7 +249,7 @@ theorem browder_demiclosed_principle [CompleteSpace H] {D : Set H} {T : H → H}
     let a := fun n => x n - T (x n) - u; let b := fun n => T (x n) - T x_lim
     have h_a : Tendsto a atTop (𝓝 0) := h2
     have h_b : WeakConverge b (x_lim - T x_lim - u) := h5
-    rw [real_inner_comm]; apply wkconv_conv_ledsto_conv
+    rw [real_inner_comm]; apply mix_convergence
     · exact h_b
     · exact h_a
   have h7' : Tendsto (fun n ↦ inner ℝ (T (x n) - T x_lim) (x n - T (x n) - u)) atTop (𝓝 0) := by
@@ -298,24 +298,24 @@ theorem browder_demiclosed_principle [CompleteSpace H] {D : Set H} {T : H → H}
 Corollary 4.28: If `x n` weakly converges to a point `p` in `D` and the error `x n - T (x n)`
   strongly converges to 0, then `p` is a fixed point of `T`.
 -/
-lemma corollary_4_28 [CompleteSpace H]
-  {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
-  {T : H → H} (hT_nonexp : NonexpansiveOn T D) (x : ℕ → H) (h_x_in_D : ∀ n, x n ∈ D)
-  (p : H) (h_p_in_D : p ∈ D) (h_weak_conv : WeakConverge x p)
-  (h_error_zero : Tendsto (fun n => x n - T (x n)) atTop (𝓝 0)) : p ∈ Fix T := by
+lemma weakLimit_mem_fixedPoints_of_strongly_tendsto_sub [CompleteSpace H]
+  {D : Set H} (hD_closed : IsClosed D) (hDc : Convex ℝ D) (hDn : D.Nonempty)
+  {T : H → H} (hT_nonexp : NonexpansiveOn T D) (x : ℕ → H) (hx : ∀ n, x n ∈ D)
+  (p : H) (hp : p ∈ D) (hw : WeakConverge x p)
+  (he : Tendsto (fun n => x n - T (x n)) atTop (𝓝 0)) : p ∈ Fix T := by
   have h_wk_seq_closed : IsWeaklySeqClosed D := by
     apply closed_is_weakly_seq_closed;
-    · exact hD_convex
+    · exact hDc
     · exact hD_closed
   have h_demiclosed := browder_demiclosed_principle hT_nonexp
   have h_p_minus_Tp_zero : p - T p = 0 := by
     apply h_demiclosed
-    · exact hD_nonempty
+    · exact hDn
     · exact h_wk_seq_closed
-    · exact h_x_in_D
-    · exact h_p_in_D
-    · exact h_weak_conv
-    · exact h_error_zero
+    · exact hx
+    · exact hp
+    · exact hw
+    · exact he
   simp only [Fix, IsFixedPt, Set.mem_setOf_eq]
   simp only [sub_eq_zero] at h_p_minus_Tp_zero
   exact id (Eq.symm h_p_minus_Tp_zero)

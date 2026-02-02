@@ -56,13 +56,13 @@ def QuasiNonexpansive (T : α → α) :=
   ∀ x y, y ∈ Fix T → ‖T x - y‖ ≤ ‖x - y‖
 
 def QuasiNonexpansiveOn (T : α → α) (s : Set α) :=
-  ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, y ∈ FixOn T s → ‖T x - y‖ ≤ ‖x - y‖
+  ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, y ∈ Fix T ∩ s → ‖T x - y‖ ≤ ‖x - y‖
 
 def Strictly_QuasiNonexpansive (T : α → α) :=
   ∀ x, ¬ IsFixedPt T x → ∀ y, IsFixedPt T y → ‖T x - y‖ < ‖x - y‖
 
 def Strictly_QuasiNonexpansiveOn (T : α → α) (s : Set α) :=
-  ∀ x, x ∈ s ∧ (¬ IsFixedPt T x) → ∀ y, FixOn T s y → ‖T x - y‖ < ‖x - y‖
+  ∀ x, x ∈ s ∧ (¬ IsFixedPt T x) → ∀ y, y ∈ Fix T ∩ s → ‖T x - y‖ < ‖x - y‖
 
 end defn_firmly_nonexpansive
 

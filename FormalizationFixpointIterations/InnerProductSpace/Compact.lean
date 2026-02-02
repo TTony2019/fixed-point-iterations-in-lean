@@ -6,8 +6,8 @@ Authors: Yifan Bai, Yantao Li
 import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Analysis.InnerProductSpace.Dual
-import FormalizationFixpointIterations.Theory.InnerProductSpace.Closedness
-import FormalizationFixpointIterations.Theory.InnerProductSpace.T2Space
+import FormalizationFixpointIterations.InnerProductSpace.Closedness
+import FormalizationFixpointIterations.InnerProductSpace.T2Space
 import Mathlib
 open Metric WeakDual Filter Topology TopologicalSpace
 section WeaklyCompact

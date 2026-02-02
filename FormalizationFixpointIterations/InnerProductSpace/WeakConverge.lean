@@ -7,12 +7,11 @@ import Mathlib.Analysis.Normed.Module.WeakDual
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Analysis.InnerProductSpace.Dual
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
-import FormalizationFixpointIterations.Theory.InnerProductSpace.liminf
+import FormalizationFixpointIterations.InnerProductSpace.liminf
 
 open Filter Metric Topology Function TopologicalSpace WeakBilin
 
-variable {H : Type*}
-variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
+variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 section topDualPairing
@@ -211,7 +210,7 @@ theorem tendsto_norm_congr (x : ℕ → ℝ) (h : Tendsto x atTop (nhds 0)) :
   Tendsto (fun n => ‖x n‖^2) atTop (nhds 0) := by
   rw[← sub_zero x]; exact (seq_converge_iff_norm_converge x 0).mp h
 
-theorem finite_weak_converge_iff_converge [FiniteDimensional ℝ H] (x : ℕ → H) (p : H)
+theorem finite_weak_converge_strong_converge [FiniteDimensional ℝ H] (x : ℕ → H) (p : H)
   (h : WeakConverge x p) : Tendsto x atTop (nhds p) := by
   apply (seq_converge_iff_norm_converge x p).2
   simp only [WeakConverge] at h
@@ -224,7 +223,7 @@ theorem finite_weak_converge_iff_converge [FiniteDimensional ℝ H] (x : ℕ →
   apply tsum_tendsto_zero w (fun i:{x//x ∈ w} => (fun n => ‖inner ℝ (x n - p) (b i)‖ ^ 2))
   intro i; apply tendsto_norm_congr; apply (weakConverge_iff_inner_converge' x p).1; exact h
 
-theorem strong_converge_then_weak_converge [CompleteSpace H] (x : ℕ → H) (p : H)
+theorem strong_converge_weak_converge [CompleteSpace H] (x : ℕ → H) (p : H)
   (h : Tendsto x atTop (nhds p)) : WeakConverge x p := by
   rw [weakConverge_iff_inner_converge]
   intro y
@@ -436,7 +435,7 @@ theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ �
       rw [hlimsup_top] at hlimsup; simp at hlimsup
     intro h
     constructor
-    · exact strong_converge_then_weak_converge x p h
+    · exact strong_converge_weak_converge x p h
     rw[Metric.tendsto_atTop] at h; exfalso; specialize h 1 zero_lt_one
     obtain ⟨N, hN⟩ := h
     let x0 := Finset.sup' (Finset.range (N + 1)) (by simp) (fun n ↦ ‖x n‖)
@@ -534,7 +533,7 @@ theorem weak_converge_limsup_le_iff_strong_converge [CompleteSpace H] (x : ℕ �
     exact (seq_converge_iff_norm_converge x p).2 hnorm_sq
   intro h'
   constructor
-  · exact strong_converge_then_weak_converge x p h'
+  · exact strong_converge_weak_converge x p h'
   have hnorm : Tendsto (fun n => ‖x n‖) atTop (nhds ‖p‖) := Tendsto.norm h'
   have hnorm_ereal : Tendsto (fun n => Real.toEReal ‖x n‖) atTop (nhds (Real.toEReal ‖p‖)) := by
     exact EReal.tendsto_coe.mpr hnorm
@@ -557,7 +556,7 @@ theorem strong_converge_iff_weak_norm_converge [CompleteSpace H] (x : ℕ → H)
   constructor
   · intro h
     constructor
-    · exact strong_converge_then_weak_converge x p h
+    · exact strong_converge_weak_converge x p h
     exact Tendsto.norm h
   intro ⟨h1, h2⟩; apply (seq_converge_iff_norm_converge x p).2
   have norm_expand : ∀ n, ‖x n - p‖^2 = ‖x n‖^2 - 2 * ⟪x n, p⟫ + ‖p‖^2 := by
@@ -576,7 +575,7 @@ For a weakly convergent sequence `x n` converging to `x_lim` and a strongly conv
 sequence `u n` converging to `u_lim`, the inner product sequence `inner ℝ (x n) (u n)`
 converges to `inner ℝ x_lim u_lim`.
 -/
-lemma wkconv_conv_ledsto_conv [CompleteSpace H]
+theorem mix_convergence [CompleteSpace H]
   {x : ℕ → H} {x_lim : H} {u : ℕ → H} {u_lim : H} {h_wkconv_x : WeakConverge x x_lim}
   {h_conv_u : Tendsto u atTop (𝓝 u_lim)}
   : Tendsto (fun n => inner ℝ (x n) (u n)) atTop (𝓝 (inner ℝ x_lim u_lim)) := by

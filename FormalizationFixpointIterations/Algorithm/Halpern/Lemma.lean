@@ -5,9 +5,9 @@ Authors: Yantao Li, Yifan Bai
 -/
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import FormalizationFixpointIterations.Nonexpansive.Properties
-import FormalizationFixpointIterations.Theory.InnerProductSpace.WeakConverge
-import FormalizationFixpointIterations.Theory.InnerProductSpace.Closedness
-import FormalizationFixpointIterations.Theory.InnerProductSpace.Compact
+import FormalizationFixpointIterations.InnerProductSpace.WeakConverge
+import FormalizationFixpointIterations.InnerProductSpace.Closedness
+import FormalizationFixpointIterations.InnerProductSpace.Compact
 
 open Nonexpansive_operator Filter Topology TopologicalSpace
 
@@ -127,15 +127,13 @@ lemma halpern_distance_monotone
   | zero =>
     constructor
     · have ⟨hz_fix, hz_D⟩ : z ∈ Fix T ∩ D := by convert hzC; exact hC.symm
-      have hz_in_fix' : z ∈ FixOn T D := ⟨hz_D, hz_fix⟩
       rw [alg.initial_value]
-      exact hT_quasinonexp halg_x0 hz_in_fix'
+      exact hT_quasinonexp halg_x0 ⟨hz_fix, hz_D⟩
     · rw [alg.initial_value]
   | succ k ih =>
     constructor
     · have ⟨hz_fix, hz_D⟩ :z ∈ Fix T ∩ D := by convert hzC; exact hC.symm
-      have hz_in_fix' : z ∈ FixOn T D := ⟨hz_D, hz_fix⟩
-      exact hT_quasinonexp (halg_x_in_D (k+1)) hz_in_fix'
+      exact hT_quasinonexp (halg_x_in_D (k+1)) ⟨hz_fix, hz_D⟩
     · rw [alg.update]; calc
         _ = ‖alg.α k • (alg.u - z) + (1 - alg.α k) • (T (alg.x k) - z)‖ := by
               congr 1; simp [smul_sub, sub_smul, add_sub, add_comm]
@@ -289,9 +287,9 @@ lemma halpern_subseq_fixed_point [CompleteSpace H]
   {D : Set H} (hD_closed : IsClosed D) (hD_convex : Convex ℝ D) (hD_nonempty : D.Nonempty)
   {T : H → H} (hT_nonexp : NonexpansiveOn T D) (alg : Halpern T) (n : ℕ → ℕ) (z : H)
   (h_z_in_D : z ∈ D) (h_z_weak_limit : WeakConverge (alg.x ∘ n) z) (halg_x_in_D : ∀ n, alg.x n ∈ D)
-  (h_subseq_x_Tx_limit : Tendsto (fun k => alg.x (n k) - T (alg.x (n k))) atTop (nhds 0))
-  : z ∈ Fix T := corollary_4_28 hD_closed hD_convex hD_nonempty hT_nonexp (alg.x ∘ n)
-    (fun k => halg_x_in_D (n k)) z h_z_in_D h_z_weak_limit h_subseq_x_Tx_limit
+  (hs : Tendsto (fun k => alg.x (n k) - T (alg.x (n k))) atTop (nhds 0)) : z ∈ Fix T :=
+  weakLimit_mem_fixedPoints_of_strongly_tendsto_sub hD_closed hD_convex hD_nonempty
+    hT_nonexp (alg.x ∘ n) (fun k => halg_x_in_D (n k)) z h_z_in_D h_z_weak_limit hs
 
 /--
 Lemma 2.45 : Bounded sequence has a weakconvergent subsequence :

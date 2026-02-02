@@ -5,7 +5,7 @@ Authors: Jian Yu
 -/
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import FormalizationFixpointIterations.Nonexpansive.Definitions
-import FormalizationFixpointIterations.Theory.InnerProductSpace.Compact
+import FormalizationFixpointIterations.InnerProductSpace.Compact
 
 open Set Filter Topology TopologicalSpace Metric BigOperators Finset Function Nonexpansive_operator
 

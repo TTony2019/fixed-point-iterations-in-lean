@@ -2,9 +2,9 @@ import FormalizationFixpointIterations.Algorithm.Halpern.Lemma
 import FormalizationFixpointIterations.Algorithm.Halpern.Halpern
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import FormalizationFixpointIterations.Nonexpansive.Properties
-import FormalizationFixpointIterations.Theory.InnerProductSpace.WeakConverge
-import FormalizationFixpointIterations.Theory.InnerProductSpace.Closedness
-import FormalizationFixpointIterations.Theory.InnerProductSpace.Compact
+import FormalizationFixpointIterations.InnerProductSpace.WeakConverge
+import FormalizationFixpointIterations.InnerProductSpace.Closedness
+import FormalizationFixpointIterations.InnerProductSpace.Compact
 
 open Nonexpansive_operator Filter Topology TopologicalSpace
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
