@@ -365,9 +365,9 @@ The maintain of strictmono : `φ0 ∘ φ1 ∘ φ2 ∘ ⋯ ∘ φm is StrictMono`
 lemma StrictMono_phi_comp (x : ℕ → H)
   (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) (f : ℕ → H) (m : ℕ)
   : StrictMono (xφ x hx f m).phi_comp := by
-  induction' m with k hk
-  · exact (xφ x hx f 0).hφ
-  · rw [phi_comp_eq]; apply StrictMono.comp hk <| phim_mono x hx f (k + 1)
+  induction m with
+  | zero => exact (xφ x hx f 0).hφ
+  | succ k hk => rw [phi_comp_eq]; apply StrictMono.comp hk <| phim_mono x hx f (k + 1)
 
 /--
 Properties of strictmono function : `∀ n, n < φ (n + 1)`
@@ -375,8 +375,9 @@ Properties of strictmono function : `∀ n, n < φ (n + 1)`
 lemma StrictMono_nge (x : ℕ → ℕ) (hx : StrictMono x) (n : ℕ) : n < x (n + 1) := by
   have hle : ∀ k, k ≤ x k := by
     intro k
-    induction' k with k hk
-    · exact Nat.zero_le _
+    induction k with
+    | zero => exact Nat.zero_le _
+    | succ k hk =>
     · have h₁ : k + 1 ≤ x k + 1 := Nat.succ_le_succ hk
       have h₂ : x k + 1 ≤ x (k + 1) := Nat.succ_le_of_lt (hx (Nat.lt_succ_self k))
       exact h₁.trans h₂

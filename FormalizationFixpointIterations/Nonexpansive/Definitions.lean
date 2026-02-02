@@ -73,6 +73,10 @@ theorem dist_le_mul (T : α → β) (h : Nonexpansive T) (x y : α) :
   dist (T x) (T y) ≤ dist x y := by
     simpa [ENNReal.coe_one] using ((lipschitzWith_iff_dist_le_mul).1 h x y)
 
+theorem dist_le_mul_On {T : α → β} {D : Set α} (h : NonexpansiveOn T D) (x y : α)
+  (hx : x ∈ D) (hy : y ∈ D) : dist (T x) (T y) ≤ dist x y := by
+  simpa [ENNReal.coe_one] using ((lipschitzOnWith_iff_dist_le_mul).1 h x hx y hy)
+
 theorem strictly_nonexpansive_iff_dist_lt_mul (T : α → β) :
   Strictly_Nonexpansive T ↔ ∀ x y, x ≠ y → dist (T x) (T y) < dist x y := by
   simp only [Strictly_Nonexpansive, edist_nndist]
@@ -91,6 +95,10 @@ variable [NormedAddCommGroup α] [NormedAddCommGroup β]
 theorem norm_le_mul (T : α → β) (h : Nonexpansive T) (x y : α) :
   ‖T x - T y‖ ≤ ‖x - y‖ := by
     simpa [dist_eq] using dist_le_mul T h x y
+
+theorem norm_le_mul_On {T : α → β} {D : Set α} (h : NonexpansiveOn T D) (x y : α)
+  (hx : x ∈ D) (hy : y ∈ D) : ‖T x - T y‖ ≤ ‖x - y‖ := by
+  simpa [dist_eq] using dist_le_mul_On h x y hx hy
 
 theorem strictly_nonexpansive_iff_norm_lt_mul (T : α → β) :
   Strictly_Nonexpansive T ↔ ∀ x y, x ≠ y → ‖T x - T y‖ < ‖x - y‖ := by
