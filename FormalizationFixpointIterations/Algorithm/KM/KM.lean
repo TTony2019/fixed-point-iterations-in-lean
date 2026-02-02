@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 Jian Yu. All rights reserved.
+Copyright (c) 2025 Jian Yu, Yifan Bai. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Jian Yu
+Authors: Jian Yu, Yifan Bai
 -/
 import FormalizationFixpointIterations.Algorithm.KM.Lemma
 open Set Filter Topology TopologicalSpace Metric BigOperators Finset Function Nonexpansive_operator
@@ -96,8 +96,7 @@ lemma key_inequality {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x �
 Sequence `x` in KM algorithm is Fejer monotone with respect to Fix T.
 -/
 lemma groetsch_theorem_i {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
-  (hT : NonexpansiveOn T D)
-  (km : KM D T) (hD : Convex ℝ D) :
+  (hT : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) :
     IsFejerMonotone km.x (Fix T ∩ D) := by
     intro y hy n
     rcases km.hα1 n with ⟨hs_nonneg, hs_le_one⟩
@@ -123,7 +122,7 @@ Sequence `T (x n) - x n` in KM algorithm converges strongly to 0.
 -/
 lemma groetsch_theorem_ii {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
   (hT_nonexpansive : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) :
-  (Tendsto (fun n ↦ ‖T (km.x n) - km.x n‖)  atTop (𝓝 0)) := by
+  (Tendsto (fun n ↦ ‖T (km.x n) - km.x n‖) atTop (𝓝 0)) := by
   rcases km.fix_T_nonempty with ⟨y0, hy0⟩
   have sum_bound : ∀ N, ∑  i ∈ range (N), km.α i * (1 - km.α i) * ‖T (km.x i) - km.x i‖ ^ 2 ≤
       ‖km.x 0 - y0‖ ^ 2 - ‖km.x (N) - y0‖ ^ 2 := by
@@ -266,9 +265,9 @@ Sequence `x n` in KM algorithm converges weakly to a point `y0` in Fix T.
 -/
 lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
 (hD_convex : Convex ℝ D) (hD_closed : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
-(hT : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) :
+(hT : NonexpansiveOn T D) (km : KM D T) :
   ∃ y0 ∈ (Fix T ∩ D), WeakConverge km.x y0 := by
-  have h_fejer := groetsch_theorem_i T h_Im_T_in_D hT km hD
+  have h_fejer := groetsch_theorem_i T h_Im_T_in_D hT km hD_convex
   have h_x : ∀ n, km.x n ∈ D := by  --The proposition that D is a convex set is only used in the third conclusion.
     intro n                          --That is, conclusions (i) and (ii) do not require that D be a convex closed set.
     induction n with
@@ -308,7 +307,7 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
           intro n
           rw [norm_sub_rev]
         rw[eq]
-        exact groetsch_theorem_ii T h_Im_T_in_D hT km hD
+        exact groetsch_theorem_ii T h_Im_T_in_D hT km hD_convex
       exact Tendsto.comp h2 h1
     have D_nonempty: (D).Nonempty := by
       exact ⟨ km.x0,km.hx0⟩
@@ -322,7 +321,7 @@ Formalization of Groetsch's theorem for Krasnosel'skii-Mann iteration
 -/
 theorem groetsch_theorem [SeparableSpace H] [CompleteSpace H] {D : Set H}
     (hD_convex : Convex ℝ D) (hD_closed : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
-    (hT : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) :
+    (hT : NonexpansiveOn T D) (km : KM D T) :
     -- (i) Fejér monotonicity
     IsFejerMonotone km.x (Fix T ∩ D)
     -- (ii) converges strongly to 0
@@ -330,7 +329,7 @@ theorem groetsch_theorem [SeparableSpace H] [CompleteSpace H] {D : Set H}
     -- (iii) converges weakly to a fixpoint
     ∧ ∃ y0 ∈ (Fix T ∩ D), WeakConverge km.x y0 :=
       ⟨
-        groetsch_theorem_i T h_Im_T_in_D hT km hD,
-        groetsch_theorem_ii  T h_Im_T_in_D hT km hD ,
-        groetsch_theorem_iii hD_convex hD_closed T h_Im_T_in_D hT km hD
+        groetsch_theorem_i T h_Im_T_in_D hT km hD_convex,
+        groetsch_theorem_ii  T h_Im_T_in_D hT km hD_convex,
+        groetsch_theorem_iii hD_convex hD_closed T h_Im_T_in_D hT km
       ⟩
