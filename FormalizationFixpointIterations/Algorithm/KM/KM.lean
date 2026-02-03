@@ -285,7 +285,7 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
     exact combo_in
   --Prove that D is a sequentially weakly closed set --Theorem 3.34
   have h_D_seq_weak_closed : IsWeaklySeqClosed D := closed_is_weakly_seq_closed D hD_convex hD_closed
-  have h_weak_cluster_in : ∀ p : H, HasWeakSubseq p km.x → p ∈ (Fix T ∩ D)  := by
+  have h_weak_cluster_in : ∀ p : H, WeakSubseqLimitPt p km.x → p ∈ (Fix T ∩ D)  := by
     intro p h_cluster
     rcases h_cluster with ⟨ φ, hφ , tend ⟩
     have p_in_D : p ∈ D := by

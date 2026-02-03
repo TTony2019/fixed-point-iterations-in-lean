@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025 Jian Yu. All rights reserved.
+Copyright (c) 2025 Jian Yu, Yifan Bai. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Jian Yu
+Authors: Jian Yu, Yifan Bai
 -/
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import FormalizationFixpointIterations.Nonexpansive.Definitions
@@ -20,16 +20,8 @@ variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 The definition of Fejér monotonicity. The sequence `x` is Fejér monotone with respect to the set `C` if
 `∀ y ∈ C, ∀ n, ‖x (n + 1) - y‖ ≤ ‖x n - y‖`
 -/
-def IsFejerMonotone (x : ℕ → H) (C : Set H) : Prop :=
-  ∀ y ∈ C, ∀ n, ‖x (n + 1) - y‖ ≤ ‖x n - y‖
-
-/--
-The definition of having a weakly convergent subsequence. A sequence `x` has a weakly convergent subsequence to `p` if
-there exists a strictly monotone function `φ : ℕ → ℕ` such that `WeakConverge (fun n => (x (φ n))) p`.
--/
-def HasWeakSubseq (p : H) (x : ℕ → H):=
-  ∃ (φ : ℕ → ℕ), StrictMono φ ∧
-    WeakConverge (fun n => (x (φ n))) p
+def IsFejerMonotone (x : ℕ → H) (D : Set H) : Prop :=
+  ∀ y ∈ D, ∀ n, ‖x (n + 1) - y‖ ≤ ‖x n - y‖
 
 /--
 Converts the definition of convergence of a real sequence `u` to `x0` into the ε-N form
@@ -41,7 +33,7 @@ Tendsto u atTop (𝓝 x0) ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, u n ∈ Ioo (x0 - 
   simp
 
 lemma HasWeakSubseq_of_WeakConverge (x : ℕ → H) (p : H) (hconv : WeakConverge x p) :
-  HasWeakSubseq p x := by
+  WeakSubseqLimitPt p x := by
   use id
   constructor
   · exact fun(x y hxy) => hxy
@@ -147,7 +139,7 @@ Lemma 2.46
 if sequence `x` is bounded and possesses at most one weak sequential cluster point, then `x` weakly converges to some point `p0` in `H`.
 -/
 lemma WeakConv_of_bounded_clusterptUnique [SeparableSpace H] [CompleteSpace H] (x : ℕ → H) (hb : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M)
-(hc : ∀ p q : H,  HasWeakSubseq p x → HasWeakSubseq q x  → p = q) : ∃ p0 : H, WeakConverge x p0 := by
+(hc : ∀ p q : H,  WeakSubseqLimitPt p x → WeakSubseqLimitPt q x  → p = q) : ∃ p0 : H, WeakConverge x p0 := by
   have hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖) := bounded_to_IsBounded x hb
   have  ⟨p0, k, hk, h_k_conv⟩ :=bounded_seq_has_weakly_converge_subseq_separable x hx
   use p0
@@ -166,8 +158,8 @@ lemma WeakConv_of_bounded_clusterptUnique [SeparableSpace H] [CompleteSpace H] (
   rcases h1 with ⟨q0,hq0, φ, hφ_strict_mono,h_conv_phi⟩
   let j:=l ∘ φ
   have hj_strict_mono :=StrictMono.comp hl_strict_mono hφ_strict_mono
-  have h_sub_p0:HasWeakSubseq p0 x:= ⟨k, hk,h_k_conv⟩
-  have h_sub_q0:HasWeakSubseq q0 x:= ⟨j, hj_strict_mono, h_conv_phi⟩
+  have h_sub_p0:WeakSubseqLimitPt p0 x:= ⟨k, hk,h_k_conv⟩
+  have h_sub_q0:WeakSubseqLimitPt q0 x:= ⟨j, hj_strict_mono, h_conv_phi⟩
   have p0_eq_q0: p0=q0 := hc p0 q0 h_sub_p0 h_sub_q0
   rw[p0_eq_q0] at hVmem
   exact hq0 hVmem
@@ -215,7 +207,7 @@ every weak sequential cluster point of `x` belongs to `C`. Then `x` converges we
 -/
 lemma WeakConv_of_sub_norm_of_clusterpt_in [SeparableSpace H] [CompleteSpace H] (C : Set H) (h_C_nonempty : C.Nonempty) (x : ℕ → H)
 (h_converge : ∀ a ∈ C, ∃ lim_A : ℝ, Tendsto (fun n ↦ ‖x n - a‖) atTop (𝓝 lim_A))
-(h_weak_cluster_in : ∀ p : H,  HasWeakSubseq p x → p ∈ C) : ∃ p0 ∈ C, WeakConverge x p0 := by
+(h_weak_cluster_in : ∀ p : H,  WeakSubseqLimitPt p x → p ∈ C) : ∃ p0 ∈ C, WeakConverge x p0 := by
   have h_bounded : ∃ M : ℝ, ∀ n, ‖x n‖ ≤ M := by
     rcases h_C_nonempty with ⟨y0 ,hy0⟩
     rcases h_converge y0 hy0 with ⟨lim_A, h_tendsto⟩
@@ -227,7 +219,7 @@ lemma WeakConv_of_sub_norm_of_clusterpt_in [SeparableSpace H] [CompleteSpace H] 
     have h2 : ‖x n‖ ≤ ‖x n - y0‖ + ‖y0‖ := by
       apply norm_le_norm_sub_add
     linarith
-  have h_atmost_one_cluster : ∀ p q : H,  HasWeakSubseq p x → HasWeakSubseq q x → p = q := by
+  have h_atmost_one_cluster : ∀ p q : H,  WeakSubseqLimitPt p x → WeakSubseqLimitPt q x → p = q := by
     intro p q h_cluster_p h_cluster_q
     have hp_in_C : p ∈ C := h_weak_cluster_in p h_cluster_p
     have hq_in_C : q ∈ C := h_weak_cluster_in q h_cluster_q
@@ -237,8 +229,12 @@ lemma WeakConv_of_sub_norm_of_clusterpt_in [SeparableSpace H] [CompleteSpace H] 
     have norm_q_2:=norm_tendsto_q.pow 2
     rcases h_cluster_p with ⟨k, hk, hconv_p⟩ --k and l are subsequence indices
     rcases h_cluster_q with ⟨l, hl, hconv_q⟩
-    rw [weakConverge_iff_inner_converge (fun n ↦ x (k n)) p] at hconv_p
-    rw [weakConverge_iff_inner_converge (fun n ↦ x (l n)) q] at hconv_q
+    have heq1 : (fun n ↦ x (k n))  = x ∘ k := by
+      ext n; simp
+    have heq2 : (fun n ↦ x (l n))  = x ∘ l := by
+      ext n; simp
+    rw [← heq1, weakConverge_iff_inner_converge (fun n ↦ x (k n)) p] at hconv_p
+    rw [← heq2, weakConverge_iff_inner_converge (fun n ↦ x (l n)) q] at hconv_q
     rcases inner_sub_lim_exists x p q lim_p lim_q norm_p_2 norm_q_2 with ⟨L, tendsto_L⟩ --用上面命题
     have hL1 :=WeakConverge_Subseq_inner hk L tendsto_L --subsequence also converges
     have hL2 :=WeakConverge_Subseq_inner hl L tendsto_L
@@ -256,9 +252,9 @@ alias Lemma_2_47 := WeakConv_of_sub_norm_of_clusterpt_in
 Proposition 5.4.i
 If the sequence `x` is Fejér monotone with respect to a nonempty set `C`, then (i) `x` is bounded.
 -/
-theorem Fejermono_bounded (C : Set H) (hC : C.Nonempty) (x : ℕ → H)
-  (hx : IsFejerMonotone x C) : ∃ M:ℝ , ∀ n, ‖x n‖ ≤ M := by
-  rcases hC with ⟨y0, hy0⟩
+theorem Fejermono_bounded (D : Set H) (hD : D.Nonempty) (x : ℕ → H)
+  (hx : IsFejerMonotone x D) : ∃ M:ℝ , ∀ n, ‖x n‖ ≤ M := by
+  rcases hD with ⟨y0, hy0⟩
   --Prove boundedness
   let M := ‖y0‖ + ‖x 0 - y0‖
   use M; intro n
@@ -275,8 +271,8 @@ Proposition 5.4.ii
 If the sequence `x` is Fejér monotone with respect to a nonempty set `C`,
 then for every point `a` in `C`, the sequence `‖x n - a‖` converges.
 -/
-theorem Fejermono_convergent (C : Set H) (x : ℕ → H) (h : IsFejerMonotone x C) :
-  ∀ a ∈ C, ∃ l : ℝ, Tendsto (fun n ↦ ‖x n - a‖) atTop (𝓝 l) := by
+theorem Fejermono_convergent (D : Set H) (x : ℕ → H) (h : IsFejerMonotone x D) :
+  ∀ a ∈ D, ∃ l : ℝ, Tendsto (fun n ↦ ‖x n - a‖) atTop (𝓝 l) := by
   intro a ha
   have h_decreasing : ∀ n, ‖x (n + 1) - a‖ ≤ ‖x n - a‖ := by
     intro n
@@ -299,9 +295,10 @@ Theorem 5.5
 If the sequence `x` is Fejér monotone with respect to a nonempty set `C`, and if every weak subsequential limit point of `x` belongs to `C`, then
 `x` weakly converges to some point `p0` in `C`.
 -/
-theorem WeakConv_of_Fejermonotone_of_clusterpt_in [SeparableSpace H] [CompleteSpace H] (C : Set H) (hC : C.Nonempty) (x : ℕ → H)
-(hx : IsFejerMonotone x C) (hw : ∀ p : H, HasWeakSubseq p x → p ∈ C):
-  ∃ p0 ∈ C, WeakConverge x p0 := by
-  have h := Fejermono_convergent C x hx
-  apply WeakConv_of_sub_norm_of_clusterpt_in C hC x h hw
+theorem WeakConv_of_Fejermonotone_of_clusterpt_in [SeparableSpace H] [CompleteSpace H] (D : Set H) (hD : D.Nonempty) (x : ℕ → H)
+(hx : IsFejerMonotone x D) (hw : ∀ p : H, WeakSubseqLimitPt p x → p ∈ D):
+  ∃ p0 ∈ D, WeakConverge x p0 := by
+  have h_converge : ∀ a ∈ D, ∃ l : ℝ, Tendsto (fun n ↦ ‖x n - a‖) atTop (𝓝 l) :=
+    Fejermono_convergent D x hx
+  exact WeakConv_of_sub_norm_of_clusterpt_in D hD x h_converge hw
 alias Theorem_5_05 := WeakConv_of_Fejermonotone_of_clusterpt_in

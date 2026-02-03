@@ -8,7 +8,6 @@ import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Analysis.InnerProductSpace.Dual
 import FormalizationFixpointIterations.InnerProductSpace.Closedness
 import FormalizationFixpointIterations.InnerProductSpace.T2Space
-import Mathlib
 open Metric WeakDual Filter Topology TopologicalSpace
 section WeaklyCompact
 
@@ -17,10 +16,12 @@ variable [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 def IsWeaklyCompact (s : Set H) : Prop := IsCompact ((toWeakSpace ℝ H) '' s)
+
 /-
 Lemma 1.12
 -/
-example (s : Set H) (h : IsWeaklyCompact s) : IsWeaklyClosed s := IsCompact.isClosed h
+theorem WeaklyCompact_WeaklyClosed (s : Set H) (h : IsWeaklyCompact s) :
+  IsWeaklyClosed s := IsCompact.isClosed h
 
 
 lemma WeakSpace.continuous_of_continuous_eval
@@ -785,5 +786,22 @@ lemma IsWeaklySeqCompact_mono {s t : Set H}
   have := ht hx'
   rcases this with ⟨a, ha_in_t, φ, hφ_strict, hφ_conv⟩
   use a, φ, hφ_strict, hφ_conv
+
+
+/--
+The definition of weak subsequential limit point `p` of a sequence `x`:
+there exists a subsequence of `x` converges weakly to `p`.
+-/
+def WeakSubseqLimitPt (p : H) (x : ℕ → H) :=
+  ∃ (φ : ℕ → ℕ), StrictMono φ ∧ WeakConverge (x ∘ φ) p
+
+
+theorem bounded_seq_has_WeakSubseqLimitPt_separable [SeparableSpace H]
+  [CompleteSpace H] (x : ℕ → H)
+  (hx : Bornology.IsBounded <| Set.range (fun n => ‖x n‖)) :
+  ∃ (a : H), WeakSubseqLimitPt a x := by
+  simp only [WeakSubseqLimitPt]
+  exact bounded_seq_has_weakly_converge_subseq_separable x hx
+
 
 end WeaklyCompact
