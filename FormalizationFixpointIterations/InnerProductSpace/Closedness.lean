@@ -9,7 +9,6 @@ import Mathlib.Analysis.LocallyConvex.Separation
 import Mathlib.Topology.Defs.Filter
 import Mathlib.Topology.Algebra.Module.WeakBilin
 import Mathlib.Analysis.LocallyConvex.WeakSpace
--- import Mathlib.Logic.Function.Defs
 import FormalizationFixpointIterations.InnerProductSpace.WeakConverge
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 
