@@ -21,17 +21,16 @@ structure KM (D : Set H) (T : H → H) where
   hx0 : x0 ∈ D
   α : ℕ → ℝ
   x : ℕ → H
-  hα1 : ∀ n, α n ∈ Set.Icc (0 : ℝ) 1
-  hα2 : Tendsto (fun n => ∑ i ∈ range (n+1), α i * (1 - α i)) atTop atTop
   update : ∀ n, x (n + 1) = x n + α n • (T (x n) - x n)
   initial_value : x 0 = x0
-  fix_T_nonempty : (Fix T ∩ D).Nonempty
 
 lemma x0_in_D {D : Set H} {T : H → H} (km : KM D T) : km.x 0 ∈ D := by
   rw [km.initial_value]; exact km.hx0
 
 lemma x_in_D {D : Set H} {T : H → H} (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D) (km : KM D T)
-  (hx0 : km.x 0 ∈ D) (hD : Convex ℝ D) : ∀ n : ℕ, km.x n ∈ D := by
+  (hx0 : km.x 0 ∈ D) (hD : Convex ℝ D) (hα1 : ∀ n, km.α n ∈ Set.Icc (0 : ℝ) 1)
+  (hα2 : Tendsto (fun n => ∑ i ∈ range (n + 1), km.α i * (1 - km.α i)) atTop atTop)
+  : ∀ n : ℕ, km.x n ∈ D := by
   intro n
   induction n with
   | zero => exact x0_in_D km
@@ -43,9 +42,9 @@ lemma x_in_D {D : Set H} {T : H → H} (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D) (k
     apply hD
     · exact h_Im_T_in_D (km.x n) ih
     · exact ih
-    · have a1 : km.α n ≥ 0 := Set.mem_Icc.1 (km.hα1 n)|>.1
+    · have a1 : km.α n ≥ 0 := Set.mem_Icc.1 (hα1 n)|>.1
       linarith
-    · have a2 : km.α n ≤ 1 := Set.mem_Icc.1 (km.hα1 n)|>.2
+    · have a2 : km.α n ≤ 1 := Set.mem_Icc.1 (hα1 n)|>.2
       linarith
     linarith
 
@@ -57,13 +56,14 @@ The important inequalities (5.16) in the proof process\
 Here km.α n corresponds to λ n in the paper.
 -/
 lemma key_inequality {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
-  (hT : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) :
+  (hT : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) (hα1 : ∀ n, km.α n ∈ Set.Icc (0 : ℝ) 1)
+  (hα2 : Tendsto (fun n => ∑ i ∈ range (n + 1), km.α i * (1 - km.α i)) atTop atTop) :
     ∀ (y : H) (hy : y ∈ Fix T ∩ D) (n : ℕ), ‖km.x (n + 1) - y‖^2 ≤ ‖km.x n - y‖^2
       - km.α n * (1 - km.α n) * ‖T (km.x n) - km.x n‖^2 := by
     intro y hy n
     rcases hy with ⟨ht, hyfix⟩
     --  obtain 0 ≤ s and s ≤ 1 from km.hα1 n
-    rcases km.hα1 n with ⟨hs_nonneg, hs_le_one⟩
+    rcases hα1 n with ⟨hs_nonneg, hs_le_one⟩
     calc
       ‖km.x (n + 1) - y‖^2
           = ‖(1 - km.α n) • (km.x n - y) + km.α n • (T (km.x n) - y)‖^2 := by
@@ -83,7 +83,7 @@ lemma key_inequality {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x �
       _ ≤ (1 - km.α n) * ‖km.x n - y‖^2 + km.α n * ‖km.x n - y‖^2 -km.α n * (1 - km.α n) *‖(T (km.x n) - km.x n )‖^2  := by
           have hT_le : ‖T (km.x n) - y‖ ≤ ‖km.x n - y‖ := by
             nth_rw 1 [← ht]
-            exact norm_le_mul_On hT (km.x n) y (x_in_D h_Im_T_in_D km (x0_in_D km) hD n) hyfix
+            exact norm_le_mul_On hT (km.x n) y (x_in_D h_Im_T_in_D km (x0_in_D km) hD hα1 hα2 n) hyfix
           simp only [sub_sub_sub_cancel_right, tsub_le_iff_right, sub_add_cancel,
             add_le_add_iff_left, ge_iff_le]
           apply mul_le_mul_of_nonneg_left _ hs_nonneg
@@ -95,15 +95,16 @@ lemma key_inequality {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x �
 /--
 Sequence `x` in KM algorithm is Fejer monotone with respect to Fix T.
 -/
-lemma groetsch_theorem_i {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
-  (hT : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) :
+lemma Groetsch_theorem_i {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
+  (hT : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) (hα1 : ∀ n, km.α n ∈ Set.Icc (0 : ℝ) 1)
+  (hα2 : Tendsto (fun n => ∑ i ∈ range (n + 1), km.α i * (1 - km.α i)) atTop atTop) :
     IsFejerMonotone km.x (Fix T ∩ D) := by
     intro y hy n
-    rcases km.hα1 n with ⟨hs_nonneg, hs_le_one⟩
+    rcases hα1 n with ⟨hs_nonneg, hs_le_one⟩
     have calc1 :‖km.x (n + 1) - y‖ ^ 2 ≤ ‖km.x n - y‖ ^ 2 := by
       calc
       ‖km.x (n + 1) - y‖ ^ 2 ≤ ‖km.x n - y‖ ^ 2 - km.α n * (1 - km.α n) * ‖T (km.x n) - km.x n‖ ^ 2 := by
-        exact key_inequality T h_Im_T_in_D hT km hD y hy n
+        exact key_inequality T h_Im_T_in_D hT km hD hα1 hα2 y hy n
       _≤ ‖km.x n - y‖ ^ 2 := by
         have h_nonneg : 0 ≤ km.α n * (1 - km.α n) * ‖T (km.x n) - y - (km.x n - y)‖ ^ 2 := by
           apply mul_nonneg
@@ -120,17 +121,19 @@ lemma groetsch_theorem_i {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T
 /--
 Sequence `T (x n) - x n` in KM algorithm converges strongly to 0.
 -/
-lemma groetsch_theorem_ii {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
-  (hT_nonexpansive : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) :
+lemma Groetsch_theorem_ii {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
+  (hT_nonexpansive : NonexpansiveOn T D) (km : KM D T) (hD : Convex ℝ D) (hα1 : ∀ n, km.α n ∈ Set.Icc (0 : ℝ) 1)
+  (hα2 : Tendsto (fun n => ∑ i ∈ range (n + 1), km.α i * (1 - km.α i)) atTop atTop)
+  (fix_T_nonempty : (Fix T ∩ D).Nonempty) :
   (Tendsto (fun n ↦ ‖T (km.x n) - km.x n‖) atTop (𝓝 0)) := by
-  rcases km.fix_T_nonempty with ⟨y0, hy0⟩
+  rcases fix_T_nonempty with ⟨y0, hy0⟩
   have sum_bound : ∀ N, ∑  i ∈ range (N), km.α i * (1 - km.α i) * ‖T (km.x i) - km.x i‖ ^ 2 ≤
       ‖km.x 0 - y0‖ ^ 2 - ‖km.x (N) - y0‖ ^ 2 := by
     intro N
     induction N with
     | zero => simp
     | succ N ih =>
-      have hN := key_inequality T h_Im_T_in_D hT_nonexpansive km hD y0 hy0 N
+      have hN := key_inequality T h_Im_T_in_D hT_nonexpansive km hD hα1 hα2 y0 hy0 N
       simp [Finset.sum_range_succ]
       linarith
   have partial_le : ∀ N, ∑ i ∈ Finset.range N, km.α i * (1 - km.α i) * ‖T (km.x i) - km.x i‖ ^ 2 ≤
@@ -141,7 +144,7 @@ lemma groetsch_theorem_ii {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, 
   let a := fun n => ‖T (km.x n) - km.x n‖ -- define a_n = ‖T x_n - x_n‖
   have a_noninc : ∀ n, a (n + 1) ≤ a n := by
     intro n
-    rcases km.hα1 n with ⟨hs0, hs1⟩
+    rcases hα1 n with ⟨hs0, hs1⟩
     -- x_{n+1} - x_n = s_n • (T x_n - x_n)
     have hx : km.x (n + 1) - km.x n = km.α n • (T (km.x n) - km.x n) := by
       rw [km.update n]; simp [ smul_sub]
@@ -159,8 +162,8 @@ lemma groetsch_theorem_ii {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, 
       _ ≤ ‖km.x (n + 1) - km.x n‖ + (1 - km.α n) * ‖T (km.x n) - km.x n‖ := by
         apply add_le_add
         · apply norm_le_mul_On hT_nonexpansive (km.x (n + 1)) (km.x n)
-          · exact x_in_D h_Im_T_in_D km (x0_in_D km) hD (n + 1)
-          exact x_in_D h_Im_T_in_D km (x0_in_D km) hD n
+          · exact x_in_D h_Im_T_in_D km (x0_in_D km) hD hα1 hα2 (n + 1)
+          exact x_in_D h_Im_T_in_D km (x0_in_D km) hD hα1 hα2 n
         have h_nonneg : 0 ≤ 1 - km.α n := by linarith
         -- prove ‖(1 - s) • v‖ ≤ (1 - s) * ‖v‖
         calc
@@ -190,7 +193,7 @@ lemma groetsch_theorem_ii {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, 
   --x0 ≠ y0. Prove by contradiction: If a does not converge to 0, then there exists ε > 0 such that for any N, there is n ≥ N with a n ≥ ε
   by_contra! hnot
   rcases hnot with ⟨ε, εpos, hε⟩
-  have tend := km.hα2
+  have tend := hα2
   -- The partial sum S is greater than 2*‖x0 - y0‖^2 / ε^2 starting from some N0
   have tend_prop := (Filter.tendsto_atTop_atTop.mp tend) (2*‖km.x 0 - y0‖ ^ 2 / ε^2)
   rcases tend_prop with ⟨N0, hN0⟩
@@ -212,7 +215,7 @@ lemma groetsch_theorem_ii {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, 
       linarith
     apply mul_le_mul_of_nonneg_left
     · exact pow_le_pow_left₀ (le_of_lt εpos) ai_ge_eps 2
-    rcases km.hα1 i with ⟨hs0, hs1⟩
+    rcases hα1 i with ⟨hs0, hs1⟩
     · apply mul_nonneg
       · exact hs0
       · exact sub_nonneg.mpr hs1
@@ -263,11 +266,13 @@ lemma groetsch_theorem_ii {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, 
 /--
 Sequence `x n` in KM algorithm converges weakly to a point `y0` in Fix T.
 -/
-lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
-(hD_convex : Convex ℝ D) (hD_closed : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
-(hT : NonexpansiveOn T D) (km : KM D T) :
+lemma Groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
+  (hD_convex : Convex ℝ D) (hD_closed : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
+  (hT : NonexpansiveOn T D) (km : KM D T) (hα1 : ∀ n, km.α n ∈ Set.Icc (0 : ℝ) 1)
+  (hα2 : Tendsto (fun n => ∑ i ∈ range (n + 1), km.α i * (1 - km.α i)) atTop atTop)
+  (fix_T_nonempty : (Fix T ∩ D).Nonempty) :
   ∃ y0 ∈ (Fix T ∩ D), WeakConverge km.x y0 := by
-  have h_fejer := groetsch_theorem_i T h_Im_T_in_D hT km hD_convex
+  have h_fejer := Groetsch_theorem_i T h_Im_T_in_D hT km hD_convex
   have h_x : ∀ n, km.x n ∈ D := by  --The proposition that D is a convex set is only used in the third conclusion.
     intro n                          --That is, conclusions (i) and (ii) do not require that D be a convex closed set.
     induction n with
@@ -278,7 +283,7 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
       simp [smul_sub, sub_smul, one_smul]
       abel_nf
     have h1 : T (km.x n) ∈ D := h_Im_T_in_D (km.x n) ih
-    rcases km.hα1 n with ⟨hs_nonneg, hs_le_one⟩
+    rcases hα1 n with ⟨hs_nonneg, hs_le_one⟩
     have combo_in : (1 - km.α n) • km.x n + km.α n • T (km.x n) ∈ D := by
       exact hD_convex (ih) h1 (sub_nonneg.mpr hs_le_one) (hs_nonneg) (sub_add_cancel _ _)
     rw [eq]
@@ -307,21 +312,23 @@ lemma groetsch_theorem_iii [SeparableSpace H] [CompleteSpace H] {D : Set H}
           intro n
           rw [norm_sub_rev]
         rw[eq]
-        exact groetsch_theorem_ii T h_Im_T_in_D hT km hD_convex
+        exact Groetsch_theorem_ii T h_Im_T_in_D hT km hD_convex hα1 hα2 fix_T_nonempty
       exact Tendsto.comp h2 h1
     have D_nonempty: (D).Nonempty := by
       exact ⟨ km.x0,km.hx0⟩
     have := weakLimit_mem_fixedPoints_of_strongly_tendsto_sub hD_closed hD_convex D_nonempty hT (fun n => km.x (φ n) ) (fun n => h_x (φ n) )
       p p_in_D tend h_error_zero
     exact ⟨this, p_in_D⟩
-  apply WeakConv_of_Fejermonotone_of_clusterpt_in (Fix T ∩ D) (km.fix_T_nonempty) km.x h_fejer h_weak_cluster_in
+  apply WeakConv_of_Fejermonotone_of_clusterpt_in (Fix T ∩ D) fix_T_nonempty km.x (h_fejer hα1 hα2) h_weak_cluster_in
 
 /--
 Formalization of Groetsch's theorem for Krasnosel'skii-Mann iteration
 -/
-theorem groetsch_theorem [SeparableSpace H] [CompleteSpace H] {D : Set H}
-    (hD_convex : Convex ℝ D) (hD_closed : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
-    (hT : NonexpansiveOn T D) (km : KM D T) :
+theorem Groetsch_theorem [SeparableSpace H] [CompleteSpace H] {D : Set H}
+  (hD1 : Convex ℝ D) (hD2 : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
+  (hT : NonexpansiveOn T D) (km : KM D T) (fix_T_nonempty : (Fix T ∩ D).Nonempty)
+  (hα1 : ∀ n, km.α n ∈ Set.Icc (0 : ℝ) 1)
+  (hα2 : Tendsto (fun n => ∑ i ∈ range (n + 1), km.α i * (1 - km.α i)) atTop atTop) :
     -- (i) Fejér monotonicity
     IsFejerMonotone km.x (Fix T ∩ D)
     -- (ii) converges strongly to 0
@@ -329,7 +336,7 @@ theorem groetsch_theorem [SeparableSpace H] [CompleteSpace H] {D : Set H}
     -- (iii) converges weakly to a fixpoint
     ∧ ∃ y0 ∈ (Fix T ∩ D), WeakConverge km.x y0 :=
       ⟨
-        groetsch_theorem_i T h_Im_T_in_D hT km hD_convex,
-        groetsch_theorem_ii  T h_Im_T_in_D hT km hD_convex,
-        groetsch_theorem_iii hD_convex hD_closed T h_Im_T_in_D hT km
+        Groetsch_theorem_i T h_Im_T_in_D hT km hD1 hα1 hα2,
+        Groetsch_theorem_ii  T h_Im_T_in_D hT km hD1 hα1 hα2 fix_T_nonempty,
+        Groetsch_theorem_iii hD1 hD2 T h_Im_T_in_D hT km hα1 hα2 fix_T_nonempty
       ⟩
