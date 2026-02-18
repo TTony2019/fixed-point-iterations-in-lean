@@ -1,8 +1,3 @@
-/-
-Copyright (c) 2025 Yantao Li. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Yantao Li
--/
 import Mathlib.Topology.Algebra.Order.LiminfLimsup
 import Mathlib.Data.Real.CompleteField
 import FormalizationFixpointIterations.Algorithm.Halpern.Lemma

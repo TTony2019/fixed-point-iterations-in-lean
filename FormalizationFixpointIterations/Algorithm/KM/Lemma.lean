@@ -1,8 +1,3 @@
-/-
-Copyright (c) 2025 Jian Yu, Yifan Bai. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Jian Yu, Yifan Bai
--/
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import FormalizationFixpointIterations.Nonexpansive.Definitions
 import FormalizationFixpointIterations.InnerProductSpace.Compact
