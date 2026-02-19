@@ -16,3 +16,9 @@ The main results of this formalization can be found in the following files:
 - **Halpern Iteration**: 
   - **Location**: `Algorithm/Halpern/Halpern.lean`
   - **Theorem**: `halpern_convergence`  
+
+## lean4 toolchain installation
+The library uses mathlib4 as a dependency, command `lake exe cache get` can be used to fetch mathlib4 cache.
+
+## lean version 
+leanprover/lean4:v4.27.0-rc1
