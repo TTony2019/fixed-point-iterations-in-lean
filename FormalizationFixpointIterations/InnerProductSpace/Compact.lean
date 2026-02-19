@@ -211,7 +211,6 @@ theorem lim_subsequence_eq_limsup
   set L := limsup x atTop with hL_def
   have h_limsup_spec := limsup_spec_lower x hx_bdd
   have h_limsup_spec' := limsup_spec_upper x hx_bdd
-  -- 步骤3：递归构造严格递增子序列 φ
   have ⟨φ, ⟨hφ_mono, h_φ_lower⟩⟩ : ∃ φ : ℕ → ℕ, (∀ m n, m < n → φ m < φ n) ∧
     (∀ k, x (φ k) ≥ L - 1 / (k + 1)) := by
     let find_next (N : ℕ) (ε : ℝ) (hε_pos : 0 < ε) : ℕ := (h_limsup_spec ε hε_pos N).choose
@@ -219,7 +218,6 @@ theorem lim_subsequence_eq_limsup
       (h_limsup_spec ε (by positivity) N).choose_spec.1
     have h_find_next_value : ∀ N ε (hε : 0 < ε), x (find_next N ε hε) ≥ L - ε := fun N ε _ =>
       (h_limsup_spec ε (by positivity) N).choose_spec.2
-    -- 递归构造序列 φ
     let φ : ℕ → ℕ := fun k => Nat.recOn k (find_next 0 1 (by positivity))
       (fun k' φk' => find_next (φk' + 1) (1 / (k' + 2)) (by positivity))
     use φ
@@ -241,9 +239,8 @@ theorem lim_subsequence_eq_limsup
         unfold φ; have h1 : (0 : ℝ) < 1 := by norm_num
         simp only [one_div, Nat.rec_zero, CharP.cast_eq_zero, zero_add, ne_eq, one_ne_zero,
           not_false_eq_true, div_self, ge_iff_le, tsub_le_iff_right]
-        exact (OrderedSub.tsub_le_iff_right L 1 (x (find_next 0 1
-          (Mathlib.Meta.Positivity.pos_of_isNat (Mathlib.Meta.NormNum.isNat_ofNat ℝ Nat.cast_one)
-            (Eq.refl (Nat.ble 1 1)))))).mp (h_find_next_value 0 1 h1)
+        exact (OrderedSub.tsub_le_iff_right L 1
+          (x (find_next 0 1 Real.zero_lt_one))).mp (h_find_next_value 0 1 h1)
       | succ k' ih =>
         have hε_pos : (0 : ℝ) < 1 / (k' + 2) := by positivity
         have h_value := h_find_next_value (φ (Nat.recOn k' (find_next 0 1
@@ -251,14 +248,9 @@ theorem lim_subsequence_eq_limsup
             (1 / (k'' + 2)) (by positivity))) + 1) (1 / (k' + 2)) hε_pos
         calc
           _ ≥ L - 1 / (k' + 2) := by
-            exact h_find_next_value (Nat.rec (find_next 0 1 (Mathlib.Meta.Positivity.pos_of_isNat
-              (Mathlib.Meta.NormNum.isNat_ofNat ℝ Nat.cast_one) (Eq.refl (Nat.ble 1 1))))
-                (fun k' φk' ↦find_next (φk' + 1) (1 / (↑k' + 2)) (div_pos
-                  (Mathlib.Meta.Positivity.pos_of_isNat
-                    (Mathlib.Meta.NormNum.isNat_ofNat ℝ Nat.cast_one) (Eq.refl (Nat.ble 1 1)))
-                        (Right.add_pos_of_nonneg_of_pos (Nat.cast_nonneg' k')
-                          (Mathlib.Meta.Positivity.pos_of_isNat (Mathlib.Meta.NormNum.isNat_ofNat ℝ
-                            (Eq.refl 2)) (Eq.refl (Nat.ble 1 2)))))) k' +1) (1 / (↑k' + 2)) hε_pos
+            exact h_find_next_value (Nat.rec (find_next 0 1 (by positivity))
+                (fun k' φk' ↦find_next (φk' + 1) (1 / (↑k' + 2)) (div_pos (by positivity)
+                (by positivity))) k' +1) (1 / (↑k' + 2)) hε_pos
           _ = L - 1 / (↑(k' + 1) + 1) := by norm_num; ring
   use φ, L, hφ_mono, rfl; rw [Metric.tendsto_atTop]; intro ε ε_pos
   obtain ⟨N_up, hN_up⟩ := (eventually_atTop).mp (h_limsup_spec' (ε / 2) (by linarith))
