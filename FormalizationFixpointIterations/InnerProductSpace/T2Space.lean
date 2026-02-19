@@ -78,16 +78,16 @@ instance inst_WeakSpace_T2 : T2Space (WeakSpace ℝ H) where
           have h1: ‖xH - yH‖ ^ 2 > 0 := sq_pos_of_pos h_pos
           rw [← real_inner_self_eq_norm_sq] at h1
           simp only [inner_self_eq_norm_sq_to_K, RCLike.ofReal_real_eq_id, id_eq, gt_iff_lt] at h1
-          -- 关键：使用 xH 和 yH 而不是转换后的形式
+          -- Key point: Use xH and yH instead of the converted forms.
           have h_calc : (⟪xH, xH⟫ - ⟪yH, yH⟫) / 2 < ⟪xH, xH⟫ - ⟪xH, yH⟫ := by
             field_simp
             rw [norm_sub_sq_eq_inner] at h1
             simp only [inner_self_eq_norm_sq_to_K, RCLike.ofReal_real_eq_id, id_eq]
             linarith
-          -- 因为 x 和 y 就是通过 toWeakSpace 从 xH 和 yH 得到的
+          -- Because x and y are obtained from xH and yH through toWeakSpace.
           have h_eq_x : (toWeakSpace ℝ H) xH = x := by simp [xH]
           have h_eq_y : (toWeakSpace ℝ H) yH = y := by simp [yH]
-          -- 转换目标中的内积
+          -- Transform the inner product in the target.
           convert h_calc using 3
           · exact Eq.symm (real_inner_self_eq_norm_sq xH)
           · exact Eq.symm (real_inner_self_eq_norm_sq yH)
@@ -119,16 +119,14 @@ instance inst_WeakSpace_T2 : T2Space (WeakSpace ℝ H) where
           have h1: ‖xH - yH‖ ^ 2 > 0 := sq_pos_of_pos h_pos
           rw [← real_inner_self_eq_norm_sq] at h1
           simp only [inner_self_eq_norm_sq_to_K, RCLike.ofReal_real_eq_id, id_eq, gt_iff_lt] at h1
-          -- 关键：使用 xH 和 yH 而不是转换后的形式
+          -- Key point: Use xH and yH instead of the converted forms.
           have h_calc : ⟪xH, yH⟫ - ⟪yH, yH⟫ < (⟪xH, xH⟫ - ⟪yH, yH⟫) / 2 := by
             field_simp
             rw [norm_sub_sq_eq_inner] at h1
             simp only [inner_self_eq_norm_sq_to_K, RCLike.ofReal_real_eq_id, id_eq]
             linarith
-          -- 因为 x 和 y 就是通过 toWeakSpace 从 xH 和 yH 得到的
           have h_eq_x : (toWeakSpace ℝ H) xH = x := by simp [xH]
           have h_eq_y : (toWeakSpace ℝ H) yH = y := by simp [yH]
-          -- 转换目标中的内积
           convert h_calc using 3
           · exact Eq.symm (real_inner_self_eq_norm_sq yH)
           · exact Eq.symm (real_inner_self_eq_norm_sq xH)

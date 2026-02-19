@@ -104,20 +104,6 @@ theorem closed_unit_ball_is_weakly_compact [CompleteSpace H] (x : H) (r : ℝ) :
 
 def IsWeaklySeqCompact (s : Set H) := @IsSeqCompact (WeakSpace ℝ H) _ (s : Set (WeakSpace ℝ H))
 
--- theorem closed_ball_is_weakly_seqcompact [SeparableSpace H] [CompleteSpace H] (x : H) (r : ℝ) :
---   IsWeaklySeqCompact (closedBall x r) := by
---   let f := InnerProductSpace.toDual ℝ H x
---   obtain h := WeakDual.isSeqCompact_closedBall ℝ H f r
---   simp [IsWeaklySeqCompact]
---   have ball_eq: closedBall f r = (InnerProductSpace.toDual ℝ H)'' (closedBall x r) := by simp [f]
---   simp [ball_eq] at h
---   obtain h' := @weakHom_image_eq _ _ _ _ x r
---   rw [s_eq (closedBall x r)] at h'
---   -- rwa [← weakHomeomorph.isCompact_image, h']
---   sorry
-
-
-
 def IsWeaklySeqClusterPt (p : H) (x : ℕ → H):= @MapClusterPt (WeakSpace ℝ H) _ ℕ p atTop x
 
 /--
@@ -206,7 +192,7 @@ theorem lim_subsequence_eq_limsup
   set L := limsup x atTop with hL_def
   have h_limsup_spec := limsup_spec_lower x hx_bdd
   have h_limsup_spec' := limsup_spec_upper x hx_bdd
-  -- 步骤3：递归构造严格递增子序列 φ
+  -- Recursive construction of strictly increasing subsequence φ
   have ⟨φ, ⟨hφ_mono, h_φ_lower⟩⟩ : ∃ φ : ℕ → ℕ, (∀ m n, m < n → φ m < φ n) ∧
     (∀ k, x (φ k) ≥ L - 1 / (k + 1)) := by
     let find_next (N : ℕ) (ε : ℝ) (hε_pos : 0 < ε) : ℕ := (h_limsup_spec ε hε_pos N).choose
@@ -214,7 +200,7 @@ theorem lim_subsequence_eq_limsup
       (h_limsup_spec ε (by positivity) N).choose_spec.1
     have h_find_next_value : ∀ N ε (hε : 0 < ε), x (find_next N ε hε) ≥ L - ε := fun N ε _ =>
       (h_limsup_spec ε (by positivity) N).choose_spec.2
-    -- 递归构造序列 φ
+    -- increasing subsequence φ
     let φ : ℕ → ℕ := fun k => Nat.recOn k (find_next 0 1 (by positivity))
       (fun k' φk' => find_next (φk' + 1) (1 / (k' + 2)) (by positivity))
     use φ
@@ -518,7 +504,7 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
   (f : ℕ → H) (m : ℕ) :
   Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop (𝓝 (xφ x hx f m).lim) := by
   have h_in_range := phi_diag_in_xφ_image x hx f m
-  -- 步骤2：因此存在 k_n 使得 x (phi_diag x hx f n) = ((xφ x hx f m).xφ) k_n
+  -- exist k_n s.t. x (phi_diag x hx f n) = ((xφ x hx f m).xφ) k_n
   have h_exists_k : ∀ n ≥ m, ∃ k ≥ n, x (phi_diag x hx f n) = ((xφ x hx f m).xφ) k := by
     intro n hn; unfold phi_diag
     have ⟨j, hj_ge, hj_eq⟩ := xφ_indices_ge x hx f m n hn n
@@ -527,7 +513,7 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
       simp
     use j, hj_ge
     rw [← h_xφ_def, hj_eq]
-  -- 步骤3：定义一个子列索引函数 ψ
+  -- Define a subsequence index function ψ
   let ψ : ℕ → ℕ := fun n => (h_exists_k (m + n) (by linarith)).choose
   have h_ψ_ge : ∀ n, ψ n ≥ n := by
     intro n
@@ -535,18 +521,17 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
       simp only [ge_iff_le] at h_exists_k
       exact (h_exists_k (m + n) (by linarith)).choose_spec.1
     linarith
-  -- 步骤4：我们知道 ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫ = ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫
+  -- ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫ = ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫
   have h_eq_xφ : ∀ n, ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫ =
     ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫ := by
     intro n
     have := (h_exists_k (m + n) (by linarith)).choose_spec
     simp only [ge_iff_le] at this
     exact congrArg (inner ℝ (f m)) this.2
-  -- 步骤5：⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫ 是 ⟪f m, ((xφ x hx f m).xφ) k⟫ 的子列
-  -- 而 ⟪f m, ((xφ x hx f m).xφ) k⟫ 收敛到 (xφ x hx f m).lim
+  -- ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫ is a subsequence of ⟪f m, ((xφ x hx f m).xφ) k⟫
   have h_base_conv : Tendsto (fun k => ⟪f m, ((xφ x hx f m).xφ) k⟫) atTop
     (𝓝 (xφ x hx f m).lim) := converge_inner_subseq_fm x hx f m
-  -- 步骤6：子列也收敛到相同的极限
+  -- The subsequences also converge to the same limit.
   have h_subseq_conv : Tendsto (fun n => ⟪f m, ((xφ x hx f m).xφ) (ψ n)⟫) atTop
     (𝓝 (xφ x hx f m).lim) := by
     apply Tendsto.comp h_base_conv ?_
@@ -556,13 +541,14 @@ lemma converge_inner_subseq_fm_phi_diag (x : ℕ → H)
     intro n hn
     specialize h_ψ_ge n
     linarith
-  -- 步骤7：通过等式转换回原始序列（从 m 开始的平移）
+  -- Convert back to the original sequence through equation transformation
   have h_shifted : Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫) atTop
     (𝓝 (xφ x hx f m).lim) := by
     convert h_subseq_conv using 1
     ext n
     exact h_eq_xφ n
-  -- 步骤8：原始序列的收敛性等价于平移序列的收敛性
+  --The convergence of the original sequence is equivalent to the convergence
+  --of the shifted sequence.
   have h_equiv : Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) n⟫) atTop
     (𝓝 (xφ x hx f m).lim) ↔
     Tendsto (fun n => ⟪f m, (x ∘ (phi_diag x hx f)) (m + n)⟫) atTop
@@ -608,7 +594,7 @@ lemma dense_f_forall (x : ℕ → H)
       + dist ⟪f k, (x ∘ (phi_diag x hx f)) m⟫ ⟪f k, (x ∘ (phi_diag x hx f)) n⟫
       + dist ⟪f k, (x ∘ (phi_diag x hx f)) n⟫ ⟪y, (x ∘ (phi_diag x hx f)) n⟫ :=
     by simp only [Function.comp_apply]; exact dist_triangle4 _ _ _ _
-  -- 估计第一项：|⟪y - f k, x(φ m)⟫| < ε/3
+  -- Estimate the first item：|⟪y - f k, x(φ m)⟫| < ε/3
   have h_term : ∀ m, dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫
     ⟪f k, (x ∘ (phi_diag x hx f)) m⟫ < ε / 3 := by
     intro p; simp only [Function.comp_apply, dist_eq_norm]
@@ -629,12 +615,12 @@ lemma dense_f_forall (x : ℕ → H)
           linarith
         · exact hε
   have h_term1 := h_term m; have h_term1' := h_term n; rw [dist_comm] at h_term1'
-  -- 估计第二项：|⟪f k, x(φ m)⟫ - ⟪f k, x(φ n)⟫| < ε/3
+  -- Estimate the second item：|⟪f k, x(φ m)⟫ - ⟪f k, x(φ n)⟫| < ε/3
   have h_term2 : dist ⟪f k, (x ∘ (phi_diag x hx f)) m⟫
     ⟪f k, (x ∘ (phi_diag x hx f)) n⟫ < ε / 3 := by
     specialize hN m hm n hn;
     simp only [Function.comp_apply, dist_eq_norm, Real.norm_eq_abs] at hN; exact hN
-  -- 综合三项
+  -- combine the three items
   calc dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫ ⟪y, (x ∘ (phi_diag x hx f)) n⟫
       ≤ dist ⟪y, (x ∘ (phi_diag x hx f)) m⟫ ⟪f k, (x ∘ (phi_diag x hx f)) m⟫
         + dist ⟪f k, (x ∘ (phi_diag x hx f)) m⟫ ⟪f k, (x ∘ (phi_diag x hx f)) n⟫

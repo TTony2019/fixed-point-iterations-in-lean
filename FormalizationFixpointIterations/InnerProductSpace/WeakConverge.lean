@@ -230,12 +230,6 @@ end FiniteDimensional
 
 section WeakConvergeBounded
 
--- def fn_norm : ℕ → H →L[ℝ] ℝ := fun n =>
--- def xn_inner (p : H) : H →ₛₗ[ℝ] ℝ where
---   toFun := fun z => ⟪p, z⟫
---   map_add' := fun u v => inner_add_right p u v
---   map_smul' := fun c u => inner_smul_right p u c
-
 /--
 Theorem: Weakly convergent sequence is bounded.
 -/
