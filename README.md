@@ -10,9 +10,9 @@ We aim to formalize the following iteration methods:
 The main results of this formalization can be found in the following files:
 
 - **Krasnosel'skiĭ--Mann Iteration**: 
-  - **Location**: `KM/KM.lean`
+  - **Location**: `Algorithm/KM/KM.lean`
   - **Theorem**: `Groetsch_theorem`
   
 - **Halpern Iteration**: 
-  - **Location**: `Halpern/Halpern.lean`
+  - **Location**: `Algorithm/Halpern/Halpern.lean`
   - **Theorem**: `halpern_convergence`  
