@@ -302,3 +302,259 @@ theorem WeakConv_of_Fejermonotone_of_clusterpt_in [SeparableSpace H] [CompleteSp
     Fejermono_convergent D x hx
   exact WeakConv_of_sub_norm_of_clusterpt_in D hD x h_converge hw
 alias Theorem_5_05 := WeakConv_of_Fejermonotone_of_clusterpt_in
+
+
+/--
+Definition 4.33 (set version): `T` is `α`-averaged on `D` if `α ∈ (0,1)` and
+there exists a nonexpansive map `R` on `D` such that
+`T x = (1 - α) x + α R x` for all `x ∈ D`.
+-/
+def AveragedOn (T : H → H) (D : Set H) (α : ℝ) : Prop :=
+  α ∈ Set.Ioo (0 : ℝ) 1 ∧
+    ∃ R : H → H, NonexpansiveOn R D ∧
+      ∀ ⦃x : H⦄, x ∈ D → T x = (1 - α) • x + α • R x
+
+/--
+Definition 4.33 (global version): `T` is `α`-averaged on the whole space.
+-/
+def Averaged (T : H → H) (α : ℝ) : Prop :=
+  AveragedOn T Set.univ α
+
+/--
+If `u n → +∞` and `c > 0`, then `c * u n → +∞`.
+-/
+lemma tendsto_atTop_atTop_const_mul {u : ℕ → ℝ} {c : ℝ} (hc : 0 < c)
+  (hu : Tendsto u atTop atTop) :
+  Tendsto (fun n => c * u n) atTop atTop := by
+  rw [Filter.tendsto_atTop_atTop]
+  intro b
+  rcases (Filter.tendsto_atTop_atTop.mp hu) (b / c) with ⟨N, hN⟩
+  refine ⟨N, ?_⟩
+  intro n hn
+  have h1 : b / c ≤ u n := hN n hn
+  have h2 : c * (b / c) ≤ c * u n := mul_le_mul_of_nonneg_left h1 (le_of_lt hc)
+  have hb : b = c * (b / c) := by
+    field_simp [hc.ne']
+  linarith
+
+/--
+From the averaged representation with `α ≠ 0`, fixed points of `T` and `R` coincide.
+-/
+lemma fix_eq_of_averaged_repr (T R : H → H) (α : ℝ) (hα_ne : α ≠ 0)
+  (hrepr : ∀ x : H, T x = (1 - α) • x + α • R x) :
+  Fix T = Fix R := by
+  ext x
+  constructor
+  · intro hxT
+    have hxT' : T x = x := by
+      simpa [Fix, IsFixedPt] using hxT
+    have hdiff : T x - x = α • (R x - x) := by
+      rw [hrepr x]
+      simp [smul_sub, sub_smul, one_smul]
+      abel_nf
+    have hzero : α • (R x - x) = 0 := by
+      rw [← hdiff, hxT']
+      simp
+    rcases smul_eq_zero.mp hzero with hα0 | hRx0
+    · exact (hα_ne hα0).elim
+    · have hxR' : R x = x := by
+        simpa [sub_eq_zero] using hRx0
+      simpa [Fix, IsFixedPt] using hxR'
+  · intro hxR
+    have hxR' : R x = x := by
+      simpa [Fix, IsFixedPt] using hxR
+    have hxT' : T x = x := by
+      calc
+        T x = (1 - α) • x + α • R x := hrepr x
+        _ = (1 - α) • x + α • x := by simp [hxR']
+        _ = ((1 - α) + α) • x := by rw [add_smul]
+        _ = (1 : ℝ) • x := by
+          congr 1
+          ring
+        _ = x := by simp
+    simpa [Fix, IsFixedPt] using hxT'
+
+/--
+A global nonexpansive map is nonexpansive on `univ`.
+-/
+lemma nonexpansiveOn_univ_of_nonexpansive {T : H → H} (hT : Nonexpansive T) :
+  NonexpansiveOn T (Set.univ : Set H) := by
+  intro x hx y hy
+  simpa using hT x y
+
+/--
+Lemma 2.17(ii)-style identity.
+-/
+lemma lemma_2_17_ii (x y : H) :
+    ‖x‖ ^ 2 - ‖(2 : ℝ) • y - x‖ ^ 2 = 2 * (‖x‖ ^ 2 - ‖x - y‖ ^ 2 - ‖y‖ ^ 2) := by
+  rw [← real_inner_self_eq_norm_sq x,
+    ← real_inner_self_eq_norm_sq ((2 : ℝ) • y - x),
+    ← real_inner_self_eq_norm_sq (x - y),
+    ← real_inner_self_eq_norm_sq y]
+  simp only [inner_sub_left, inner_sub_right, inner_smul_left, inner_smul_right, real_inner_comm]
+  simp
+  ring
+
+/--
+Proposition 4.4 (i)-(iii), global-space version.
+
+`T` is firmly nonexpansive, `Id - T` is firmly nonexpansive, and `2T - Id`
+is nonexpansive are equivalent characterizations.
+-/
+theorem proposition_4_4_i_ii_iii {T : H → H} :
+    (Firmly_Nonexpansive T ↔ Firmly_Nonexpansive (fun x => x - T x)) ∧
+    (Firmly_Nonexpansive T ↔ Nonexpansive (fun x => (2 : ℝ) • T x - x)) ∧
+    (Firmly_Nonexpansive (fun x => x - T x) ↔
+      Nonexpansive (fun x => (2 : ℝ) • T x - x)) := by
+  let R : H → H := fun x => (2 : ℝ) • T x - x
+  have h_i_ii : Firmly_Nonexpansive T ↔ Firmly_Nonexpansive (fun x => x - T x) := by
+    constructor
+    · intro h x y
+      calc
+        ‖(x - T x) - (y - T y)‖ ^ 2 + ‖(x - (x - T x)) - (y - (y - T y))‖ ^ 2
+            = ‖(x - T x) - (y - T y)‖ ^ 2 + ‖T x - T y‖ ^ 2 := by
+                congr 2
+                abel_nf
+        _ = ‖T x - T y‖ ^ 2 + ‖(x - T x) - (y - T y)‖ ^ 2 := by ring
+        _ ≤ ‖x - y‖ ^ 2 := h x y
+    · intro h x y
+      have hxy := h x y
+      calc
+        ‖T x - T y‖ ^ 2 + ‖(x - T x) - (y - T y)‖ ^ 2
+            = ‖(x - T x) - (y - T y)‖ ^ 2 + ‖T x - T y‖ ^ 2 := by ring
+        _ = ‖(x - T x) - (y - T y)‖ ^ 2 + ‖(x - (x - T x)) - (y - (y - T y))‖ ^ 2 := by
+              congr 2
+              abel_nf
+        _ ≤ ‖x - y‖ ^ 2 := hxy
+  have h_i_iii : Firmly_Nonexpansive T ↔ Nonexpansive R := by
+    constructor
+    · intro h x y
+      let u : H := x - y
+      let v : H := T x - T y
+      have huv : u - v = (x - T x) - (y - T y) := by
+        dsimp [u, v]
+        abel_nf
+      have h_le_uv : ‖v‖ ^ 2 + ‖u - v‖ ^ 2 ≤ ‖u‖ ^ 2 := by
+        calc
+          ‖v‖ ^ 2 + ‖u - v‖ ^ 2 = ‖T x - T y‖ ^ 2 + ‖(x - T x) - (y - T y)‖ ^ 2 := by
+            simp [u, v, huv]
+          _ ≤ ‖x - y‖ ^ 2 := h x y
+          _ = ‖u‖ ^ 2 := by simp [u]
+      have h_nonneg_inside : 0 ≤ ‖u‖ ^ 2 - ‖u - v‖ ^ 2 - ‖v‖ ^ 2 := by
+        linarith [h_le_uv]
+      have h217 : ‖u‖ ^ 2 - ‖(2 : ℝ) • v - u‖ ^ 2 =
+          2 * (‖u‖ ^ 2 - ‖u - v‖ ^ 2 - ‖v‖ ^ 2) := lemma_2_17_ii u v
+      have h_nonneg_diff : 0 ≤ ‖u‖ ^ 2 - ‖(2 : ℝ) • v - u‖ ^ 2 := by
+        linarith [h_nonneg_inside, h217]
+      have h_sq : ‖(2 : ℝ) • v - u‖ ^ 2 ≤ ‖u‖ ^ 2 := by
+        linarith [h_nonneg_diff]
+      have h_norm_abs := (sq_le_sq).mp h_sq
+      have h_norm : ‖(2 : ℝ) • v - u‖ ≤ ‖u‖ := by
+        simpa [abs_of_nonneg (norm_nonneg _), abs_of_nonneg (norm_nonneg _)] using h_norm_abs
+      have h_rewrite : (2 : ℝ) • v - u = R x - R y := by
+        dsimp [R, u, v]
+        calc
+          (2 : ℝ) • (T x - T y) - (x - y)
+              = ((2 : ℝ) • T x - (2 : ℝ) • T y) - (x - y) := by rw [smul_sub]
+          _ = ((2 : ℝ) • T x - x) - ((2 : ℝ) • T y - y) := by abel_nf
+      have h_norm_R : ‖R x - R y‖ ≤ ‖x - y‖ := by
+        calc
+          ‖R x - R y‖ = ‖(2 : ℝ) • v - u‖ := by rw [h_rewrite]
+          _ ≤ ‖u‖ := h_norm
+          _ = ‖x - y‖ := by simp [u]
+      have h_dist_R : dist (R x) (R y) ≤ dist x y := by
+        simpa [dist_eq_norm] using h_norm_R
+      have h_edist_R : edist (R x) (R y) ≤ edist x y := by
+        rw [edist_dist, edist_dist]
+        exact (ENNReal.ofReal_le_ofReal_iff dist_nonneg).2 h_dist_R
+      simpa [ENNReal.coe_one, one_mul] using h_edist_R
+    · intro h x y
+      let u : H := x - y
+      let v : H := T x - T y
+      have h_rewrite : (2 : ℝ) • v - u = R x - R y := by
+        dsimp [R, u, v]
+        calc
+          (2 : ℝ) • (T x - T y) - (x - y)
+              = ((2 : ℝ) • T x - (2 : ℝ) • T y) - (x - y) := by rw [smul_sub]
+          _ = ((2 : ℝ) • T x - x) - ((2 : ℝ) • T y - y) := by abel_nf
+      have h_norm_R : ‖(2 : ℝ) • v - u‖ ≤ ‖u‖ := by
+        calc
+          ‖(2 : ℝ) • v - u‖ = ‖R x - R y‖ := by rw [h_rewrite]
+          _ ≤ ‖x - y‖ := norm_le_mul R h x y
+          _ = ‖u‖ := by simp [u]
+      have h_sq : ‖(2 : ℝ) • v - u‖ ^ 2 ≤ ‖u‖ ^ 2 := by
+        refine pow_le_pow_left₀ ?_ h_norm_R 2
+        exact norm_nonneg _
+      have h_nonneg_diff : 0 ≤ ‖u‖ ^ 2 - ‖(2 : ℝ) • v - u‖ ^ 2 := by
+        linarith [h_sq]
+      have h217 : ‖u‖ ^ 2 - ‖(2 : ℝ) • v - u‖ ^ 2 =
+          2 * (‖u‖ ^ 2 - ‖u - v‖ ^ 2 - ‖v‖ ^ 2) := lemma_2_17_ii u v
+      have h_nonneg_inside : 0 ≤ ‖u‖ ^ 2 - ‖u - v‖ ^ 2 - ‖v‖ ^ 2 := by
+        have h_twice : 0 ≤ 2 * (‖u‖ ^ 2 - ‖u - v‖ ^ 2 - ‖v‖ ^ 2) := by
+          linarith [h_nonneg_diff, h217]
+        linarith [h_twice]
+      have h_le_uv : ‖v‖ ^ 2 + ‖u - v‖ ^ 2 ≤ ‖u‖ ^ 2 := by
+        linarith [h_nonneg_inside]
+      have huv : u - v = (x - T x) - (y - T y) := by
+        dsimp [u, v]
+        abel_nf
+      calc
+        ‖T x - T y‖ ^ 2 + ‖(x - T x) - (y - T y)‖ ^ 2 = ‖v‖ ^ 2 + ‖u - v‖ ^ 2 := by
+          simp [u, v, huv]
+        _ ≤ ‖u‖ ^ 2 := h_le_uv
+        _ = ‖x - y‖ ^ 2 := by simp [u]
+  have h_ii_iii : Firmly_Nonexpansive (fun x => x - T x) ↔ Nonexpansive R :=
+    h_i_ii.symm.trans h_i_iii
+  exact ⟨h_i_ii, h_i_iii, by simpa [R] using h_ii_iii⟩
+
+/--
+`T` is firmly nonexpansive iff `T` is averaged with coefficient `1/2`.
+-/
+theorem firmly_nonexpansive_iff_averaged_half (T : H → H) :
+    Firmly_Nonexpansive T ↔ Averaged T (1 / 2 : ℝ) := by
+  constructor
+  · intro hfirm
+    let R : H → H := fun z => (2 : ℝ) • T z - z
+    have hprop_4_4 := proposition_4_4_i_ii_iii (T := T)
+    have hR_nonexp : Nonexpansive R := by
+      simpa [R] using hprop_4_4.2.1.1 hfirm
+    have hR_nonexp_on : NonexpansiveOn R (Set.univ : Set H) :=
+      nonexpansiveOn_univ_of_nonexpansive hR_nonexp
+    refine ⟨by norm_num, R, hR_nonexp_on, ?_⟩
+    intro z hz
+    have hhalf : (1 - (1 / 2 : ℝ)) = (1 / 2 : ℝ) := by norm_num
+    have haux : (1 / 2 : ℝ) • ((2 : ℝ) • T z - z) = T z - (1 / 2 : ℝ) • z := by
+      simp [smul_sub, smul_smul]
+    rw [hhalf]
+    change T z = (1 / 2 : ℝ) • z + (1 / 2 : ℝ) • ((2 : ℝ) • T z - z)
+    rw [haux]
+    abel_nf
+  · intro havg_half
+    rcases havg_half with ⟨hhalf_range, R, hR_nonexp_on, hrepr_on⟩
+    have hR_nonexp : Nonexpansive R := by
+      intro x y
+      exact hR_nonexp_on (x := x) (by simp) (y := y) (by simp)
+    have hR_eq : ∀ z : H, R z = (2 : ℝ) • T z - z := by
+      intro z
+      have hz : T z = (1 - (1 / 2 : ℝ)) • z + (1 / 2 : ℝ) • R z := by
+        simpa using hrepr_on (x := z) (by simp)
+      have hhalf : (1 - (1 / 2 : ℝ)) = (1 / 2 : ℝ) := by norm_num
+      rw [hhalf] at hz
+      have hz2 : (2 : ℝ) • T z = z + R z := by
+        calc
+          (2 : ℝ) • T z = (2 : ℝ) • ((1 / 2 : ℝ) • z + (1 / 2 : ℝ) • R z) := by rw [hz]
+          _ = (2 : ℝ) • ((1 / 2 : ℝ) • z) + (2 : ℝ) • ((1 / 2 : ℝ) • R z) := by rw [smul_add]
+          _ = ((2 : ℝ) * (1 / 2 : ℝ)) • z + ((2 : ℝ) * (1 / 2 : ℝ)) • R z := by
+                rw [smul_smul, smul_smul]
+          _ = z + R z := by norm_num
+      have hz3 : (2 : ℝ) • T z - z = R z := by
+        calc
+          (2 : ℝ) • T z - z = (z + R z) - z := by rw [hz2]
+          _ = R z := by abel_nf
+      exact hz3.symm
+    have h_nonexp_2TminusId : Nonexpansive (fun z => (2 : ℝ) • T z - z) := by
+      intro x y
+      simpa [hR_eq x, hR_eq y] using hR_nonexp x y
+    have hprop_4_4 := proposition_4_4_i_ii_iii (T := T)
+    exact hprop_4_4.2.1.2 h_nonexp_2TminusId
+

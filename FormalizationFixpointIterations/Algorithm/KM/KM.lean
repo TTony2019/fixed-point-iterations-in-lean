@@ -13,6 +13,7 @@ local notation "⟪" a₁ ", " a₂ "⟫" => @inner ℝ _ _ a₁ a₂
 
 variable {H : Type*} [NormedAddCommGroup H] [InnerProductSpace ℝ H]
 
+
 /--
 Krasnosel'skii-Mann iteration structure
 -/
@@ -114,7 +115,7 @@ lemma Groetsch_theorem_i {D : Set H} (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T
           · exact pow_nonneg (norm_nonneg _) 2
         simp at h_nonneg
         linarith
-    have := (sq_le_sq).mp calc1
+    have this:= (sq_le_sq).mp calc1
     repeat rw[abs_of_nonneg (norm_nonneg _)] at this
     exact this
 
@@ -340,3 +341,178 @@ theorem Groetsch_theorem [SeparableSpace H] [CompleteSpace H] {D : Set H}
         Groetsch_theorem_ii  T h_Im_T_in_D hT km hD1 hα1 hα2 fix_T_nonempty,
         Groetsch_theorem_iii hD1 hD2 T h_Im_T_in_D hT km hα1 hα2 fix_T_nonempty
       ⟩
+
+/--
+Build a `KM` structure from raw iteration data.
+-/
+def KM.ofData {D : Set H} {T : H → H}
+  (x0 : H) (hx0 : x0 ∈ D) (α : ℕ → ℝ) (x : ℕ → H)
+  (hupdate : ∀ n : ℕ, x (n + 1) = x n + α n • (T (x n) - x n))
+  (hinit : x 0 = x0) : KM D T where
+  x0 := x0
+  hx0 := hx0
+  α := α
+  x := x
+  update := hupdate
+  initial_value := hinit
+
+/--
+`Groetsch_theorem` in a non-structure form: provide raw data `(x0, α, x)` and
+the KM recursion, then apply the existing theorem via `KM.ofData`.
+-/
+theorem Groetsch_theorem_ofData [SeparableSpace H] [CompleteSpace H] {D : Set H}
+  (hD1 : Convex ℝ D) (hD2 : IsClosed D) (T : H → H) (h_Im_T_in_D : ∀ x ∈ D, T x ∈ D)
+  (hT : NonexpansiveOn T D)
+  (x0 : H) (hx0 : x0 ∈ D) (α : ℕ → ℝ) (x : ℕ → H)
+  (hupdate : ∀ n : ℕ, x (n + 1) = x n + α n • (T (x n) - x n))
+  (hinit : x 0 = x0)
+  (fix_T_nonempty : (Fix T ∩ D).Nonempty)
+  (hα1 : ∀ n : ℕ, α n ∈ Set.Icc (0 : ℝ) 1)
+  (hα2 : Tendsto (fun n : ℕ => ∑ i ∈ range (n + 1), α i * (1 - α i)) atTop atTop) :
+    IsFejerMonotone x (Fix T ∩ D)
+    ∧ (Tendsto (fun n ↦ ‖T (x n) - x n‖) atTop (𝓝 0))
+    ∧ ∃ y0 ∈ (Fix T ∩ D), WeakConverge x y0 := by
+  simpa [KM.ofData] using
+    (Groetsch_theorem hD1 hD2 T h_Im_T_in_D hT
+      (KM.ofData x0 hx0 α x hupdate hinit) fix_T_nonempty hα1 hα2)
+
+/--
+Proposition 5.16 (global-space version): convergence of KM iteration for an `α`-averaged operator.
+-/
+theorem proposition_5_16 [SeparableSpace H] [CompleteSpace H]
+  (T : H → H) (α : ℝ) (havg : Averaged T α) (hfix_nonempty : (Fix T).Nonempty)
+  (lam : ℕ → ℝ)
+  (hlam1 : ∀ n, lam n ∈ Set.Icc (0 : ℝ) (1 / α))
+  (hlam2 : Tendsto (fun n => ∑ i ∈ range (n + 1), lam i * (1 - α * lam i)) atTop atTop)
+  (x0 : H) (x : ℕ → H)
+  (hupdate : ∀ n, x (n + 1) = x n + lam n • (T (x n) - x n))
+  (hinit : x 0 = x0) :
+    IsFejerMonotone x (Fix T)
+    ∧ (Tendsto (fun n ↦ ‖T (x n) - x n‖) atTop (𝓝 0))
+    ∧ ∃ y0 ∈ Fix T, WeakConverge x y0 := by
+  rcases havg with ⟨hα_range, R, hR_nonexp, hrepr_on⟩
+  have hα_pos : 0 < α := hα_range.1
+  have hα_ne : α ≠ 0 := ne_of_gt hα_pos
+  have hrepr : ∀ z : H, T z = (1 - α) • z + α • R z := by
+    intro z
+    simpa using hrepr_on (x := z) (by simp)
+  let μ : ℕ → ℝ := fun n => α * lam n
+  have hdiff : ∀ n, T (x n) - x n = α • (R (x n) - x n) := by
+    intro n
+    rw [hrepr (x n)]
+    simp [smul_sub, sub_smul, one_smul]
+    abel_nf
+  have hupdate_R : ∀ n, x (n + 1) = x n + μ n • (R (x n) - x n) := by
+    intro n
+    calc
+      x (n + 1) = x n + lam n • (T (x n) - x n) := hupdate n
+      _ = x n + lam n • (α • (R (x n) - x n)) := by rw [hdiff n]
+      _ = x n + (lam n * α) • (R (x n) - x n) := by rw [smul_smul]
+      _ = x n + (α * lam n) • (R (x n) - x n) := by
+        congr 2
+        ring
+      _ = x n + μ n • (R (x n) - x n) := rfl
+  have hμ1 : ∀ n, μ n ∈ Set.Icc (0 : ℝ) 1 := by
+    intro n
+    rcases hlam1 n with ⟨hl0, hl1⟩
+    refine ⟨mul_nonneg (le_of_lt hα_pos) hl0, ?_⟩
+    have hmul : α * lam n ≤ α * (1 / α) :=
+      mul_le_mul_of_nonneg_left hl1 (le_of_lt hα_pos)
+    have hmul' : α * lam n ≤ (1 : ℝ) := by
+      calc
+        α * lam n ≤ α * (1 / α) := hmul
+        _ = (1 : ℝ) := by field_simp [hα_ne]
+    simpa [μ] using hmul'
+  have hsum_mu : ∀ n,
+      (∑ i ∈ range (n + 1), μ i * (1 - μ i)) =
+        α * (∑ i ∈ range (n + 1), lam i * (1 - α * lam i)) := by
+    intro n
+    calc
+      ∑ i ∈ range (n + 1), μ i * (1 - μ i)
+          = ∑ i ∈ range (n + 1), α * (lam i * (1 - α * lam i)) := by
+              apply Finset.sum_congr rfl
+              intro i hi
+              simp [μ]
+              ring
+      _ = α * (∑ i ∈ range (n + 1), lam i * (1 - α * lam i)) := by
+            rw [← Finset.mul_sum]
+  have hμ2_scaled :
+      Tendsto (fun n => α * (∑ i ∈ range (n + 1), lam i * (1 - α * lam i))) atTop atTop :=
+    tendsto_atTop_atTop_const_mul hα_pos hlam2
+  have hμ2 : Tendsto (fun n => ∑ i ∈ range (n + 1), μ i * (1 - μ i)) atTop atTop := by
+    refine Tendsto.congr' ?_ hμ2_scaled
+    exact Filter.Eventually.of_forall (fun n => (hsum_mu n).symm)
+  have hFix_eq : Fix T = Fix R := fix_eq_of_averaged_repr T R α hα_ne hrepr
+  have hfixR_nonempty : (Fix R ∩ (Set.univ : Set H)).Nonempty := by
+    rcases hfix_nonempty with ⟨y, hy⟩
+    refine ⟨y, ?_⟩
+    constructor
+    · simpa [hFix_eq] using hy
+    · simp
+  have hmain :=
+    Groetsch_theorem_ofData (D := (Set.univ : Set H)) (T := R)
+      (hD1 := convex_univ) (hD2 := isClosed_univ)
+      (h_Im_T_in_D := by intro z hz; simp)
+      (hT := hR_nonexp)
+      (x0 := x0) (hx0 := by simp)
+      (α := μ) (x := x) (hupdate := hupdate_R) (hinit := hinit)
+      (fix_T_nonempty := hfixR_nonempty)
+      (hα1 := hμ1) (hα2 := hμ2)
+  rcases hmain with ⟨hfejerR, hstrongR, hweakR⟩
+  have hfejerT : IsFejerMonotone x (Fix T) := by
+    simpa [hFix_eq] using hfejerR
+  have hnorm_eq : ∀ n, ‖T (x n) - x n‖ = α * ‖R (x n) - x n‖ := by
+    intro n
+    rw [hdiff n, norm_smul, Real.norm_eq_abs, abs_of_pos hα_pos]
+  have hstrong_scaled : Tendsto (fun n ↦ α * ‖R (x n) - x n‖) atTop (𝓝 0) := by
+    simpa using (tendsto_const_nhds.mul hstrongR)
+  have hstrongT : Tendsto (fun n ↦ ‖T (x n) - x n‖) atTop (𝓝 0) := by
+    refine Tendsto.congr' ?_ hstrong_scaled
+    exact Filter.Eventually.of_forall (fun n => (hnorm_eq n).symm)
+  have hweakT : ∃ y0 ∈ Fix T, WeakConverge x y0 := by
+    rcases hweakR with ⟨y0, hy0, hconv⟩
+    refine ⟨y0, ?_, hconv⟩
+    simpa [hFix_eq] using hy0.1
+  exact ⟨hfejerT, hstrongT, hweakT⟩
+
+
+/--
+Corollary 5.17 (global-space version): apply Proposition 5.16 with `α = 1/2`
+for firmly nonexpansive operators.
+-/
+theorem corollary_5_17 [SeparableSpace H] [CompleteSpace H]
+  (T : H → H) (hfirm : Firmly_Nonexpansive T) (hfix_nonempty : (Fix T).Nonempty)
+  (lam : ℕ → ℝ)
+  (hlam1 : ∀ n, lam n ∈ Set.Icc (0 : ℝ) 2)
+  (hlam2 : Tendsto (fun n => ∑ i ∈ range (n + 1), lam i * (2 - lam i)) atTop atTop)
+  (x0 : H) (x : ℕ → H)
+  (hupdate : ∀ n, x (n + 1) = x n + lam n • (T (x n) - x n))
+  (hinit : x 0 = x0) :
+    IsFejerMonotone x (Fix T)
+    ∧ (Tendsto (fun n ↦ ‖T (x n) - x n‖) atTop (𝓝 0))
+    ∧ ∃ y0 ∈ Fix T, WeakConverge x y0 := by
+  have havg_half : Averaged T (1 / 2 : ℝ) :=
+    (firmly_nonexpansive_iff_averaged_half T).1 hfirm
+  have hlam1_half : ∀ n, lam n ∈ Set.Icc (0 : ℝ) (1 / (1 / 2 : ℝ)) := by
+    intro n
+    have htwo : (1 / (1 / 2 : ℝ)) = (2 : ℝ) := by norm_num
+    simpa [htwo] using hlam1 n
+  have hlam2_half :
+      Tendsto (fun n => ∑ i ∈ range (n + 1), lam i * (1 - (1 / 2 : ℝ) * lam i)) atTop atTop := by
+    have hscaled :
+        Tendsto (fun n => (1 / 2 : ℝ) * (∑ i ∈ range (n + 1), lam i * (2 - lam i))) atTop atTop :=
+      tendsto_atTop_atTop_const_mul (by norm_num) hlam2
+    refine Tendsto.congr' ?_ hscaled
+    refine Filter.Eventually.of_forall ?_
+    intro n
+    calc
+      (1 / 2 : ℝ) * (∑ i ∈ range (n + 1), lam i * (2 - lam i))
+          = ∑ i ∈ range (n + 1), (1 / 2 : ℝ) * (lam i * (2 - lam i)) := by
+              rw [Finset.mul_sum]
+      _ = ∑ i ∈ range (n + 1), lam i * (1 - (1 / 2 : ℝ) * lam i) := by
+              apply Finset.sum_congr rfl
+              intro i hi
+              ring
+  simpa using
+    proposition_5_16 T (1 / 2 : ℝ) havg_half hfix_nonempty lam hlam1_half hlam2_half
+      x0 x hupdate hinit
