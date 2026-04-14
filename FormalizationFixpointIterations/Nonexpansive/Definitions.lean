@@ -41,10 +41,10 @@ def Fix (T : α → α) : Set α := {x | IsFixedPt T x}
 def FixOn (T : α → α) (D : Set α) : Set α := {x | x ∈ D ∧ IsFixedPt T x}
 
 def Firmly_Nonexpansive (T : α → α) :=
-  ∀ x y, ‖T x - T y‖^2 + ‖(x - T x) - (y - T y)‖^2 < ‖x - y‖^2
+  ∀ x y, ‖T x - T y‖^2 + ‖(x - T x) - (y - T y)‖^2 ≤  ‖x - y‖^2
 
 def Firmly_NonexpansiveOn (T : α → α) (s : Set α) :=
-  ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, y ∈ s → ‖T x - T y‖^2 + ‖(x - T x) - (y - T y)‖^2 < ‖x - y‖^2
+  ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, y ∈ s → ‖T x - T y‖^2 + ‖(x - T x) - (y - T y)‖^2 ≤  ‖x - y‖^2
 
 def Firmly_QuasiNonexpansive (T : α → α) :=
   ∀ x y, y ∈ Fix T → ‖T x - y‖^2 + ‖T x - x‖^2 ≤ ‖x - y‖^2
@@ -108,7 +108,7 @@ theorem strictly_norm_lt_mul (T : α → β) (h : Strictly_Nonexpansive T) (x y 
   ‖T x - T y‖ < ‖x - y‖ := (strictly_nonexpansive_iff_norm_lt_mul T).1 h x y hxy
 
 theorem firmly_norm_le (T : α → α) (h : Firmly_Nonexpansive T) (x y : α) :
-  ‖T x - T y‖^2 + ‖(x - T x) - (y - T y)‖^2 < ‖x - y‖^2 := h x y
+  ‖T x - T y‖^2 + ‖(x - T x) - (y - T y)‖^2 ≤ ‖x - y‖^2 := h x y
 
 
 end properties_Normed
